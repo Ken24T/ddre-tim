@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "node scripts/tctbp-pretool-hook.js",
+        "linux": "node scripts/tctbp-pretool-hook.js || nodejs scripts/tctbp-pretool-hook.js",
+        "osx": "node scripts/tctbp-pretool-hook.js || nodejs scripts/tctbp-pretool-hook.js",
+        "cwd": ".",
+        "timeout": 5
+      }
+    ]
+  }
+}

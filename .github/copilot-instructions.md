@@ -13,6 +13,36 @@ The current delivery plan is:
 
 This repo is a monorepo. The desktop app, API, web viewer, shared contracts, and docs should evolve together.
 
+## Current Status
+
+- The TCTBP runtime surface is installed for this repository.
+- The current release version files are `package.json`, `apps/api/package.json`, and `packages/contracts/package.json`.
+- The current verification gates are `npm run typecheck` and `npm run build`.
+- Deploy is intentionally disabled until the repo defines a concrete runtime target, rollback approach, and post-deploy validation path.
+
+## TCTBP Runtime Surface
+
+The TCTBP runtime and workflow surface lives in:
+
+- `.github/agents/TCTBP.agent.md`
+- `.github/TCTBP.json`
+- `.github/TCTBP Agent.md`
+- `.github/TCTBP Cheatsheet.md`
+- `.github/copilot-instructions.md`
+- `.github/prompts/Install TCTBP Agent Infrastructure Into Another Repository.prompt.md`
+- optional hook layer: `.github/hooks/tctbp-safety.json` and `scripts/tctbp-pretool-hook.js`
+
+Keep these files aligned when the workflow or runtime entry points change.
+
+The consolidated cross-repo application prompt is expected to be discoverable through the explicit local-only trigger `reconcile-tctbp <absolute-target-repo-path>`.
+
+## TCTBP Workflow Expectations
+
+- If the user asks to ship, checkpoint, publish, handover, resume, deploy, status, abort, or branch, follow `.github/TCTBP Agent.md` and `.github/TCTBP.json`.
+- Use `checkpoint`, `publish`, and `handover` for routine slice safety and sync; reserve `ship` for milestone-quality releases.
+- `slice/*` is the preferred delivery branch prefix and drives the first-ship minor-bump rule.
+- Keep the workflow files and runtime files aligned when they change.
+
 ## Current Structure
 
 | Path | Purpose |
@@ -101,10 +131,11 @@ These rules are core to the app and should not be casually bypassed.
 ## Critical Repo Rules
 
 1. `npm run typecheck` must pass after code changes unless the repo grows a narrower targeted check for the touched slice.
-2. Keep instructions and docs aligned with the real repo state. Remove stale guidance instead of leaving copied placeholders.
-3. Prefer focused modules over oversized route files or contract files when logic becomes hard to scan.
-4. Do not document commands, files, or platform behaviour that the repo does not yet implement.
-5. Preserve the central API write-path model; do not regress toward direct shared-datastore desktop writes.
+2. `npm run build` must pass before shipping unless the change is docs-only or infrastructure-only under the TCTBP profile.
+3. Keep instructions and docs aligned with the real repo state. Remove stale guidance instead of leaving copied placeholders.
+4. Prefer focused modules over oversized route files or contract files when logic becomes hard to scan.
+5. Do not document commands, files, or platform behaviour that the repo does not yet implement.
+6. Preserve the central API write-path model; do not regress toward direct shared-datastore desktop writes.
 
 ## Documentation Expectations
 
@@ -130,4 +161,4 @@ Follow the repo workflow already documented in `docs/workflow.md`:
 
 - Review the existing docs before introducing new product rules.
 - If the repo only has API and contracts implemented, keep edits grounded there instead of inventing desktop code that does not exist yet.
-- When adding a future desktop or web workspace, update this file so the command list and structure stay accurate.
+- When adding a future desktop or web workspace, update this file so the command list, structure, and TCTBP profile stay accurate.
