@@ -1,0 +1,17 @@
+{
+  "name": "@ddre/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build --workspace @ddre/contracts && tsx watch src/index.ts",
+    "build": "npm run build --workspace @ddre/contracts && tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "npm run build --workspace @ddre/contracts && tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ddre/contracts": "file:../../packages/contracts",
+    "fastify": "^5.0.0",
+    "zod": "^3.0.0"
+  }
+}
