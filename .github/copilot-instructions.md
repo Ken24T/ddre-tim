@@ -18,7 +18,8 @@ This repo is a monorepo. The desktop app, API, web viewer, shared contracts, and
 - The TCTBP runtime surface is installed for this repository.
 - The current release version files are `package.json`, `apps/api/package.json`, and `packages/contracts/package.json`.
 - The current verification gates are `npm run typecheck` and `npm run build`.
-- Deploy is intentionally disabled until the repo defines a concrete runtime target, rollback approach, and post-deploy validation path.
+- The current runtime target is a zero-cost office-hosted deployment on `DDNUC-11` for the API, PostgreSQL, and future dashboard.
+- Deploy is still intentionally disabled until the repo defines the concrete service management, backup, rollback, remote-access, and post-deploy validation path for that office-hosted target.
 
 ## TCTBP Runtime Surface
 
@@ -59,6 +60,15 @@ The consolidated cross-repo application prompt is expected to be discoverable th
 | `docs/workflow.md` | Branching and slice-delivery guidance |
 | `docs/adr/` | Architecture decision records |
 | `infra/docker-compose.yml` | Local PostgreSQL scaffold for later persistence work |
+
+## Runtime Target
+
+The current intended runtime model is:
+
+- `DDNUC-11` hosts the central API and PostgreSQL datastore
+- the future dashboard is served from office-hosted infrastructure and viewed from the office LAN
+- home-based employees reach only the API through a secure remote office-network path
+- PostgreSQL is never treated as a shared desktop-access database
 
 ## Development Commands
 
@@ -162,3 +172,4 @@ Follow the repo workflow already documented in `docs/workflow.md`:
 - Review the existing docs before introducing new product rules.
 - If the repo only has API and contracts implemented, keep edits grounded there instead of inventing desktop code that does not exist yet.
 - When adding a future desktop or web workspace, update this file so the command list, structure, and TCTBP profile stay accurate.
+- Preserve the office-hosted runtime assumption unless the user explicitly changes deployment direction.

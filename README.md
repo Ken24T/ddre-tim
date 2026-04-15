@@ -2,6 +2,8 @@
 
 Time in Motion is a multi-user activity capture system built around a lightweight tray application and a central web-facing backend. The first delivery target is a Linux Cinnamon tray workflow, with GNOME and Windows 11 planned as later compatibility slices.
 
+The current runtime target is a zero-cost office-hosted deployment: the shared API, PostgreSQL database, and future dashboard will run on office hardware (`DDNUC-11`), with desktop clients syncing to that central API.
+
 ## What Exists Now
 
 - Monorepo root tooling for TypeScript workspaces.

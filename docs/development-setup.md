@@ -45,6 +45,24 @@ If Docker is available later, `infra/docker-compose.yml` mounts `infra/sql` into
 - API: `http://localhost:4000`
 - PostgreSQL: scaffolded through `infra/docker-compose.yml`
 
+## Runtime Planning Target
+
+The current target deployment is an office-hosted setup on `DDNUC-11` rather than a paid hosted platform.
+
+Expected production shape:
+
+- `DDNUC-11` runs the central API and PostgreSQL datastore
+- the future dashboard is served from the same office-hosted machine unless later split out
+- office staff use the dashboard from machines on the office LAN
+- employees working from home connect only to the API through a secure path into the office network
+
+Operational assumptions for this target:
+
+- do not expose PostgreSQL directly outside the host machine
+- prefer exposing only the API surface needed by desktop clients
+- keep dashboard access restricted to the office LAN unless a later slice intentionally expands that scope
+- deployment remains a planned/manual slice until the repo defines the exact service supervisor, backup process, rollback procedure, and remote-access approach
+
 ## Next Setup Slices
 
 - Add the Tauri desktop workspace.

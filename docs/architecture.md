@@ -8,6 +8,24 @@ The system is split into three products:
 - A central API that validates, stores, and projects activity data.
 - A web viewer that reads derived session and reporting data.
 
+## Runtime Target
+
+The current runtime target is a zero-cost office-hosted deployment on `DDNUC-11`.
+
+Planned hosting layout:
+
+- the API runs on `DDNUC-11`
+- PostgreSQL runs on `DDNUC-11`
+- the future TiM dashboard is served from `DDNUC-11`
+- office desktops reach the API and dashboard over the office LAN
+- home-based employees reach only the API through a secure remote path into the office network
+
+Constraints for this model:
+
+- PostgreSQL is not exposed directly to employee workstations or the public internet
+- the dashboard is intended for office-LAN viewing only, not general external access
+- remote employees still need a secure office-network path, such as VPN or equivalent tunnel, so the desktop client can sync to the API
+
 ## Startup
 
 The desktop tray client is expected to auto-start inside each user's session when they log into their workstation. On first run it should route the user into settings before normal tray-driven capture begins.
@@ -35,6 +53,8 @@ Display names are normalized to Propercase. Each user also has a default departm
 ## Dashboard Access
 
 The browser dashboard is manager-facing and must enforce server-side scope filtering. A property manager should only see the staff assigned to their property-management scope, while broader roles such as business owner can be granted access to all departments and users.
+
+The current deployment assumption is that dashboard access happens from machines on the office LAN. Remote desktop users may sync activity through the API, but the dashboard is not currently planned as a general internet-facing application.
 
 ## Database Shape
 
