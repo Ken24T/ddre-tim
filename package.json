@@ -1,7 +1,7 @@
 {
   "name": "ddre-tim",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Time in Motion monorepo",
   "packageManager": "npm@10.9.2",
   "workspaces": [
