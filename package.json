@@ -1,7 +1,7 @@
 {
   "name": "ddre-tim",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Time in Motion monorepo",
   "packageManager": "npm@10.9.2",
   "workspaces": [
@@ -10,12 +10,17 @@
   ],
   "scripts": {
     "build": "npm run build --workspace @ddre/contracts && npm run build --workspace @ddre/api",
+    "db:generate-seed": "tsx scripts/generate-historical-seed-sql.ts",
+    "db:validate": "tsx scripts/validate-dev-db.ts",
     "dev:api": "npm run dev --workspace @ddre/api",
+    "import:tim-records": "tsx scripts/import-tim-records.ts",
     "typecheck": "npm run typecheck --workspace @ddre/contracts && npm run typecheck --workspace @ddre/api"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "pg-mem": "^3.0.14",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "xlsx": "^0.18.5"
   }
 }

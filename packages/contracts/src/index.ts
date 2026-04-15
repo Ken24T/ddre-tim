@@ -23,11 +23,19 @@ export const displayNameSchema = z
 
 export const activityKindSchema = z.enum(["timed", "non-timed"]);
 
+export const departmentSchema = z.object({
+  id: z.string().min(1),
+  slug: z.string().min(1),
+  name: z.string().min(1),
+  isActive: z.boolean().default(true)
+});
+
 export const activitySchema = z.object({
   id: z.string().min(1),
   slug: z.string().min(1),
   name: z.string().min(1),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  departmentId: z.string().min(1).optional(),
   kind: activityKindSchema.default("timed"),
   isSystem: z.boolean().default(false),
   isActive: z.boolean().default(true)
@@ -41,6 +49,7 @@ export const activityCatalogResponseSchema = z.object({
 export const activityDraftSchema = z.object({
   name: z.string().trim().min(1).max(100),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  departmentId: z.string().min(1).optional(),
   isActive: z.boolean().default(true)
 });
 
@@ -48,6 +57,8 @@ export const userSettingsSchema = z.object({
   userId: z.string().min(1),
   displayName: z.string().trim().max(100),
   isConfigured: z.boolean(),
+  defaultDepartmentId: z.string().min(1),
+  departments: z.array(departmentSchema),
   activities: z.array(activitySchema),
   updatedAt: timestampSchema
 });
@@ -55,6 +66,7 @@ export const userSettingsSchema = z.object({
 export const userSettingsUpdateSchema = z
   .object({
     displayName: displayNameSchema,
+    defaultDepartmentId: z.string().min(1),
     activities: z.array(activityDraftSchema)
   })
   .superRefine((settings, context) => {
@@ -103,6 +115,7 @@ export const activityEventSchema = z
     recordedAt: timestampSchema,
     type: activityEventTypeSchema,
     activityId: z.string().min(1).optional(),
+    departmentId: z.string().min(1).optional(),
     note: z.string().trim().min(1).max(500).optional(),
     idempotencyKey: z.string().min(1),
     metadata: z.record(z.string()).default({})
@@ -156,6 +169,7 @@ export type Activity = z.infer<typeof activitySchema>;
 export type ActivityDraft = z.infer<typeof activityDraftSchema>;
 export type ActivityCatalogResponse = z.infer<typeof activityCatalogResponseSchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
+export type Department = z.infer<typeof departmentSchema>;
 export type SyncBatch = z.infer<typeof syncBatchSchema>;
 export type SyncAck = z.infer<typeof syncAckSchema>;
 export type UserSettings = z.infer<typeof userSettingsSchema>;

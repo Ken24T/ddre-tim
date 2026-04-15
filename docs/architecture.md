@@ -30,11 +30,17 @@ The desktop client will keep a local SQLite outbox per user and sync batches to 
 
 Each user will have a settings surface for one-time profile setup and maintenance of the activity list shown in the tray menu. The API owns the stored user name and normalized activity definitions so activity events can reference stable identifiers.
 
-Display names are normalized to Propercase, and the non-timed default activity is system-managed so users can CRUD their department-appropriate timed activities without removing the default fallback state.
+Display names are normalized to Propercase. Each user also has a default department used when creating new timed activities, while individual timed activities can be reassigned to a different department when needed. The non-timed default activity is system-managed so users can CRUD their department-appropriate timed activities without removing the default fallback state.
 
 ## Dashboard Access
 
 The browser dashboard is manager-facing and must enforce server-side scope filtering. A property manager should only see the staff assigned to their property-management scope, while broader roles such as business owner can be granted access to all departments and users.
+
+## Database Shape
+
+The primary database should store normalized users, departments, activities, and append-only activity events. Reporting totals such as daily hours, weekly totals, month labels, and chart aggregates should be derived from those facts rather than authored directly.
+
+The reviewed legacy workbook shape is useful as an import and reporting reference, but not as the source-of-truth live schema. For the current historical backfill slice, import only Ken Boyle records and normalize workbook dates using Australian day-first conventions before deriving reporting periods. See `docs/database-schema.md` for the proposed table layout and the rationale for excluding derived fields such as `Week` and `Month` from primary tables.
 
 ## Initial Implementation Slice
 

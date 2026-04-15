@@ -1,0 +1,3355 @@
+{
+  "sourceFile": "TiM Metrics.xlsx",
+  "sheetName": "TiM Records",
+  "employeeFilter": "Ken Boyle",
+  "importedAt": "2026-04-15T23:03:54.222Z",
+  "recordCount": 368,
+  "departments": [
+    "Accounts",
+    "Administration",
+    "Business Development",
+    "Company",
+    "Human Resources",
+    "Office",
+    "Property Management",
+    "Sales"
+  ],
+  "activities": [
+    "AI - Research",
+    "Automation - Creation/Maintenance",
+    "Cognito Forms - Creation/Modification",
+    "Email - Responding/Creating",
+    "Equipment - Contracts, etc.",
+    "General - Unspecified",
+    "Grey Fox - IT Support",
+    "Infrastructure - Equipment, Cabling, etc.",
+    "IT - Support",
+    "Lead Generation",
+    "Meeting - Attending",
+    "Meeting - Preparing/Presenting",
+    "New Product Appraisal",
+    "Project - Coding",
+    "Project - Implementation",
+    "Project - Preparation",
+    "Social Activities",
+    "Training - Attending",
+    "Training - Preparing/Presenting",
+    "Vault Maintenance",
+    "Web Site - Maintenance",
+    "Website - Maintenance"
+  ],
+  "records": [
+    {
+      "id": "historical-130c78d1e8b8354f",
+      "workDate": "2024-06-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 9,
+      "sourceRowNumber": 17
+    },
+    {
+      "id": "historical-b0761bc9f5796e3b",
+      "workDate": "2024-06-11",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 9,
+      "sourceRowNumber": 31
+    },
+    {
+      "id": "historical-b1bf8b02053fbc68",
+      "workDate": "2024-06-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Automation - Creation/Maintenance",
+      "hours": 1,
+      "sourceRowNumber": 44
+    },
+    {
+      "id": "historical-a0bc0ed6be21c8e6",
+      "workDate": "2024-06-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.5,
+      "sourceRowNumber": 41
+    },
+    {
+      "id": "historical-a2f76048d79aa903",
+      "workDate": "2024-06-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 43
+    },
+    {
+      "id": "historical-3faa3da3defe2b52",
+      "workDate": "2024-06-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Website - Maintenance",
+      "hours": 0.5,
+      "sourceRowNumber": 42
+    },
+    {
+      "id": "historical-2331e41fb3bd5dd5",
+      "workDate": "2024-06-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Property Management",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 40
+    },
+    {
+      "id": "historical-eb1e4e1b85c4f497",
+      "workDate": "2024-06-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 7.5,
+      "sourceRowNumber": 39
+    },
+    {
+      "id": "historical-b9289f0c0b166b19",
+      "workDate": "2024-06-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 2,
+      "sourceRowNumber": 53
+    },
+    {
+      "id": "historical-dcdf85943a4cb9a4",
+      "workDate": "2024-06-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 1.75,
+      "sourceRowNumber": 55
+    },
+    {
+      "id": "historical-c73957ae3d64e404",
+      "workDate": "2024-06-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 54
+    },
+    {
+      "id": "historical-71b178e390a27eee",
+      "workDate": "2024-06-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 1,
+      "sourceRowNumber": 56
+    },
+    {
+      "id": "historical-d854e9a75e357db5",
+      "workDate": "2024-06-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Training - Attending",
+      "hours": 1.5,
+      "sourceRowNumber": 57
+    },
+    {
+      "id": "historical-4bcf57ad751a6843",
+      "workDate": "2024-06-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Website - Maintenance",
+      "hours": 0.5,
+      "sourceRowNumber": 59
+    },
+    {
+      "id": "historical-6079a66f8fab1251",
+      "workDate": "2024-06-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Property Management",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 58
+    },
+    {
+      "id": "historical-9d99b5fdbadad546",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 67
+    },
+    {
+      "id": "historical-8c0900b878711433",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 0.5,
+      "sourceRowNumber": 71
+    },
+    {
+      "id": "historical-5d827d4ba59c009f",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 75
+    },
+    {
+      "id": "historical-555b31003d60c5ce",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Equipment - Contracts, etc.",
+      "hours": 0.75,
+      "sourceRowNumber": 70
+    },
+    {
+      "id": "historical-783c21b9fc018a37",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Project - Implementation",
+      "hours": 3.5,
+      "sourceRowNumber": 69
+    },
+    {
+      "id": "historical-a0d27c4ef56c037b",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Human Resources",
+      "activityName": "Equipment - Contracts, etc.",
+      "hours": 0.25,
+      "sourceRowNumber": 74
+    },
+    {
+      "id": "historical-dd40723107d4d283",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 72
+    },
+    {
+      "id": "historical-c4ce3ac0db9bacd6",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 76
+    },
+    {
+      "id": "historical-0c12af4a8a39bf3d",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Property Management",
+      "activityName": "IT - Support",
+      "hours": 0.25,
+      "sourceRowNumber": 73
+    },
+    {
+      "id": "historical-503d1dc5d20fe446",
+      "workDate": "2024-06-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.25,
+      "sourceRowNumber": 68
+    },
+    {
+      "id": "historical-d6e554d4930d94e5",
+      "workDate": "2024-06-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 0.25,
+      "sourceRowNumber": 77
+    },
+    {
+      "id": "historical-843c6bb4cb0bc4f6",
+      "workDate": "2024-06-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Project - Preparation",
+      "hours": 1.75,
+      "sourceRowNumber": 78
+    },
+    {
+      "id": "historical-cdbd2a0b6b4d84b3",
+      "workDate": "2024-06-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Project - Implementation",
+      "hours": 1.5,
+      "sourceRowNumber": 79
+    },
+    {
+      "id": "historical-2e61018dd884b4c0",
+      "workDate": "2024-06-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 80
+    },
+    {
+      "id": "historical-e36a50599fc45d18",
+      "workDate": "2024-06-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 81
+    },
+    {
+      "id": "historical-63f9e43662de5148",
+      "workDate": "2024-06-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Business Development",
+      "activityName": "General - Unspecified",
+      "hours": 0.75,
+      "sourceRowNumber": 86
+    },
+    {
+      "id": "historical-5ad184013478ab68",
+      "workDate": "2024-06-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Business Development",
+      "activityName": "Project - Preparation",
+      "hours": 4.5,
+      "sourceRowNumber": 85
+    },
+    {
+      "id": "historical-7345f28b6814640e",
+      "workDate": "2024-06-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 1.25,
+      "sourceRowNumber": 83
+    },
+    {
+      "id": "historical-c93aa8610cf75590",
+      "workDate": "2024-06-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Equipment - Contracts, etc.",
+      "hours": 0.25,
+      "sourceRowNumber": 82
+    },
+    {
+      "id": "historical-4b094c44d8a55ed3",
+      "workDate": "2024-06-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 1,
+      "sourceRowNumber": 84
+    },
+    {
+      "id": "historical-822f27903ad86f18",
+      "workDate": "2024-06-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 0.5,
+      "sourceRowNumber": 87
+    },
+    {
+      "id": "historical-859424e1ae284f56",
+      "workDate": "2024-06-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 2,
+      "sourceRowNumber": 92
+    },
+    {
+      "id": "historical-977eabf874ac1b6c",
+      "workDate": "2024-06-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Business Development",
+      "activityName": "Automation - Creation/Maintenance",
+      "hours": 2,
+      "sourceRowNumber": 90
+    },
+    {
+      "id": "historical-64fd0e2e6b939431",
+      "workDate": "2024-06-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Business Development",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 1.5,
+      "sourceRowNumber": 89
+    },
+    {
+      "id": "historical-9fee1269400dc115",
+      "workDate": "2024-06-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Business Development",
+      "activityName": "IT - Support",
+      "hours": 0.25,
+      "sourceRowNumber": 88
+    },
+    {
+      "id": "historical-24e3ed8214ddb7d9",
+      "workDate": "2024-06-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Business Development",
+      "activityName": "Project - Preparation",
+      "hours": 2,
+      "sourceRowNumber": 91
+    },
+    {
+      "id": "historical-94e46225ce6307fc",
+      "workDate": "2024-06-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.5,
+      "sourceRowNumber": 93
+    },
+    {
+      "id": "historical-de1ad0c29fe3c09c",
+      "workDate": "2024-06-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 5,
+      "sourceRowNumber": 96
+    },
+    {
+      "id": "historical-afe7d667c6bd9d14",
+      "workDate": "2024-06-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Equipment - Contracts, etc.",
+      "hours": 3,
+      "sourceRowNumber": 98
+    },
+    {
+      "id": "historical-23c83095ccf7bc50",
+      "workDate": "2024-06-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Meeting - Attending",
+      "hours": 0.25,
+      "sourceRowNumber": 97
+    },
+    {
+      "id": "historical-c858e6503bd9532f",
+      "workDate": "2024-06-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 0.75,
+      "sourceRowNumber": 99
+    },
+    {
+      "id": "historical-40619c19873a365a",
+      "workDate": "2024-06-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 3,
+      "sourceRowNumber": 101
+    },
+    {
+      "id": "historical-bba30578850ec0d3",
+      "workDate": "2024-06-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Training - Attending",
+      "hours": 1.5,
+      "sourceRowNumber": 100
+    },
+    {
+      "id": "historical-4a7af16d5cc23ce1",
+      "workDate": "2024-06-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 1.5,
+      "sourceRowNumber": 103
+    },
+    {
+      "id": "historical-53b06d634ce8443e",
+      "workDate": "2024-06-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "IT - Support",
+      "hours": 0.25,
+      "sourceRowNumber": 102
+    },
+    {
+      "id": "historical-5a46197606cdf3b8",
+      "workDate": "2024-06-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 0.5,
+      "sourceRowNumber": 110
+    },
+    {
+      "id": "historical-96a3ed9f71467aac",
+      "workDate": "2024-06-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 104
+    },
+    {
+      "id": "historical-1a018cfed09ff3e9",
+      "workDate": "2024-06-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 2.5,
+      "sourceRowNumber": 108
+    },
+    {
+      "id": "historical-64f1f1d39b37a971",
+      "workDate": "2024-06-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.25,
+      "sourceRowNumber": 107
+    },
+    {
+      "id": "historical-f9f70fe52e9bfb1c",
+      "workDate": "2024-06-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Meeting - Attending",
+      "hours": 1,
+      "sourceRowNumber": 109
+    },
+    {
+      "id": "historical-4f39e2c99bad69a2",
+      "workDate": "2024-06-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 1.5,
+      "sourceRowNumber": 106
+    },
+    {
+      "id": "historical-f24aacc7820aedf2",
+      "workDate": "2024-06-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Training - Preparing/Presenting",
+      "hours": 0.75,
+      "sourceRowNumber": 105
+    },
+    {
+      "id": "historical-99c4ad27baacfcaa",
+      "workDate": "2024-06-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.25,
+      "sourceRowNumber": 112
+    },
+    {
+      "id": "historical-9dbdd6c90f4b2f5a",
+      "workDate": "2024-06-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 0.25,
+      "sourceRowNumber": 111
+    },
+    {
+      "id": "historical-5e6f727c7f161b32",
+      "workDate": "2024-06-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 0.75,
+      "sourceRowNumber": 116
+    },
+    {
+      "id": "historical-94c888248f53ee95",
+      "workDate": "2024-06-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Automation - Creation/Maintenance",
+      "hours": 2.5,
+      "sourceRowNumber": 115
+    },
+    {
+      "id": "historical-56c1501bec209876",
+      "workDate": "2024-06-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 1.25,
+      "sourceRowNumber": 117
+    },
+    {
+      "id": "historical-4b828808ef5f1c80",
+      "workDate": "2024-06-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 113
+    },
+    {
+      "id": "historical-d297db73b0a7302e",
+      "workDate": "2024-06-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Business Development",
+      "activityName": "Project - Preparation",
+      "hours": 2,
+      "sourceRowNumber": 114
+    },
+    {
+      "id": "historical-4d8f2890f013b521",
+      "workDate": "2024-06-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Training - Preparing/Presenting",
+      "hours": 0.25,
+      "sourceRowNumber": 118
+    },
+    {
+      "id": "historical-1b03bd9b0c902988",
+      "workDate": "2024-06-25",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 1,
+      "sourceRowNumber": 122
+    },
+    {
+      "id": "historical-2deaaf1989e3a6bd",
+      "workDate": "2024-06-25",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1.5,
+      "sourceRowNumber": 119
+    },
+    {
+      "id": "historical-01dff14c76ae5100",
+      "workDate": "2024-06-25",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 5.5,
+      "sourceRowNumber": 120
+    },
+    {
+      "id": "historical-01f964a6b3c0ff32",
+      "workDate": "2024-06-25",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Training - Preparing/Presenting",
+      "hours": 0.5,
+      "sourceRowNumber": 121
+    },
+    {
+      "id": "historical-f8f965c599612e1a",
+      "workDate": "2024-06-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 123
+    },
+    {
+      "id": "historical-d78e2a00656e68c4",
+      "workDate": "2024-06-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 4.5,
+      "sourceRowNumber": 124
+    },
+    {
+      "id": "historical-5bd28c5a960309e7",
+      "workDate": "2024-06-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Training - Preparing/Presenting",
+      "hours": 2,
+      "sourceRowNumber": 125
+    },
+    {
+      "id": "historical-92d81b3d654cad02",
+      "workDate": "2024-06-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 2,
+      "sourceRowNumber": 126
+    },
+    {
+      "id": "historical-03c54cca0a6a2ad9",
+      "workDate": "2024-06-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 0.5,
+      "sourceRowNumber": 128
+    },
+    {
+      "id": "historical-f601bae9854509c6",
+      "workDate": "2024-06-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Meeting - Preparing/Presenting",
+      "hours": 2,
+      "sourceRowNumber": 127
+    },
+    {
+      "id": "historical-e2e31f857f0764b7",
+      "workDate": "2024-06-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 2,
+      "sourceRowNumber": 130
+    },
+    {
+      "id": "historical-ee98eefe9f007755",
+      "workDate": "2024-06-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "New Product Appraisal",
+      "hours": 2,
+      "sourceRowNumber": 129
+    },
+    {
+      "id": "historical-e0a0ca56104edd6b",
+      "workDate": "2024-06-28",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 132
+    },
+    {
+      "id": "historical-089f9cd1585cd14c",
+      "workDate": "2024-06-28",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "IT - Support",
+      "hours": 0.75,
+      "sourceRowNumber": 135
+    },
+    {
+      "id": "historical-e608ccd7e04dba54",
+      "workDate": "2024-06-28",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 1.5,
+      "sourceRowNumber": 133
+    },
+    {
+      "id": "historical-f890e634abe7e69f",
+      "workDate": "2024-06-28",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Social Activities",
+      "hours": 2.5,
+      "sourceRowNumber": 131
+    },
+    {
+      "id": "historical-eb07febbcb807302",
+      "workDate": "2024-06-28",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Training - Preparing/Presenting",
+      "hours": 2,
+      "sourceRowNumber": 134
+    },
+    {
+      "id": "historical-96b18547e3e31198",
+      "workDate": "2024-06-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "IT - Support",
+      "hours": 0.75,
+      "sourceRowNumber": 136
+    },
+    {
+      "id": "historical-43bc20273a465394",
+      "workDate": "2024-07-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 2,
+      "sourceRowNumber": 142
+    },
+    {
+      "id": "historical-3e19851801e5b806",
+      "workDate": "2024-07-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 138
+    },
+    {
+      "id": "historical-70f03bb698c05d6c",
+      "workDate": "2024-07-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 2,
+      "sourceRowNumber": 141
+    },
+    {
+      "id": "historical-c5b9be6f3773a186",
+      "workDate": "2024-07-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 2.5,
+      "sourceRowNumber": 139
+    },
+    {
+      "id": "historical-a01f4909929fabbc",
+      "workDate": "2024-07-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Social Activities",
+      "hours": 0.25,
+      "sourceRowNumber": 140
+    },
+    {
+      "id": "historical-ed8b1a655e4b2df0",
+      "workDate": "2024-07-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.5,
+      "sourceRowNumber": 137
+    },
+    {
+      "id": "historical-c33ebab33b47bb23",
+      "workDate": "2024-07-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 143
+    },
+    {
+      "id": "historical-25410646899c8ff5",
+      "workDate": "2024-07-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 0.75,
+      "sourceRowNumber": 147
+    },
+    {
+      "id": "historical-841c58fbe727a405",
+      "workDate": "2024-07-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Project - Preparation",
+      "hours": 4.25,
+      "sourceRowNumber": 145
+    },
+    {
+      "id": "historical-117df1f842daae22",
+      "workDate": "2024-07-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 2.5,
+      "sourceRowNumber": 146
+    },
+    {
+      "id": "historical-b1b5f2a22ac741f4",
+      "workDate": "2024-07-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 0.25,
+      "sourceRowNumber": 144
+    },
+    {
+      "id": "historical-678863d77ba9772c",
+      "workDate": "2024-07-03",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "IT - Support",
+      "hours": 8.5,
+      "sourceRowNumber": 148
+    },
+    {
+      "id": "historical-06dd106ad1aedcb9",
+      "workDate": "2024-07-03",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.25,
+      "sourceRowNumber": 150
+    },
+    {
+      "id": "historical-2e7875522c801df4",
+      "workDate": "2024-07-03",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Project - Preparation",
+      "hours": 8,
+      "sourceRowNumber": 149
+    },
+    {
+      "id": "historical-6a04b24befe87990",
+      "workDate": "2024-07-04",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 8,
+      "sourceRowNumber": 151
+    },
+    {
+      "id": "historical-4fc04722f4c43c3d",
+      "workDate": "2024-07-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Accounts",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 153
+    },
+    {
+      "id": "historical-647e3eb177e32786",
+      "workDate": "2024-07-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 0.5,
+      "sourceRowNumber": 155
+    },
+    {
+      "id": "historical-a7d473a5284b0c76",
+      "workDate": "2024-07-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 0.75,
+      "sourceRowNumber": 152
+    },
+    {
+      "id": "historical-f0cd9d2645304dea",
+      "workDate": "2024-07-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 2,
+      "sourceRowNumber": 156
+    },
+    {
+      "id": "historical-7699266b6598a598",
+      "workDate": "2024-07-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Project - Preparation",
+      "hours": 4.5,
+      "sourceRowNumber": 154
+    },
+    {
+      "id": "historical-d9abd03bd5806978",
+      "workDate": "2024-07-06",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Project - Preparation",
+      "hours": 1,
+      "sourceRowNumber": 157
+    },
+    {
+      "id": "historical-eac68f46c4c90220",
+      "workDate": "2024-07-08",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 158
+    },
+    {
+      "id": "historical-90e4980a3416e196",
+      "workDate": "2024-07-08",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Web Site - Maintenance",
+      "hours": 1,
+      "sourceRowNumber": 162
+    },
+    {
+      "id": "historical-032636d14fee3456",
+      "workDate": "2024-07-08",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 159
+    },
+    {
+      "id": "historical-a55b1d86d662d355",
+      "workDate": "2024-07-08",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Project - Preparation",
+      "hours": 5,
+      "sourceRowNumber": 161
+    },
+    {
+      "id": "historical-2e1d875fe062c661",
+      "workDate": "2024-07-08",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Property Management",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 160
+    },
+    {
+      "id": "historical-c10a4da2444e21c7",
+      "workDate": "2024-07-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 1.25,
+      "sourceRowNumber": 163
+    },
+    {
+      "id": "historical-010acb14946ec380",
+      "workDate": "2024-07-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 164
+    },
+    {
+      "id": "historical-fc265967b92b2952",
+      "workDate": "2024-07-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Project - Implementation",
+      "hours": 1,
+      "sourceRowNumber": 165
+    },
+    {
+      "id": "historical-763deee0d30658ab",
+      "workDate": "2024-07-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Lead Generation",
+      "hours": 3,
+      "sourceRowNumber": 166
+    },
+    {
+      "id": "historical-9e8aac9860f08b29",
+      "workDate": "2024-07-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 2,
+      "sourceRowNumber": 167
+    },
+    {
+      "id": "historical-f0bd1f6e2aba29a7",
+      "workDate": "2024-07-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.25,
+      "sourceRowNumber": 169
+    },
+    {
+      "id": "historical-132730b13bde9790",
+      "workDate": "2024-07-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1.5,
+      "sourceRowNumber": 168
+    },
+    {
+      "id": "historical-8fd4f3724e01d5cf",
+      "workDate": "2024-07-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 3.5,
+      "sourceRowNumber": 170
+    },
+    {
+      "id": "historical-c330104eff8477cb",
+      "workDate": "2024-07-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Project - Preparation",
+      "hours": 1.5,
+      "sourceRowNumber": 172
+    },
+    {
+      "id": "historical-a6715cac1d196947",
+      "workDate": "2024-07-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 1.5,
+      "sourceRowNumber": 171
+    },
+    {
+      "id": "historical-8d5046b76200c831",
+      "workDate": "2024-07-11",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 6,
+      "sourceRowNumber": 174
+    },
+    {
+      "id": "historical-c798616d636e605c",
+      "workDate": "2024-07-11",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1.25,
+      "sourceRowNumber": 173
+    },
+    {
+      "id": "historical-7954b91d64c6494c",
+      "workDate": "2024-07-11",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 1.5,
+      "sourceRowNumber": 175
+    },
+    {
+      "id": "historical-4200e2f7e75c8ef0",
+      "workDate": "2024-07-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 0.5,
+      "sourceRowNumber": 179
+    },
+    {
+      "id": "historical-e571cf8129d4e104",
+      "workDate": "2024-07-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 0.5,
+      "sourceRowNumber": 178
+    },
+    {
+      "id": "historical-9f04f0feb28977a9",
+      "workDate": "2024-07-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 4.5,
+      "sourceRowNumber": 180
+    },
+    {
+      "id": "historical-0d779ae9eeecbd4c",
+      "workDate": "2024-07-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Infrastructure - Equipment, Cabling, etc.",
+      "hours": 1,
+      "sourceRowNumber": 176
+    },
+    {
+      "id": "historical-e04a9c2f55ae1e5b",
+      "workDate": "2024-07-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 177
+    },
+    {
+      "id": "historical-00bd775eda991ad4",
+      "workDate": "2024-07-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.25,
+      "sourceRowNumber": 183
+    },
+    {
+      "id": "historical-26e6ba9c7f7da0dc",
+      "workDate": "2024-07-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 182
+    },
+    {
+      "id": "historical-741faec7107edc72",
+      "workDate": "2024-07-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 2.25,
+      "sourceRowNumber": 181
+    },
+    {
+      "id": "historical-a82786defaec43ee",
+      "workDate": "2024-07-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 185
+    },
+    {
+      "id": "historical-9da8e451ab502643",
+      "workDate": "2024-07-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4.5,
+      "sourceRowNumber": 184
+    },
+    {
+      "id": "historical-059f6e268e43e53e",
+      "workDate": "2024-07-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 0.5,
+      "sourceRowNumber": 188
+    },
+    {
+      "id": "historical-8ed11fa54453730f",
+      "workDate": "2024-07-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 186
+    },
+    {
+      "id": "historical-6cb17b919eb6fcda",
+      "workDate": "2024-07-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "IT - Support",
+      "hours": 2.75,
+      "sourceRowNumber": 189
+    },
+    {
+      "id": "historical-e33a5dea09602e78",
+      "workDate": "2024-07-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.25,
+      "sourceRowNumber": 190
+    },
+    {
+      "id": "historical-d97d9e2429b57e95",
+      "workDate": "2024-07-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 3,
+      "sourceRowNumber": 187
+    },
+    {
+      "id": "historical-c786f6e5c28ac897",
+      "workDate": "2024-07-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 1.25,
+      "sourceRowNumber": 191
+    },
+    {
+      "id": "historical-bd1fd6e1b9213abd",
+      "workDate": "2024-07-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1.25,
+      "sourceRowNumber": 192
+    },
+    {
+      "id": "historical-78758e3adcc35ec4",
+      "workDate": "2024-07-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 7.5,
+      "sourceRowNumber": 194
+    },
+    {
+      "id": "historical-bab26e46a9baaa3d",
+      "workDate": "2024-07-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 0.25,
+      "sourceRowNumber": 193
+    },
+    {
+      "id": "historical-a6a55e3e9285e7e0",
+      "workDate": "2024-07-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 195
+    },
+    {
+      "id": "historical-342b998f02c9edb8",
+      "workDate": "2024-07-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 1,
+      "sourceRowNumber": 198
+    },
+    {
+      "id": "historical-73be663af1ee5804",
+      "workDate": "2024-07-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 197
+    },
+    {
+      "id": "historical-65ccfecada03d651",
+      "workDate": "2024-07-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 6,
+      "sourceRowNumber": 196
+    },
+    {
+      "id": "historical-fa495501062cee05",
+      "workDate": "2024-07-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 199
+    },
+    {
+      "id": "historical-3c22a8ceffa7d94b",
+      "workDate": "2024-07-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 200
+    },
+    {
+      "id": "historical-bbd1d29835c24da4",
+      "workDate": "2024-07-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 7,
+      "sourceRowNumber": 201
+    },
+    {
+      "id": "historical-30aa80f07b450597",
+      "workDate": "2024-07-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 3,
+      "sourceRowNumber": 202
+    },
+    {
+      "id": "historical-faf189f8b0b06d85",
+      "workDate": "2024-07-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 2,
+      "sourceRowNumber": 203
+    },
+    {
+      "id": "historical-7f4c01b7c8802975",
+      "workDate": "2024-07-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Automation - Creation/Maintenance",
+      "hours": 0.75,
+      "sourceRowNumber": 204
+    },
+    {
+      "id": "historical-c887305e43811c8c",
+      "workDate": "2024-07-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 205
+    },
+    {
+      "id": "historical-52be5a98b62de684",
+      "workDate": "2024-07-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 3,
+      "sourceRowNumber": 207
+    },
+    {
+      "id": "historical-3d3f897e2257a0d7",
+      "workDate": "2024-07-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 3,
+      "sourceRowNumber": 206
+    },
+    {
+      "id": "historical-29337f846d0345ca",
+      "workDate": "2024-07-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 209
+    },
+    {
+      "id": "historical-a5849f1b2f618b42",
+      "workDate": "2024-07-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Infrastructure - Equipment, Cabling, etc.",
+      "hours": 1.5,
+      "sourceRowNumber": 208
+    },
+    {
+      "id": "historical-07680863b7f3b86c",
+      "workDate": "2024-07-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 210
+    },
+    {
+      "id": "historical-27b1d9f9f37d22b4",
+      "workDate": "2024-07-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 5,
+      "sourceRowNumber": 211
+    },
+    {
+      "id": "historical-072c6169072aaab1",
+      "workDate": "2024-07-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 212
+    },
+    {
+      "id": "historical-5be928d150dd1dc4",
+      "workDate": "2024-07-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 214
+    },
+    {
+      "id": "historical-e97ebc77ed84c41c",
+      "workDate": "2024-07-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4,
+      "sourceRowNumber": 213
+    },
+    {
+      "id": "historical-56ceaebf75624061",
+      "workDate": "2024-07-25",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 215
+    },
+    {
+      "id": "historical-c87d4747434b3479",
+      "workDate": "2024-07-25",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 217
+    },
+    {
+      "id": "historical-4b79e02c83ab94d7",
+      "workDate": "2024-07-25",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 6,
+      "sourceRowNumber": 216
+    },
+    {
+      "id": "historical-2ec2de5cc670f586",
+      "workDate": "2024-07-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 218
+    },
+    {
+      "id": "historical-48a6610818862117",
+      "workDate": "2024-07-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 0.5,
+      "sourceRowNumber": 221
+    },
+    {
+      "id": "historical-eb47eb9a4de1c99c",
+      "workDate": "2024-07-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 1,
+      "sourceRowNumber": 222
+    },
+    {
+      "id": "historical-f87c757df2e40e28",
+      "workDate": "2024-07-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 220
+    },
+    {
+      "id": "historical-28729e5f77ceed86",
+      "workDate": "2024-07-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4.5,
+      "sourceRowNumber": 219
+    },
+    {
+      "id": "historical-8aa5d09ff3cf0bf9",
+      "workDate": "2024-07-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 1,
+      "sourceRowNumber": 226
+    },
+    {
+      "id": "historical-2103196fab781a80",
+      "workDate": "2024-07-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 223
+    },
+    {
+      "id": "historical-ba092d10f1c7133f",
+      "workDate": "2024-07-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.5,
+      "sourceRowNumber": 225
+    },
+    {
+      "id": "historical-5b50aea9145a1f80",
+      "workDate": "2024-07-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 227
+    },
+    {
+      "id": "historical-449181529611e869",
+      "workDate": "2024-07-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 5.5,
+      "sourceRowNumber": 224
+    },
+    {
+      "id": "historical-cde378a704e857c6",
+      "workDate": "2024-07-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 230
+    },
+    {
+      "id": "historical-749f9c8b9f7956ee",
+      "workDate": "2024-07-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 1.5,
+      "sourceRowNumber": 228
+    },
+    {
+      "id": "historical-fff43945a3e956b6",
+      "workDate": "2024-07-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 5.5,
+      "sourceRowNumber": 229
+    },
+    {
+      "id": "historical-68d272621284a41e",
+      "workDate": "2024-07-31",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 0.5,
+      "sourceRowNumber": 234
+    },
+    {
+      "id": "historical-10b7ed2ebd5e997c",
+      "workDate": "2024-07-31",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 231
+    },
+    {
+      "id": "historical-56537ccc1a45f88d",
+      "workDate": "2024-07-31",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 1,
+      "sourceRowNumber": 235
+    },
+    {
+      "id": "historical-89bccd29360a1dc5",
+      "workDate": "2024-07-31",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 0.25,
+      "sourceRowNumber": 233
+    },
+    {
+      "id": "historical-4209ec5619a5fd88",
+      "workDate": "2024-07-31",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 6,
+      "sourceRowNumber": 232
+    },
+    {
+      "id": "historical-34798c9a2de5583c",
+      "workDate": "2024-08-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1.5,
+      "sourceRowNumber": 236
+    },
+    {
+      "id": "historical-b68b6171f0e51d46",
+      "workDate": "2024-08-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 1,
+      "sourceRowNumber": 237
+    },
+    {
+      "id": "historical-c5f3ed8725d6d538",
+      "workDate": "2024-08-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 5,
+      "sourceRowNumber": 238
+    },
+    {
+      "id": "historical-05c78b6b9ca283f5",
+      "workDate": "2024-08-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 1.5,
+      "sourceRowNumber": 244
+    },
+    {
+      "id": "historical-93008938426c35b8",
+      "workDate": "2024-08-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 0.5,
+      "sourceRowNumber": 240
+    },
+    {
+      "id": "historical-9e44c402d8ef9b0c",
+      "workDate": "2024-08-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.25,
+      "sourceRowNumber": 243
+    },
+    {
+      "id": "historical-35a5f36d0717df88",
+      "workDate": "2024-08-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.25,
+      "sourceRowNumber": 239
+    },
+    {
+      "id": "historical-4e21709fbd0f953f",
+      "workDate": "2024-08-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 242
+    },
+    {
+      "id": "historical-af6c9b637c56fba2",
+      "workDate": "2024-08-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 6.5,
+      "sourceRowNumber": 241
+    },
+    {
+      "id": "historical-323623fa905fa5c8",
+      "workDate": "2024-08-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 245
+    },
+    {
+      "id": "historical-1660ea2329cb0419",
+      "workDate": "2024-08-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 0.5,
+      "sourceRowNumber": 248
+    },
+    {
+      "id": "historical-1535a8532741bea0",
+      "workDate": "2024-08-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 247
+    },
+    {
+      "id": "historical-2bec5c971390bef6",
+      "workDate": "2024-08-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 7,
+      "sourceRowNumber": 246
+    },
+    {
+      "id": "historical-4b25d8b37a5be2ad",
+      "workDate": "2024-08-06",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 249
+    },
+    {
+      "id": "historical-508b36f05537411a",
+      "workDate": "2024-08-06",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 251
+    },
+    {
+      "id": "historical-6e2f72e97608787c",
+      "workDate": "2024-08-06",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 7.5,
+      "sourceRowNumber": 250
+    },
+    {
+      "id": "historical-99fea94d996b97dd",
+      "workDate": "2024-08-07",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 254
+    },
+    {
+      "id": "historical-e059303da03ab6de",
+      "workDate": "2024-08-07",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Infrastructure - Equipment, Cabling, etc.",
+      "hours": 1.5,
+      "sourceRowNumber": 252
+    },
+    {
+      "id": "historical-7a6d436622e61a2c",
+      "workDate": "2024-08-07",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 7.5,
+      "sourceRowNumber": 253
+    },
+    {
+      "id": "historical-c1131c70574fcd74",
+      "workDate": "2024-08-08",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 255
+    },
+    {
+      "id": "historical-24a9e9e05007d2b6",
+      "workDate": "2024-08-08",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 0.75,
+      "sourceRowNumber": 258
+    },
+    {
+      "id": "historical-055907fa5336f989",
+      "workDate": "2024-08-08",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 257
+    },
+    {
+      "id": "historical-c16f8e8ac0b276a4",
+      "workDate": "2024-08-08",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 6,
+      "sourceRowNumber": 256
+    },
+    {
+      "id": "historical-de4407ff65445e0f",
+      "workDate": "2024-08-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 259
+    },
+    {
+      "id": "historical-1bcb16fc175b0261",
+      "workDate": "2024-08-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 260
+    },
+    {
+      "id": "historical-317f5cdb5480ad4a",
+      "workDate": "2024-08-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 3,
+      "sourceRowNumber": 262
+    },
+    {
+      "id": "historical-ef7dcbe4155c8e6a",
+      "workDate": "2024-08-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 5,
+      "sourceRowNumber": 261
+    },
+    {
+      "id": "historical-e4ac5a73222f6eb0",
+      "workDate": "2024-08-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 6,
+      "sourceRowNumber": 263
+    },
+    {
+      "id": "historical-442ba128322fd536",
+      "workDate": "2024-08-11",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 5,
+      "sourceRowNumber": 264
+    },
+    {
+      "id": "historical-a0e9ddb20252d786",
+      "workDate": "2024-08-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 265
+    },
+    {
+      "id": "historical-c28aea2eeabeb66d",
+      "workDate": "2024-08-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 3,
+      "sourceRowNumber": 267
+    },
+    {
+      "id": "historical-9d36679c80e127e8",
+      "workDate": "2024-08-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 3,
+      "sourceRowNumber": 266
+    },
+    {
+      "id": "historical-aea15ea1ffbb343e",
+      "workDate": "2024-08-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 268
+    },
+    {
+      "id": "historical-5c378511d2e7f0f9",
+      "workDate": "2024-08-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 271
+    },
+    {
+      "id": "historical-4372c9e6ca80f531",
+      "workDate": "2024-08-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2,
+      "sourceRowNumber": 269
+    },
+    {
+      "id": "historical-eba6e0a82716b0a3",
+      "workDate": "2024-08-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4,
+      "sourceRowNumber": 270
+    },
+    {
+      "id": "historical-53c37e7aae72bcec",
+      "workDate": "2024-08-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Infrastructure - Equipment, Cabling, etc.",
+      "hours": 3,
+      "sourceRowNumber": 272
+    },
+    {
+      "id": "historical-73ff3fbb0741cb9d",
+      "workDate": "2024-08-14",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2,
+      "sourceRowNumber": 273
+    },
+    {
+      "id": "historical-c1f222f4aa65a1f3",
+      "workDate": "2024-08-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 274
+    },
+    {
+      "id": "historical-330c5d38bec03429",
+      "workDate": "2024-08-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 277
+    },
+    {
+      "id": "historical-ae13578c6710446e",
+      "workDate": "2024-08-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2.5,
+      "sourceRowNumber": 276
+    },
+    {
+      "id": "historical-79e1c7c385c6aaee",
+      "workDate": "2024-08-15",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4.5,
+      "sourceRowNumber": 275
+    },
+    {
+      "id": "historical-385b49691405caa7",
+      "workDate": "2024-08-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 278
+    },
+    {
+      "id": "historical-ab6fd7035d6410a0",
+      "workDate": "2024-08-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 1,
+      "sourceRowNumber": 280
+    },
+    {
+      "id": "historical-d18357c2c524e84d",
+      "workDate": "2024-08-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 282
+    },
+    {
+      "id": "historical-2d0a90fe71fc3f1e",
+      "workDate": "2024-08-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 1.5,
+      "sourceRowNumber": 281
+    },
+    {
+      "id": "historical-68324d2679f909e9",
+      "workDate": "2024-08-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4,
+      "sourceRowNumber": 279
+    },
+    {
+      "id": "historical-6a20edd0a8ef6ef4",
+      "workDate": "2024-08-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 2,
+      "sourceRowNumber": 283
+    },
+    {
+      "id": "historical-6f51503382366bfc",
+      "workDate": "2024-08-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 284
+    },
+    {
+      "id": "historical-e3e39a11b979fa09",
+      "workDate": "2024-08-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 285
+    },
+    {
+      "id": "historical-58ad7a17a79ca8e3",
+      "workDate": "2024-08-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 6,
+      "sourceRowNumber": 286
+    },
+    {
+      "id": "historical-90bb3479b3677dd2",
+      "workDate": "2024-08-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 288
+    },
+    {
+      "id": "historical-ea29d98bca6fe5da",
+      "workDate": "2024-08-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Web Site - Maintenance",
+      "hours": 1,
+      "sourceRowNumber": 290
+    },
+    {
+      "id": "historical-1ed14d4544ba2bfb",
+      "workDate": "2024-08-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 287
+    },
+    {
+      "id": "historical-dfd6a959ad9a035d",
+      "workDate": "2024-08-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 0.5,
+      "sourceRowNumber": 289
+    },
+    {
+      "id": "historical-bedea254fb36ddf6",
+      "workDate": "2024-08-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 6,
+      "sourceRowNumber": 291
+    },
+    {
+      "id": "historical-5c2ebece50f14fad",
+      "workDate": "2024-08-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 292
+    },
+    {
+      "id": "historical-90da920b7010b805",
+      "workDate": "2024-08-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 295
+    },
+    {
+      "id": "historical-af07b6930025a394",
+      "workDate": "2024-08-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 1,
+      "sourceRowNumber": 294
+    },
+    {
+      "id": "historical-9d580c47a12037e9",
+      "workDate": "2024-08-21",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 6.5,
+      "sourceRowNumber": 293
+    },
+    {
+      "id": "historical-a089aa226930e3b6",
+      "workDate": "2024-08-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 296
+    },
+    {
+      "id": "historical-aaa30809774a7207",
+      "workDate": "2024-08-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 298
+    },
+    {
+      "id": "historical-bfa4735b42c96d7d",
+      "workDate": "2024-08-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 3,
+      "sourceRowNumber": 299
+    },
+    {
+      "id": "historical-2d74d7942a7ad2cd",
+      "workDate": "2024-08-22",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4,
+      "sourceRowNumber": 297
+    },
+    {
+      "id": "historical-6a5108643ab8a307",
+      "workDate": "2024-08-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 300
+    },
+    {
+      "id": "historical-9ae33557a63cf2fc",
+      "workDate": "2024-08-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 5,
+      "sourceRowNumber": 301
+    },
+    {
+      "id": "historical-afa7caebd3d0266a",
+      "workDate": "2024-08-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 1.5,
+      "sourceRowNumber": 302
+    },
+    {
+      "id": "historical-1aa5a58ee85dc232",
+      "workDate": "2024-08-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 2,
+      "sourceRowNumber": 306
+    },
+    {
+      "id": "historical-35458254a9d8cf51",
+      "workDate": "2024-08-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 303
+    },
+    {
+      "id": "historical-a54d3cd5da3da4ea",
+      "workDate": "2024-08-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 305
+    },
+    {
+      "id": "historical-6b2e35b80218f10b",
+      "workDate": "2024-08-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 307
+    },
+    {
+      "id": "historical-056d3f11bb7e7e6e",
+      "workDate": "2024-08-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4,
+      "sourceRowNumber": 304
+    },
+    {
+      "id": "historical-7472f452cd750439",
+      "workDate": "2024-08-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 308
+    },
+    {
+      "id": "historical-5a27b66a49db646e",
+      "workDate": "2024-08-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2.5,
+      "sourceRowNumber": 310
+    },
+    {
+      "id": "historical-3198acd65b4c7ed4",
+      "workDate": "2024-08-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 6.5,
+      "sourceRowNumber": 309
+    },
+    {
+      "id": "historical-1b707b03cad46a0f",
+      "workDate": "2024-08-28",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 311
+    },
+    {
+      "id": "historical-b3a0699843fe97e9",
+      "workDate": "2024-08-28",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 314
+    },
+    {
+      "id": "historical-d68a948e71cc3955",
+      "workDate": "2024-08-28",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 3,
+      "sourceRowNumber": 312
+    },
+    {
+      "id": "historical-2f76766eb7928120",
+      "workDate": "2024-08-28",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4,
+      "sourceRowNumber": 313
+    },
+    {
+      "id": "historical-1314a82b0de2943e",
+      "workDate": "2024-08-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 315
+    },
+    {
+      "id": "historical-a002818daf369e69",
+      "workDate": "2024-08-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 316
+    },
+    {
+      "id": "historical-7409b7cc465a6865",
+      "workDate": "2024-08-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 3.5,
+      "sourceRowNumber": 317
+    },
+    {
+      "id": "historical-5acdd4618ef092f0",
+      "workDate": "2024-08-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Implementation",
+      "hours": 2,
+      "sourceRowNumber": 319
+    },
+    {
+      "id": "historical-f6b9bfbf491b0d24",
+      "workDate": "2024-08-29",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 1,
+      "sourceRowNumber": 318
+    },
+    {
+      "id": "historical-766f370d4705c7cc",
+      "workDate": "2024-08-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 320
+    },
+    {
+      "id": "historical-11bd66677de7ad80",
+      "workDate": "2024-08-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 324
+    },
+    {
+      "id": "historical-4306462c3f9b1e43",
+      "workDate": "2024-08-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2,
+      "sourceRowNumber": 322
+    },
+    {
+      "id": "historical-387793430499cb53",
+      "workDate": "2024-08-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Implementation",
+      "hours": 1.5,
+      "sourceRowNumber": 321
+    },
+    {
+      "id": "historical-6f4f0c1ba5337f6f",
+      "workDate": "2024-08-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4.5,
+      "sourceRowNumber": 323
+    },
+    {
+      "id": "historical-d3cbfa3c9eacff6b",
+      "workDate": "2024-08-31",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 3,
+      "sourceRowNumber": 325
+    },
+    {
+      "id": "historical-f4a6f3cfdf499c4b",
+      "workDate": "2024-09-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 0.5,
+      "sourceRowNumber": 329
+    },
+    {
+      "id": "historical-89cdaf3a2a6ab915",
+      "workDate": "2024-09-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 326
+    },
+    {
+      "id": "historical-fe7e80600989b0a2",
+      "workDate": "2024-09-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 0.5,
+      "sourceRowNumber": 328
+    },
+    {
+      "id": "historical-1782fb855323e1cd",
+      "workDate": "2024-09-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 7,
+      "sourceRowNumber": 327
+    },
+    {
+      "id": "historical-2fb067951071bbfc",
+      "workDate": "2024-09-03",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 330
+    },
+    {
+      "id": "historical-875fc091c80071b8",
+      "workDate": "2024-09-03",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 331
+    },
+    {
+      "id": "historical-03e236b8d78f5be7",
+      "workDate": "2024-09-03",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 5.5,
+      "sourceRowNumber": 332
+    },
+    {
+      "id": "historical-4f9e015b41cafbaf",
+      "workDate": "2024-09-03",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 2,
+      "sourceRowNumber": 333
+    },
+    {
+      "id": "historical-4543f9272aaa85c9",
+      "workDate": "2024-09-04",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 334
+    },
+    {
+      "id": "historical-d3a6285bcbd5fd29",
+      "workDate": "2024-09-04",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 337
+    },
+    {
+      "id": "historical-1c5c8e128e37113b",
+      "workDate": "2024-09-04",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 4,
+      "sourceRowNumber": 335
+    },
+    {
+      "id": "historical-dd4a074894cc97a7",
+      "workDate": "2024-09-04",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4,
+      "sourceRowNumber": 336
+    },
+    {
+      "id": "historical-71267da639009eb5",
+      "workDate": "2024-09-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 338
+    },
+    {
+      "id": "historical-a9ea8618bc3673f3",
+      "workDate": "2024-09-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 341
+    },
+    {
+      "id": "historical-a0a95f5ff56a7242",
+      "workDate": "2024-09-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2,
+      "sourceRowNumber": 339
+    },
+    {
+      "id": "historical-00bd1f48a3b70562",
+      "workDate": "2024-09-05",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 5,
+      "sourceRowNumber": 340
+    },
+    {
+      "id": "historical-514904be569d6f70",
+      "workDate": "2024-09-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 342
+    },
+    {
+      "id": "historical-0742f3677e44e39f",
+      "workDate": "2024-09-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 2,
+      "sourceRowNumber": 346
+    },
+    {
+      "id": "historical-21d634a7f72d386c",
+      "workDate": "2024-09-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2,
+      "sourceRowNumber": 344
+    },
+    {
+      "id": "historical-63e734c0e91e3bc6",
+      "workDate": "2024-09-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Implementation",
+      "hours": 1,
+      "sourceRowNumber": 343
+    },
+    {
+      "id": "historical-a01aa8ffadc6347c",
+      "workDate": "2024-09-09",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 2,
+      "sourceRowNumber": 345
+    },
+    {
+      "id": "historical-77ffbb087778bc5b",
+      "workDate": "2024-09-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 347
+    },
+    {
+      "id": "historical-9305a9e0c1a68e5c",
+      "workDate": "2024-09-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 350
+    },
+    {
+      "id": "historical-85af896ec5f6a7e0",
+      "workDate": "2024-09-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2,
+      "sourceRowNumber": 349
+    },
+    {
+      "id": "historical-8816b570d8d0ffbb",
+      "workDate": "2024-09-10",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 5,
+      "sourceRowNumber": 348
+    },
+    {
+      "id": "historical-3142a2c23bebc331",
+      "workDate": "2024-09-11",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 351
+    },
+    {
+      "id": "historical-a5e10a3127a0867c",
+      "workDate": "2024-09-11",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 1,
+      "sourceRowNumber": 354
+    },
+    {
+      "id": "historical-c5beaa0c17f95fa5",
+      "workDate": "2024-09-11",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2.5,
+      "sourceRowNumber": 353
+    },
+    {
+      "id": "historical-b61ffcaca01395e5",
+      "workDate": "2024-09-11",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 2,
+      "sourceRowNumber": 352
+    },
+    {
+      "id": "historical-1a975963e699dbbd",
+      "workDate": "2024-09-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 355
+    },
+    {
+      "id": "historical-b1ca9eaf45d13017",
+      "workDate": "2024-09-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 357
+    },
+    {
+      "id": "historical-51f8a6cd020c6acc",
+      "workDate": "2024-09-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 0.5,
+      "sourceRowNumber": 358
+    },
+    {
+      "id": "historical-aa68cc4683102164",
+      "workDate": "2024-09-12",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 3,
+      "sourceRowNumber": 356
+    },
+    {
+      "id": "historical-501d934606a01f4f",
+      "workDate": "2024-09-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 359
+    },
+    {
+      "id": "historical-a3de818f4f7658a5",
+      "workDate": "2024-09-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Implementation",
+      "hours": 0.5,
+      "sourceRowNumber": 360
+    },
+    {
+      "id": "historical-9271366d539a6792",
+      "workDate": "2024-09-13",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 1.5,
+      "sourceRowNumber": 361
+    },
+    {
+      "id": "historical-59fdf9e54eac1a58",
+      "workDate": "2024-09-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 362
+    },
+    {
+      "id": "historical-1023f353992aa0f4",
+      "workDate": "2024-09-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 2,
+      "sourceRowNumber": 363
+    },
+    {
+      "id": "historical-201de68d21f3190f",
+      "workDate": "2024-09-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 1,
+      "sourceRowNumber": 364
+    },
+    {
+      "id": "historical-0a93fb2de591add0",
+      "workDate": "2024-09-16",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 3,
+      "sourceRowNumber": 365
+    },
+    {
+      "id": "historical-cd5d1b9c09e4baad",
+      "workDate": "2024-09-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 3,
+      "sourceRowNumber": 367
+    },
+    {
+      "id": "historical-b33fd6ba9b5b40eb",
+      "workDate": "2024-09-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 366
+    },
+    {
+      "id": "historical-934a03547548f191",
+      "workDate": "2024-09-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 0.5,
+      "sourceRowNumber": 370
+    },
+    {
+      "id": "historical-9d86330dd016a46b",
+      "workDate": "2024-09-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1.5,
+      "sourceRowNumber": 369
+    },
+    {
+      "id": "historical-f924fef920c7ac57",
+      "workDate": "2024-09-17",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 3,
+      "sourceRowNumber": 368
+    },
+    {
+      "id": "historical-ea397231bb24121a",
+      "workDate": "2024-09-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 371
+    },
+    {
+      "id": "historical-94457e01879eafdf",
+      "workDate": "2024-09-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 1.5,
+      "sourceRowNumber": 372
+    },
+    {
+      "id": "historical-81193d8fc8fa0808",
+      "workDate": "2024-09-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 377
+    },
+    {
+      "id": "historical-d465093fb40188a7",
+      "workDate": "2024-09-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 375
+    },
+    {
+      "id": "historical-d4a4e4f6e11ea379",
+      "workDate": "2024-09-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Property Management",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 373
+    },
+    {
+      "id": "historical-fa3948115ca552d4",
+      "workDate": "2024-09-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 1.5,
+      "sourceRowNumber": 376
+    },
+    {
+      "id": "historical-6c29cdcf92d1e731",
+      "workDate": "2024-09-18",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 3,
+      "sourceRowNumber": 374
+    },
+    {
+      "id": "historical-53eb20abff1f927a",
+      "workDate": "2024-09-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 4,
+      "sourceRowNumber": 381
+    },
+    {
+      "id": "historical-96d9e176abe1996d",
+      "workDate": "2024-09-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1.5,
+      "sourceRowNumber": 378
+    },
+    {
+      "id": "historical-27d91649b52f4006",
+      "workDate": "2024-09-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Property Management",
+      "activityName": "Project - Implementation",
+      "hours": 2,
+      "sourceRowNumber": 380
+    },
+    {
+      "id": "historical-1d9748765332a766",
+      "workDate": "2024-09-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Property Management",
+      "activityName": "Training - Preparing/Presenting",
+      "hours": 1,
+      "sourceRowNumber": 382
+    },
+    {
+      "id": "historical-5c66e124216f00e9",
+      "workDate": "2024-09-19",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 0.5,
+      "sourceRowNumber": 379
+    },
+    {
+      "id": "historical-afe31006e870e58d",
+      "workDate": "2024-09-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 384
+    },
+    {
+      "id": "historical-049735c855646e89",
+      "workDate": "2024-09-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 2,
+      "sourceRowNumber": 387
+    },
+    {
+      "id": "historical-f8dbe4418aff58dc",
+      "workDate": "2024-09-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "Training - Preparing/Presenting",
+      "hours": 2.5,
+      "sourceRowNumber": 385
+    },
+    {
+      "id": "historical-e467e4a80752e12b",
+      "workDate": "2024-09-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 0.5,
+      "sourceRowNumber": 383
+    },
+    {
+      "id": "historical-0d79fab0d0212c37",
+      "workDate": "2024-09-20",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 3,
+      "sourceRowNumber": 386
+    },
+    {
+      "id": "historical-51b08722aecfecb9",
+      "workDate": "2024-09-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 2,
+      "sourceRowNumber": 396
+    },
+    {
+      "id": "historical-b90bed8b258b6acd",
+      "workDate": "2024-09-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 392
+    },
+    {
+      "id": "historical-6f7681c747baf5a6",
+      "workDate": "2024-09-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 1,
+      "sourceRowNumber": 397
+    },
+    {
+      "id": "historical-d8cd96a70e42cf0f",
+      "workDate": "2024-09-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Project - Preparation",
+      "hours": 2,
+      "sourceRowNumber": 393
+    },
+    {
+      "id": "historical-a594fec91c0b9454",
+      "workDate": "2024-09-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Training - Preparing/Presenting",
+      "hours": 1,
+      "sourceRowNumber": 394
+    },
+    {
+      "id": "historical-c244ee2e3cfbc3d0",
+      "workDate": "2024-09-23",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 1,
+      "sourceRowNumber": 395
+    },
+    {
+      "id": "historical-1995bb07c9c06a1b",
+      "workDate": "2024-09-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 2,
+      "sourceRowNumber": 388
+    },
+    {
+      "id": "historical-11b5f41f59ef842b",
+      "workDate": "2024-09-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 0.5,
+      "sourceRowNumber": 391
+    },
+    {
+      "id": "historical-56e036a2d8c12685",
+      "workDate": "2024-09-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 4,
+      "sourceRowNumber": 390
+    },
+    {
+      "id": "historical-4e9bf0fef2715dab",
+      "workDate": "2024-09-24",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Project - Implementation",
+      "hours": 3,
+      "sourceRowNumber": 389
+    },
+    {
+      "id": "historical-d77ee6158a12f2d1",
+      "workDate": "2024-09-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1.5,
+      "sourceRowNumber": 398
+    },
+    {
+      "id": "historical-002550d2caa6a127",
+      "workDate": "2024-09-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "General - Unspecified",
+      "hours": 1,
+      "sourceRowNumber": 402
+    },
+    {
+      "id": "historical-48168e7610ff8547",
+      "workDate": "2024-09-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 2,
+      "sourceRowNumber": 399
+    },
+    {
+      "id": "historical-4e0fc7b21ffdeb84",
+      "workDate": "2024-09-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 401
+    },
+    {
+      "id": "historical-4b549213c7936835",
+      "workDate": "2024-09-26",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 3,
+      "sourceRowNumber": 400
+    },
+    {
+      "id": "historical-f6b0d1aa4e414b81",
+      "workDate": "2024-09-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 403
+    },
+    {
+      "id": "historical-5d193e4cef76b33f",
+      "workDate": "2024-09-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 406
+    },
+    {
+      "id": "historical-92deeccce3081756",
+      "workDate": "2024-09-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Property Management",
+      "activityName": "IT - Support",
+      "hours": 1,
+      "sourceRowNumber": 405
+    },
+    {
+      "id": "historical-fbb3129c09a87bcf",
+      "workDate": "2024-09-27",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 4,
+      "sourceRowNumber": 404
+    },
+    {
+      "id": "historical-ed941d9bc2e2d02e",
+      "workDate": "2024-09-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "AI - Research",
+      "hours": 2,
+      "sourceRowNumber": 409
+    },
+    {
+      "id": "historical-91efa695df5a224c",
+      "workDate": "2024-09-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 2,
+      "sourceRowNumber": 407
+    },
+    {
+      "id": "historical-01052e67ebb3b8a3",
+      "workDate": "2024-09-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Company",
+      "activityName": "IT - Support",
+      "hours": 1.5,
+      "sourceRowNumber": 410
+    },
+    {
+      "id": "historical-2825e37dde7b313d",
+      "workDate": "2024-09-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Cognito Forms - Creation/Modification",
+      "hours": 1,
+      "sourceRowNumber": 408
+    },
+    {
+      "id": "historical-3af2b88cdf595560",
+      "workDate": "2024-09-30",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Preparation",
+      "hours": 2,
+      "sourceRowNumber": 411
+    },
+    {
+      "id": "historical-aa8b86c1d91b2c58",
+      "workDate": "2024-10-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 412
+    },
+    {
+      "id": "historical-393fa551a097d212",
+      "workDate": "2024-10-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Project - Preparation",
+      "hours": 4,
+      "sourceRowNumber": 413
+    },
+    {
+      "id": "historical-39b49eb6727c6f43",
+      "workDate": "2024-10-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 2,
+      "sourceRowNumber": 415
+    },
+    {
+      "id": "historical-3eef4a237b3c875b",
+      "workDate": "2024-10-01",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 2,
+      "sourceRowNumber": 414
+    },
+    {
+      "id": "historical-1326187c63dba83b",
+      "workDate": "2024-10-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 416
+    },
+    {
+      "id": "historical-5cd49978677165c9",
+      "workDate": "2024-10-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Office",
+      "activityName": "Grey Fox - IT Support",
+      "hours": 0.5,
+      "sourceRowNumber": 419
+    },
+    {
+      "id": "historical-e9a749aca4461bf2",
+      "workDate": "2024-10-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Project - Coding",
+      "hours": 1,
+      "sourceRowNumber": 418
+    },
+    {
+      "id": "historical-076c81f8991321e6",
+      "workDate": "2024-10-02",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 6,
+      "sourceRowNumber": 417
+    },
+    {
+      "id": "historical-bf0118b737b1cf3d",
+      "workDate": "2024-10-04",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Administration",
+      "activityName": "Email - Responding/Creating",
+      "hours": 1,
+      "sourceRowNumber": 420
+    },
+    {
+      "id": "historical-fc2cc4fd38e15d97",
+      "workDate": "2024-10-04",
+      "employeeName": "Ken Boyle",
+      "departmentName": "Sales",
+      "activityName": "Vault Maintenance",
+      "hours": 7,
+      "sourceRowNumber": 421
+    }
+  ]
+}
