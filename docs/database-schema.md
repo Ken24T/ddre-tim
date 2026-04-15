@@ -248,6 +248,22 @@ Import rules:
 - Keep imported `Hours` as historical daily totals only; do not fabricate live event timestamps from them
 - Regenerate the current repo seed file with `npm run import:tim-records -- "/home/ken/Downloads/TiM Metrics.xlsx"`, which writes `infra/seeds/ken-boyle-historical-tim-records.json`
 
+## Current Repo DB Artifacts
+
+The repository now contains an initial SQL implementation of the recommended tables in `infra/sql/001_initial_schema.sql` and a generated historical seed load in `infra/sql/010_seed_ken_boyle_historical.sql`.
+
+Current behavior of the generated seed:
+
+- inserts a single Ken Boyle user row
+- derives the user's default department from the imported department with the highest total hours
+- inserts shared timed activities from the imported workbook rows plus the system-managed `Not Timed` activity
+- loads all 368 Ken Boyle historical rows into `historical_tim_daily_records` with mapped user, department, and activity ids
+
+Validation commands:
+
+- `npm run db:generate-seed`
+- `npm run db:validate`
+
 ## Recommended Direction For This Repo
 
 For the new application, build the live database around `users`, `departments`, `activities`, `devices`, and append-only `activity_events`.

@@ -8,6 +8,7 @@ Time in Motion is a multi-user activity capture system built around a lightweigh
 - Shared domain contracts for activities, user settings, and sync batches.
 - A minimal Fastify API with health, activity catalog, user settings, and sync-batch endpoints.
 - A repeatable workbook import script that generates Ken Boyle-only historical seed data for future persistence and reporting work.
+- An initial PostgreSQL schema plus generated SQL seed files for local development and future persistence work.
 - Core architecture and workflow docs to keep implementation decisions explicit.
 
 ## Planned Components
@@ -24,5 +25,6 @@ Time in Motion is a multi-user activity capture system built around a lightweigh
 2. Run `npm install` from the repo root.
 3. Run `npm run dev:api` to start the initial API.
 4. Optional: run `npm run import:tim-records -- "/home/ken/Downloads/TiM Metrics.xlsx"` to regenerate the historical Ken Boyle seed data.
+5. Optional: run `npm run db:generate-seed && npm run db:validate` to refresh and validate the local SQL seed artifacts.
 
 See `docs/development-setup.md` for more detail.
