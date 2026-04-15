@@ -12,6 +12,10 @@
   "dependencies": {
     "@ddre/contracts": "file:../../packages/contracts",
     "fastify": "^5.0.0",
+    "pg": "^8.20.0",
     "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0"
   }
 }

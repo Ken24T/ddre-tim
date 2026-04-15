@@ -9,6 +9,7 @@ The current runtime target is a zero-cost office-hosted deployment: the shared A
 - Monorepo root tooling for TypeScript workspaces.
 - Shared domain contracts for activities, user settings, and sync batches.
 - A minimal Fastify API with health, activity catalog, user settings, and sync-batch endpoints.
+- User settings can now persist in PostgreSQL when `DATABASE_URL` is configured, while local development can still fall back to in-memory storage.
 - A repeatable workbook import script that generates Ken Boyle-only historical seed data for future persistence and reporting work.
 - An initial PostgreSQL schema plus generated SQL seed files for local development and future persistence work.
 - Core architecture and workflow docs to keep implementation decisions explicit.

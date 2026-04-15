@@ -8,16 +8,22 @@ import {
 } from "@ddre/contracts";
 import { ZodError } from "zod";
 import { getActivityCatalog } from "./data.js";
-import { getUserSettings, upsertUserSettings } from "./settings.js";
+import { createUserSettingsStore, type UserSettingsStore } from "./settings.js";
 
 export interface BuildServerOptions {
   logger?: boolean;
+  userSettingsStore?: UserSettingsStore;
 }
 
 export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   const server = Fastify({ logger: options.logger ?? true });
   const seenEventIds = new Set<string>();
   const userParamsSchema = userSettingsSchema.pick({ userId: true });
+  const userSettingsStore = options.userSettingsStore ?? createUserSettingsStore();
+
+  server.addHook("onClose", async () => {
+    await userSettingsStore.close?.();
+  });
 
   server.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {
@@ -45,14 +51,14 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   server.get("/v1/users/:userId/settings", async (request) => {
     const { userId } = userParamsSchema.parse(request.params);
 
-    return userSettingsSchema.parse(getUserSettings(userId));
+    return userSettingsSchema.parse(await userSettingsStore.getUserSettings(userId));
   });
 
   server.put("/v1/users/:userId/settings", async (request) => {
     const { userId } = userParamsSchema.parse(request.params);
     const settingsUpdate = userSettingsUpdateSchema.parse(request.body);
 
-    return userSettingsSchema.parse(upsertUserSettings(userId, settingsUpdate));
+    return userSettingsSchema.parse(await userSettingsStore.upsertUserSettings(userId, settingsUpdate));
   });
 
   server.post("/v1/sync-batches", async (request, reply) => {

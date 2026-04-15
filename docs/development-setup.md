@@ -13,6 +13,22 @@
 2. Start the API with `npm run dev:api`.
 3. Open `http://localhost:4000/health` to confirm the service is running.
 
+By default the current API still uses in-memory storage for user settings if no database connection string is configured.
+
+## API Persistence
+
+The current persistence slice adds PostgreSQL-backed storage for user settings.
+
+To run the API against PostgreSQL instead of the in-memory fallback:
+
+1. Make sure the SQL files in `infra/sql/` have been applied to the target database.
+2. Start the API with `DATABASE_URL=<postgres-connection-string> npm run dev:api`.
+
+Current behavior:
+
+- without `DATABASE_URL`, user settings stay in memory for local iteration
+- with `DATABASE_URL`, user settings are stored in PostgreSQL using the `user_settings_snapshots` table
+
 ## Historical Test Data
 
 To regenerate the current historical seed data from the workbook:
@@ -31,6 +47,7 @@ The importer currently:
 The repo now includes:
 
 - `infra/sql/001_initial_schema.sql` for the initial PostgreSQL schema
+- `infra/sql/002_user_settings_snapshots.sql` for the current API settings-persistence table
 - `infra/sql/010_seed_ken_boyle_historical.sql` for the generated historical seed load
 
 Useful commands:

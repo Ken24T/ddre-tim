@@ -1,14 +1,46 @@
-import type { Activity, ActivityDraft, Department, UserSettings, UserSettingsUpdate } from "@ddre/contracts";
+import {
+  userSettingsSchema,
+  type Activity,
+  type ActivityDraft,
+  type Department,
+  type UserSettings,
+  type UserSettingsUpdate
+} from "@ddre/contracts";
+import { Pool } from "pg";
 import { ZodError, ZodIssueCode } from "zod";
 import { getActivityCatalog, getDepartmentCatalog } from "./data.js";
 
-const settingsStore = new Map<string, UserSettings>();
 const availableDepartments = getDepartmentCatalog();
 const preferredDefaultDepartmentId = "department-property-management";
 const defaultDepartmentId = availableDepartments.find(
   (department) => department.id === preferredDefaultDepartmentId
 )?.id ?? availableDepartments[0]?.id ?? preferredDefaultDepartmentId;
 const knownDepartmentIds = new Set(availableDepartments.map((department) => department.id));
+
+interface QueryResultRow {
+  [columnName: string]: unknown;
+}
+
+interface Queryable {
+  query<Row extends QueryResultRow>(text: string, params?: readonly unknown[]): Promise<{ rows: Row[] }>;
+  end?(): Promise<void>;
+}
+
+interface StoredSettingsRow extends QueryResultRow {
+  settings_payload: unknown;
+}
+
+export interface UserSettingsStore {
+  getUserSettings(userId: string): Promise<UserSettings>;
+  upsertUserSettings(userId: string, settingsUpdate: UserSettingsUpdate): Promise<UserSettings>;
+  close?(): Promise<void>;
+}
+
+export interface CreateUserSettingsStoreOptions {
+  connectionString?: string;
+  pool?: Queryable;
+}
+
 const defaultNonTimedActivity: Activity = {
   id: "activity-not-timed",
   slug: "not-timed",
@@ -18,6 +50,14 @@ const defaultNonTimedActivity: Activity = {
   isSystem: true,
   isActive: true
 };
+
+function cloneUserSettings(settings: UserSettings): UserSettings {
+  return {
+    ...settings,
+    departments: cloneDepartments(settings.departments),
+    activities: settings.activities.map((activity) => ({ ...activity }))
+  };
+}
 
 function cloneDepartments(departments: Department[]): Department[] {
   return departments.map((department) => ({ ...department }));
@@ -79,17 +119,7 @@ function getDefaultActivities(defaultDepartmentIdForUser: string): Activity[] {
   ];
 }
 
-export function getUserSettings(userId: string): UserSettings {
-  const existingSettings = settingsStore.get(userId);
-
-  if (existingSettings) {
-    return {
-      ...existingSettings,
-      departments: cloneDepartments(existingSettings.departments),
-      activities: existingSettings.activities.map((activity) => ({ ...activity }))
-    };
-  }
-
+function createDefaultUserSettings(userId: string): UserSettings {
   return {
     userId,
     displayName: "",
@@ -101,13 +131,10 @@ export function getUserSettings(userId: string): UserSettings {
   };
 }
 
-export function upsertUserSettings(
-  userId: string,
-  settingsUpdate: UserSettingsUpdate
-): UserSettings {
+function createStoredUserSettings(userId: string, settingsUpdate: UserSettingsUpdate): UserSettings {
   assertKnownDepartmentId(settingsUpdate.defaultDepartmentId, ["defaultDepartmentId"]);
 
-  const storedSettings: UserSettings = {
+  return {
     userId,
     displayName: settingsUpdate.displayName,
     isConfigured: true,
@@ -116,12 +143,82 @@ export function upsertUserSettings(
     activities: buildStoredActivities(settingsUpdate.activities, settingsUpdate.defaultDepartmentId),
     updatedAt: new Date().toISOString()
   };
+}
 
-  settingsStore.set(userId, storedSettings);
+function parseStoredUserSettings(value: unknown): UserSettings {
+  const rawValue = typeof value === "string" ? JSON.parse(value) : value;
+  return userSettingsSchema.parse(rawValue);
+}
 
-  return {
-    ...storedSettings,
-    departments: cloneDepartments(storedSettings.departments),
-    activities: storedSettings.activities.map((activity) => ({ ...activity }))
-  };
+class InMemoryUserSettingsStore implements UserSettingsStore {
+  private readonly settingsStore = new Map<string, UserSettings>();
+
+  async getUserSettings(userId: string): Promise<UserSettings> {
+    const existingSettings = this.settingsStore.get(userId);
+
+    if (!existingSettings) {
+      return createDefaultUserSettings(userId);
+    }
+
+    return cloneUserSettings(existingSettings);
+  }
+
+  async upsertUserSettings(userId: string, settingsUpdate: UserSettingsUpdate): Promise<UserSettings> {
+    const storedSettings = createStoredUserSettings(userId, settingsUpdate);
+    this.settingsStore.set(userId, storedSettings);
+
+    return cloneUserSettings(storedSettings);
+  }
+}
+
+class PostgresUserSettingsStore implements UserSettingsStore {
+  constructor(private readonly pool: Queryable) {}
+
+  async getUserSettings(userId: string): Promise<UserSettings> {
+    const result = await this.pool.query<StoredSettingsRow>(
+      "select settings_payload from user_settings_snapshots where user_id = $1",
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return createDefaultUserSettings(userId);
+    }
+
+    return cloneUserSettings(parseStoredUserSettings(result.rows[0].settings_payload));
+  }
+
+  async upsertUserSettings(userId: string, settingsUpdate: UserSettingsUpdate): Promise<UserSettings> {
+    const storedSettings = createStoredUserSettings(userId, settingsUpdate);
+
+    await this.pool.query(
+      [
+        "insert into user_settings_snapshots (user_id, settings_payload, updated_at)",
+        "values ($1, $2::jsonb, $3::timestamptz)",
+        "on conflict (user_id) do update",
+        "set settings_payload = excluded.settings_payload,",
+        "    updated_at = excluded.updated_at"
+      ].join("\n"),
+      [userId, JSON.stringify(storedSettings), storedSettings.updatedAt]
+    );
+
+    return cloneUserSettings(storedSettings);
+  }
+
+  async close(): Promise<void> {
+    await this.pool.end?.();
+  }
+}
+
+export function createUserSettingsStore(options: CreateUserSettingsStoreOptions = {}): UserSettingsStore {
+  if (options.pool) {
+    return new PostgresUserSettingsStore(options.pool);
+  }
+
+  const connectionString = options.connectionString ?? process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    return new InMemoryUserSettingsStore();
+  }
+
+  return new PostgresUserSettingsStore(new Pool({ connectionString }));
 }

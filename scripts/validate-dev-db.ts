@@ -1,12 +1,12 @@
-import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { readdir, readFile } from "node:fs/promises";
+import { dirname, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { newDb } from "pg-mem";
 import { buildHistoricalSeedSql, readImportedHistoricalSeed } from "./lib/historical-seed-sql.js";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDirectory, "..");
-const schemaPath = resolve(repoRoot, "infra/sql/001_initial_schema.sql");
+const sqlDirectoryPath = resolve(repoRoot, "infra/sql");
 const seedSqlPath = resolve(repoRoot, "infra/sql/010_seed_ken_boyle_historical.sql");
 
 function readCount(db: ReturnType<typeof newDb>, query: string): number {
@@ -14,9 +14,22 @@ function readCount(db: ReturnType<typeof newDb>, query: string): number {
   return Number(row.count);
 }
 
+async function readSchemaSql(): Promise<string> {
+  const sqlFileNames = (await readdir(sqlDirectoryPath))
+    .filter((fileName) => extname(fileName) === ".sql")
+    .filter((fileName) => fileName !== "010_seed_ken_boyle_historical.sql")
+    .sort((left, right) => left.localeCompare(right));
+
+  const sqlContents = await Promise.all(
+    sqlFileNames.map((fileName) => readFile(resolve(sqlDirectoryPath, fileName), "utf8"))
+  );
+
+  return `${sqlContents.join("\n\n")}\n`;
+}
+
 async function main(): Promise<void> {
   const [schemaSql, generatedSeed, storedSeedSql] = await Promise.all([
-    readFile(schemaPath, "utf8"),
+    readSchemaSql(),
     readImportedHistoricalSeed().then((seed) => ({ seed, built: buildHistoricalSeedSql(seed) })),
     readFile(seedSqlPath, "utf8")
   ]);
@@ -35,6 +48,7 @@ async function main(): Promise<void> {
   const activityCount = readCount(db, "select count(*) as count from activities;");
   const assignmentCount = readCount(db, "select count(*) as count from user_activity_assignments;");
   const historicalCount = readCount(db, "select count(*) as count from historical_tim_daily_records;");
+  const settingsSnapshotCount = readCount(db, "select count(*) as count from user_settings_snapshots;");
   const mappedUserCount = readCount(db, "select count(mapped_user_id) as count from historical_tim_daily_records;");
   const mappedDepartmentCount = readCount(db, "select count(mapped_department_id) as count from historical_tim_daily_records;");
   const mappedActivityCount = readCount(db, "select count(mapped_activity_id) as count from historical_tim_daily_records;");
@@ -63,6 +77,10 @@ async function main(): Promise<void> {
 
   if (historicalCount !== generatedSeed.seed.recordCount) {
     throw new Error(`Expected ${generatedSeed.seed.recordCount} historical records, found ${historicalCount}.`);
+  }
+
+  if (settingsSnapshotCount !== 0) {
+    throw new Error(`Expected 0 user settings snapshots in the generated seed, found ${settingsSnapshotCount}.`);
   }
 
   if (mappedUserCount !== historicalCount) {
