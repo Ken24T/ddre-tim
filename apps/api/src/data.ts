@@ -1,4 +1,55 @@
-import type { Activity, ActivityCatalogResponse } from "@ddre/contracts";
+import type { Activity, ActivityCatalogResponse, Department } from "@ddre/contracts";
+
+const knownDepartments: Department[] = [
+  {
+    id: "department-property-management",
+    slug: "property-management",
+    name: "Property Management",
+    isActive: true
+  },
+  {
+    id: "department-sales",
+    slug: "sales",
+    name: "Sales",
+    isActive: true
+  },
+  {
+    id: "department-administration",
+    slug: "administration",
+    name: "Administration",
+    isActive: true
+  },
+  {
+    id: "department-accounts",
+    slug: "accounts",
+    name: "Accounts",
+    isActive: true
+  },
+  {
+    id: "department-business-development",
+    slug: "business-development",
+    name: "Business Development",
+    isActive: true
+  },
+  {
+    id: "department-company",
+    slug: "company",
+    name: "Company",
+    isActive: true
+  },
+  {
+    id: "department-human-resources",
+    slug: "human-resources",
+    name: "Human Resources",
+    isActive: true
+  },
+  {
+    id: "department-office",
+    slug: "office",
+    name: "Office",
+    isActive: true
+  }
+];
 
 const knownActivities: Activity[] = [
   {
@@ -44,4 +95,8 @@ export function getActivityCatalog(): ActivityCatalogResponse {
     activities: knownActivities,
     refreshedAt: new Date().toISOString()
   };
+}
+
+export function getDepartmentCatalog(): Department[] {
+  return knownDepartments.map((department) => ({ ...department }));
 }

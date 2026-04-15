@@ -7,6 +7,7 @@ Time in Motion is a multi-user activity capture system built around a lightweigh
 - Monorepo root tooling for TypeScript workspaces.
 - Shared domain contracts for activities, user settings, and sync batches.
 - A minimal Fastify API with health, activity catalog, user settings, and sync-batch endpoints.
+- A repeatable workbook import script that generates Ken Boyle-only historical seed data for future persistence and reporting work.
 - Core architecture and workflow docs to keep implementation decisions explicit.
 
 ## Planned Components
@@ -22,5 +23,6 @@ Time in Motion is a multi-user activity capture system built around a lightweigh
 1. Install Node.js 22+ and Rust stable.
 2. Run `npm install` from the repo root.
 3. Run `npm run dev:api` to start the initial API.
+4. Optional: run `npm run import:tim-records -- "/home/ken/Downloads/TiM Metrics.xlsx"` to regenerate the historical Ken Boyle seed data.
 
 See `docs/development-setup.md` for more detail.

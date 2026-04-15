@@ -11,11 +11,13 @@
   "scripts": {
     "build": "npm run build --workspace @ddre/contracts && npm run build --workspace @ddre/api",
     "dev:api": "npm run dev --workspace @ddre/api",
+    "import:tim-records": "tsx scripts/import-tim-records.ts",
     "typecheck": "npm run typecheck --workspace @ddre/contracts && npm run typecheck --workspace @ddre/api"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "xlsx": "^0.18.5"
   }
 }

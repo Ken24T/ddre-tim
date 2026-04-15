@@ -5,8 +5,10 @@
 1. The user logs into their workstation and the tray app auto-starts inside their desktop session.
 2. On first run, the app requires settings completion before timed capture begins.
 3. The user enters their name, which is stored in Propercase.
-4. The user maintains a department-appropriate list of timed activities and can create, edit, or remove those timed activities later.
-5. The system always includes a non-removable `Not Timed` activity for non-billable or uncategorized time.
+4. The user selects a default department for new work.
+5. The user maintains a department-appropriate list of timed activities, and each new activity inherits the default department unless the user assigns a different department to that activity.
+6. The user can later change an activity's department without losing the ability to work across multiple departments.
+7. The system always includes a non-removable `Not Timed` activity for non-billable or uncategorized time.
 
 ## Activity Capture
 
