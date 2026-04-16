@@ -77,7 +77,8 @@ body {
 .hero,
 .summary-grid,
 .grid,
-.control-panel {
+.control-panel,
+.api-detail-grid {
   max-width: 1120px;
   margin-left: auto;
   margin-right: auto;
@@ -85,6 +86,13 @@ body {
 
 .hero {
   margin-bottom: 28px;
+}
+
+.hero-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
 }
 
 .eyebrow {
@@ -116,6 +124,106 @@ body {
   color: var(--text-secondary);
   font-size: 1.06rem;
   line-height: 1.65;
+}
+
+.api-status-flyout {
+  position: relative;
+  margin-left: auto;
+}
+
+.api-status-flyout summary {
+  list-style: none;
+}
+
+.api-status-flyout summary::-webkit-details-marker {
+  display: none;
+}
+
+.api-status-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+  padding: 10px 14px;
+  border: 1px solid rgba(213, 234, 244, 0.18);
+  border-radius: 999px;
+  background: rgba(231, 245, 252, 0.08);
+  box-shadow: 0 16px 36px rgba(10, 16, 42, 0.2);
+  cursor: pointer;
+}
+
+.api-status-trigger:focus-visible {
+  outline: 2px solid rgba(146, 208, 200, 0.5);
+  outline-offset: 3px;
+}
+
+.api-status-indicator {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-radius: 50%;
+  background: var(--ice-100);
+  box-shadow: 0 0 0 4px rgba(238, 248, 252, 0.12);
+}
+
+.api-status-flyout.is-online .api-status-indicator {
+  background: var(--mint-300);
+  box-shadow: 0 0 0 4px rgba(146, 208, 200, 0.16);
+}
+
+.api-status-flyout.is-checking .api-status-indicator {
+  background: #d9eaf2;
+  box-shadow: 0 0 0 4px rgba(217, 234, 242, 0.16);
+}
+
+.api-status-flyout.is-offline .api-status-indicator {
+  background: #f1a9a9;
+  box-shadow: 0 0 0 4px rgba(241, 169, 169, 0.16);
+}
+
+.api-status-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.api-status-copy strong {
+  font-size: 0.96rem;
+}
+
+.api-status-copy small {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.api-status-popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(360px, calc(100vw - 40px));
+  padding: 18px;
+  border: 1px solid rgba(213, 234, 244, 0.18);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(35, 56, 118, 0.96), rgba(18, 31, 73, 0.96));
+  box-shadow: 0 26px 54px rgba(7, 12, 34, 0.34);
+  backdrop-filter: blur(20px);
+  z-index: 4;
+}
+
+.api-status-section + .api-status-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(213, 234, 244, 0.12);
+}
+
+.api-status-popover p {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.api-status-popover code {
+  font-family: "Consolas", "Liberation Mono", monospace;
+  font-size: 0.92em;
 }
 
 .panel {
@@ -319,6 +427,13 @@ body {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+}
+
+.api-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
 }
 
 .panel-span-2 {
@@ -602,6 +717,7 @@ body {
 
 @media (max-width: 980px) {
   .control-panel,
+  .api-detail-grid,
   .summary-grid,
   .grid {
     grid-template-columns: 1fr;
@@ -623,6 +739,27 @@ body {
 @media (max-width: 720px) {
   .shell {
     padding-top: 32px;
+  }
+
+  .hero-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .api-status-flyout {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .api-status-trigger {
+    width: 100%;
+  }
+
+  .api-status-popover {
+    left: 0;
+    right: auto;
+    width: min(100%, calc(100vw - 40px));
   }
 
   .user-filter-header {

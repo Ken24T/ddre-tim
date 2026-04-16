@@ -319,11 +319,71 @@ export default function App() {
   const departmentRows = dashboardData?.departmentBreakdown.slice(0, 8) ?? [];
   const userChartMax = Math.max(...userRows.map((row) => row.hours), 0);
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
+  const apiStatusTone = healthState.phase === "ready" ? "online" : healthState.phase === "error" ? "offline" : "checking";
+  const apiStatusLabel =
+    healthState.phase === "ready" ? "API connected" : healthState.phase === "error" ? "API unavailable" : "Checking API";
+  const apiStatusMeta =
+    healthState.phase === "ready"
+      ? `${healthState.payload.service} responding`
+      : healthState.phase === "error"
+        ? "Open for connection details"
+        : "Waiting for local health check";
 
   return (
     <main className="shell">
       <section className="hero">
-        <p className="eyebrow">Time in Motion</p>
+        <div className="hero-bar">
+          <p className="eyebrow">Time in Motion</p>
+
+          <details className={`api-status-flyout is-${apiStatusTone}`}>
+            <summary className="api-status-trigger">
+              <span className="api-status-indicator" aria-hidden="true" />
+              <span className="api-status-copy">
+                <strong>{apiStatusLabel}</strong>
+                <small>{apiStatusMeta}</small>
+              </span>
+            </summary>
+
+            <div className="api-status-popover">
+              <div className="api-status-section">
+                <p className="panel-label">API connection</p>
+                {healthState.phase === "loading" ? <p>Checking the local API connection.</p> : null}
+                {healthState.phase === "ready" ? (
+                  <>
+                    <p>Status: {healthState.payload.status.toUpperCase()}</p>
+                    <p>Service: {healthState.payload.service}</p>
+                    <p>Checked: {formatTimestamp(healthState.payload.now)}</p>
+                  </>
+                ) : null}
+                {healthState.phase === "error" ? (
+                  <>
+                    <p>{healthState.message}</p>
+                    <p>Start the local API with <code>npm run dev:api</code>.</p>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="api-status-section api-status-section-secondary">
+                <p className="panel-label">Read model</p>
+                {dashboardData ? (
+                  <>
+                    <p>Imported: {formatTimestamp(dashboardData.importedAt)}</p>
+                    <p>Source: <code>{dashboardData.sourceFile}</code></p>
+                    <p>{dashboardData.scopeLabel} within {dashboardData.filters.selectedDepartment ?? "all departments"}.</p>
+                  </>
+                ) : dashboardState.phase === "error" ? (
+                  <>
+                    <p>{dashboardState.message}</p>
+                    <p>The API responded, but the dashboard read model did not load successfully.</p>
+                  </>
+                ) : (
+                  <p>Waiting for the dashboard read model to finish loading.</p>
+                )}
+              </div>
+            </div>
+          </details>
+        </div>
+
         <h1>DDRE TiM Dashboard</h1>
         <p className="lead">
           This dashboard turns day-to-day activity data into a practical view of how work is moving across the business.
@@ -455,44 +515,6 @@ export default function App() {
       ) : null}
 
       <section className="grid">
-        <article className="panel panel-health panel-span-2">
-          <p className="panel-label">API health</p>
-          {healthState.phase === "loading" ? <h2>Checking local API...</h2> : null}
-          {healthState.phase === "ready" ? (
-            <>
-              <h2>{healthState.payload.status.toUpperCase()}</h2>
-              <p>Service: {healthState.payload.service}</p>
-              <p>Checked: {formatTimestamp(healthState.payload.now)}</p>
-            </>
-          ) : null}
-          {healthState.phase === "error" ? (
-            <>
-              <h2>API unavailable</h2>
-              <p>{healthState.message}</p>
-              <p>Start the local API with <code>npm run dev:api</code>.</p>
-            </>
-          ) : null}
-        </article>
-
-        <article className="panel">
-          <p className="panel-label">Read model source</p>
-          {dashboardData ? (
-            <>
-              <h2>{formatTimestamp(dashboardData.importedAt)}</h2>
-              <p>
-                The API is serving this dashboard from <code>{dashboardData.sourceFile}</code>. Refresh the seed after
-                workbook changes with <code>npm run import:tim-records</code>.
-              </p>
-              <p>{dashboardData.scopeLabel} within {dashboardData.filters.selectedDepartment ?? "all departments"}.</p>
-            </>
-          ) : (
-            <>
-              <h2>Loading dashboard...</h2>
-              <p>Waiting for the API read model to return imported history.</p>
-            </>
-          )}
-        </article>
-
         {dashboardData ? (
           <>
             <article className="panel panel-span-2 chart-panel">
@@ -708,6 +730,46 @@ export default function App() {
             <p>The API is up, but the dashboard read model did not return successfully.</p>
           </article>
         ) : null}
+      </section>
+
+      <section className="api-detail-grid">
+        <article className="panel panel-health panel-span-2">
+          <p className="panel-label">API health</p>
+          {healthState.phase === "loading" ? <h2>Checking local API...</h2> : null}
+          {healthState.phase === "ready" ? (
+            <>
+              <h2>{healthState.payload.status.toUpperCase()}</h2>
+              <p>Service: {healthState.payload.service}</p>
+              <p>Checked: {formatTimestamp(healthState.payload.now)}</p>
+            </>
+          ) : null}
+          {healthState.phase === "error" ? (
+            <>
+              <h2>API unavailable</h2>
+              <p>{healthState.message}</p>
+              <p>Start the local API with <code>npm run dev:api</code>.</p>
+            </>
+          ) : null}
+        </article>
+
+        <article className="panel">
+          <p className="panel-label">Read model source</p>
+          {dashboardData ? (
+            <>
+              <h2>{formatTimestamp(dashboardData.importedAt)}</h2>
+              <p>
+                The API is serving this dashboard from <code>{dashboardData.sourceFile}</code>. Refresh the seed after
+                workbook changes with <code>npm run import:tim-records</code>.
+              </p>
+              <p>{dashboardData.scopeLabel} within {dashboardData.filters.selectedDepartment ?? "all departments"}.</p>
+            </>
+          ) : (
+            <>
+              <h2>Loading dashboard...</h2>
+              <p>Waiting for the API read model to return imported history.</p>
+            </>
+          )}
+        </article>
       </section>
     </main>
   );
