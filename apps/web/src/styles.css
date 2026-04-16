@@ -727,59 +727,74 @@ body {
   border-radius: 999px;
 }
 
-.share-row {
-  display: grid;
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 20px;
-  background: rgba(238, 248, 252, 0.05);
-  border: 1px solid rgba(209, 234, 245, 0.08);
-}
-
-.share-copy {
-  display: grid;
-  gap: 4px;
-}
-
-.share-track-wrap {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: center;
-}
-
-.share-copy span,
 .trend-value,
-.trend-label {
+.trend-label,
+.user-mix-meta {
   color: var(--text-muted);
 }
 
-.share-track-wrap {
-  align-items: center;
-}
-
-.split-by-user-chart {
+.user-mix-chart {
   display: grid;
-  gap: 12px;
-  margin-top: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+  min-height: 280px;
+  margin-top: 22px;
 }
 
-.split-by-user-track {
+.user-mix-column {
+  display: grid;
+  grid-template-rows: auto minmax(180px, 1fr) auto;
+  align-items: stretch;
+  justify-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.user-mix-value,
+.user-mix-label {
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.user-mix-value {
+  color: var(--text-secondary);
+}
+
+.user-mix-label {
+  font-weight: 600;
+}
+
+.user-mix-label-block {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.user-mix-meta {
+  font-size: 0.8rem;
+}
+
+.user-mix-stack {
   display: flex;
-  flex: 1;
-  height: 12px;
-  border-radius: 999px;
-  background: rgba(225, 242, 250, 0.08);
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  width: min(100%, 108px);
+  min-height: 14%;
+  align-self: end;
   overflow: hidden;
+  border-radius: 18px 18px 10px 10px;
+  background: rgba(225, 242, 250, 0.08);
   box-shadow: inset 0 0 0 1px rgba(238, 248, 252, 0.08);
 }
-.split-by-user-segment {
+
+.user-mix-segment {
   display: block;
-  height: 100%;
+  width: 100%;
 }
 
-.split-by-user-segment + .split-by-user-segment {
-  box-shadow: -1px 0 0 rgba(10, 16, 42, 0.16);
+.user-mix-segment + .user-mix-segment {
+  box-shadow: 0 -1px 0 rgba(10, 16, 42, 0.16);
 }
 
 .user-activity-pies {
@@ -893,7 +908,6 @@ body {
   }
 
   .filter-actions,
-  .share-track-wrap,
   .pie-chart-row,
   .pie-chart-row-values {
     flex-direction: column;

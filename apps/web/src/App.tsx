@@ -167,6 +167,21 @@ interface UserActivityPieCard {
   slices: BreakdownPieSlice[];
 }
 
+interface UserBreakdownStackSegment {
+  label: string;
+  hours: number;
+  color: string;
+}
+
+interface UserBreakdownStackCard {
+  userId: string;
+  label: string;
+  totalHours: number;
+  dayCount: number;
+  recordCount: number;
+  segments: UserBreakdownStackSegment[];
+}
+
 const breakdownPiePalette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#7CB8DD", "#6EA6CF", "#5E8FC3", "#4B79B4"];
 
 function buildBreakdownColorMap(rows: BreakdownRow[], extraLabels: string[] = []): Map<string, string> {
@@ -256,6 +271,46 @@ function buildUserActivityPieCards(
       };
     })
     .filter((card) => card.slices.length > 0);
+}
+
+function buildUserBreakdownStackCards(
+  breakdownRows: DashboardResponse["departmentUserBreakdown"],
+  userRows: DashboardResponse["userBreakdown"],
+  colorByLabel: Map<string, string>,
+  labelOrder: string[]
+): UserBreakdownStackCard[] {
+  const segmentsByUser = new Map<string, UserBreakdownStackSegment[]>();
+  const labelRank = new Map(labelOrder.map((label, index) => [label, index]));
+
+  for (const breakdownRow of breakdownRows) {
+    const segmentColor = colorByLabel.get(breakdownRow.label) ?? "#6EA6CF";
+
+    for (const segment of breakdownRow.segments) {
+      const userSegments = segmentsByUser.get(segment.userId) ?? [];
+      userSegments.push({
+        label: breakdownRow.label,
+        hours: segment.hours,
+        color: segmentColor
+      });
+      segmentsByUser.set(segment.userId, userSegments);
+    }
+  }
+
+  return userRows
+    .map((userRow) => ({
+      userId: userRow.userId,
+      label: userRow.label,
+      totalHours: userRow.hours,
+      dayCount: userRow.dayCount,
+      recordCount: userRow.recordCount,
+      segments: [...(segmentsByUser.get(userRow.userId) ?? [])].sort((left, right) => {
+        const leftRank = labelRank.get(left.label) ?? Number.MAX_SAFE_INTEGER;
+        const rightRank = labelRank.get(right.label) ?? Number.MAX_SAFE_INTEGER;
+
+        return leftRank - rightRank || right.hours - left.hours || left.label.localeCompare(right.label, "en-AU");
+      })
+    }))
+    .filter((card) => card.segments.length > 0);
 }
 
 function BreakdownPieLayout({
@@ -472,16 +527,26 @@ export default function App() {
   const monthlyChartMax = dashboardData ? Math.max(...dashboardData.monthlyUserTotals.map((month) => month.totalHours), 0) : 0;
   const selectedUsers = dashboardData?.filters.availableUsers.filter((user) => user.isSelected) ?? [];
   const userRows = dashboardData?.userBreakdown ?? [];
-  const departmentPieSlices = buildBreakdownPieSlices(dashboardData?.departmentBreakdown ?? [], {
+  const departmentBreakdownRows = dashboardData?.departmentBreakdown ?? [];
+  const departmentColorByLabel = buildBreakdownColorMap(departmentBreakdownRows, ["Other"]);
+  const departmentPieSlices = buildBreakdownPieSlices(departmentBreakdownRows, {
     maxRows: 5,
-    collapseRemainingLabel: "Other"
+    collapseRemainingLabel: "Other",
+    colorByLabel: departmentColorByLabel
   });
   const departmentPieTotal = departmentPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const activityBreakdownRows = dashboardData?.activityBreakdown ?? [];
   const activityRows = activityBreakdownRows.slice(0, 8) ?? [];
-  const departmentUserRows = dashboardData?.departmentUserBreakdown.slice(0, 8) ?? [];
-  const departmentUserLegendUsers = selectedUsers.filter((user) => {
-    return departmentUserRows.some((row) => row.segments.some((segment) => segment.userId === user.id));
+  const departmentUserRows = dashboardData?.departmentUserBreakdown ?? [];
+  const departmentUserBars = buildUserBreakdownStackCards(
+    departmentUserRows,
+    userRows,
+    departmentColorByLabel,
+    departmentBreakdownRows.map((row) => row.label)
+  );
+  const departmentUserMaxHours = Math.max(...departmentUserBars.map((bar) => bar.totalHours), 0);
+  const departmentLegendRows = departmentBreakdownRows.filter((row) => {
+    return departmentUserBars.some((bar) => bar.segments.some((segment) => segment.label === row.label));
   });
   const activityColorByLabel = buildBreakdownColorMap(activityBreakdownRows, ["Other"]);
   const activityPieSlices = buildBreakdownPieSlices(activityRows, {
@@ -778,44 +843,40 @@ export default function App() {
             {showDepartmentCharts ? (
               <article className="panel panel-span-2 chart-panel">
                 <p className="panel-label">Department by user</p>
-                <h2>How each department is split across selected users</h2>
-                {departmentUserRows.length > 0 ? (
+                <h2>How each selected user divides time across departments</h2>
+                {departmentUserBars.length > 0 ? (
                   <>
-                    <div className="split-by-user-chart" role="img" aria-label="Department by user stacked chart">
-                      {departmentUserRows.map((row) => (
-                        <div className="share-row department-user-row" key={row.label}>
-                          <div className="share-copy">
-                            <strong>{row.label}</strong>
-                            <span>{row.dayCount} days · {row.recordCount} records</span>
-                          </div>
-
-                          <div className="share-track-wrap split-by-user-track-wrap">
-                            <div className="split-by-user-track">
-                              {row.segments.map((segment) => (
+                    <div className="user-mix-chart" role="img" aria-label="Department mix by user stacked bar chart">
+                      {departmentUserBars.map((bar) => (
+                        <div className="user-mix-column" key={bar.userId}>
+                          <span className="user-mix-value">{formatHoursLabel(bar.totalHours)}</span>
+                          <span className="user-mix-stack" style={{ height: barHeight(bar.totalHours, departmentUserMaxHours) }}>
+                            {bar.segments.map((segment) => (
                                 <span
-                                  className="split-by-user-segment"
-                                  key={segment.userId}
-                                  title={`${segment.label}: ${formatHoursLabel(segment.hours)}`}
+                                  className="user-mix-segment"
+                                  key={segment.label}
+                                  title={`${bar.label} · ${segment.label}: ${formatHoursLabel(segment.hours)}`}
                                   style={{
                                     background: segment.color,
-                                    width: `${row.totalHours === 0 ? 0 : (segment.hours / row.totalHours) * 100}%`
+                                    height: `${bar.totalHours === 0 ? 0 : (segment.hours / bar.totalHours) * 100}%`
                                   }}
                                 />
                               ))}
-                            </div>
-
-                            <strong>{formatHoursLabel(row.totalHours)}</strong>
+                          </span>
+                          <div className="user-mix-label-block">
+                            <span className="user-mix-label">{bar.label}</span>
+                            <span className="user-mix-meta">{bar.dayCount} days · {bar.recordCount} records</span>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    {departmentUserLegendUsers.length > 0 ? (
+                    {departmentLegendRows.length > 0 ? (
                       <div className="chart-legend">
-                        {departmentUserLegendUsers.map((user) => (
-                          <div className="legend-item" key={user.id}>
-                            <span className="legend-swatch" style={{ background: user.color }} />
-                            <span>{user.displayName}</span>
+                        {departmentLegendRows.map((row) => (
+                          <div className="legend-item" key={row.label}>
+                            <span className="legend-swatch" style={{ background: departmentColorByLabel.get(row.label) ?? "#6EA6CF" }} />
+                            <span>{row.label}</span>
                           </div>
                         ))}
                       </div>
