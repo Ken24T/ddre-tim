@@ -30,12 +30,11 @@ type DashboardState =
   | { phase: "ready"; data: DashboardResponse }
   | { phase: "error"; message: string };
 
-type DashboardFocus = "all" | "monthly" | "users" | "departments" | "activities";
+type DashboardFocus = "all" | "monthly" | "departments" | "activities";
 
 const dashboardFocusOptions: Array<{ id: DashboardFocus; label: string; helper: string; cardCount: number }> = [
-  { id: "all", label: "All charts", helper: "Full dashboard", cardCount: 7 },
+  { id: "all", label: "All charts", helper: "Full dashboard", cardCount: 6 },
   { id: "monthly", label: "Monthly trends", helper: "Month by month", cardCount: 1 },
-  { id: "users", label: "Users", helper: "Contribution view", cardCount: 1 },
   { id: "departments", label: "Departments", helper: "Share and split", cardCount: 2 },
   { id: "activities", label: "Activities", helper: "What users do", cardCount: 2 }
 ];
@@ -79,14 +78,6 @@ function barHeight(hours: number, maxHours: number): string {
   }
 
   return `${Math.max(14, (hours / maxHours) * 100)}%`;
-}
-
-function barWidth(hours: number, maxHours: number): string {
-  if (maxHours === 0) {
-    return "0%";
-  }
-
-  return `${Math.max(8, (hours / maxHours) * 100)}%`;
 }
 
 const pieChartCenterX = 110;
@@ -498,7 +489,6 @@ export default function App() {
   });
   const activityPieTotal = activityPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const activityUserPieCards = buildUserActivityPieCards(dashboardData?.activityUserBreakdown ?? [], userRows, activityColorByLabel);
-  const userChartMax = Math.max(...userRows.map((row) => row.hours), 0);
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
   const apiStatusTone = healthState.phase === "ready" ? "online" : healthState.phase === "error" ? "offline" : "checking";
   const apiStatusLabel =
@@ -510,7 +500,6 @@ export default function App() {
         ? "Open for connection details"
         : "Waiting for local health check";
   const showMonthlyCharts = dashboardFocus === "all" || dashboardFocus === "monthly";
-  const showUserCharts = dashboardFocus === "all" || dashboardFocus === "users";
   const showDepartmentCharts = dashboardFocus === "all" || dashboardFocus === "departments";
   const showActivityCharts = dashboardFocus === "all" || dashboardFocus === "activities";
 
@@ -770,33 +759,6 @@ export default function App() {
                   </>
                 ) : (
                   <p>No monthly data in the current filter window.</p>
-                )}
-              </article>
-            ) : null}
-
-            {showUserCharts ? (
-              <article className="panel chart-panel">
-                <p className="panel-label">User comparison</p>
-                <h2>Selected user contribution</h2>
-                {userRows.length > 0 ? (
-                  <div className="share-chart" role="img" aria-label="User hours comparison chart">
-                    {userRows.map((row) => (
-                      <div className="share-row" key={row.userId}>
-                        <div className="share-copy">
-                          <strong>{row.label}</strong>
-                          <span>{row.dayCount} days · {row.recordCount} records</span>
-                        </div>
-                        <div className="share-track-wrap">
-                          <div className="share-track">
-                            <span className="share-fill" style={{ width: barWidth(row.hours, userChartMax), background: row.color }} />
-                          </div>
-                          <strong>{formatHoursLabel(row.hours)}</strong>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p>No user data in the current filter window.</p>
                 )}
               </article>
             ) : null}
