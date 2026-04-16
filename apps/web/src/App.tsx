@@ -696,29 +696,6 @@ export default function App() {
               )}
             </article>
 
-            <article className="panel">
-              <p className="panel-label">Recent workdays</p>
-              <h2>Latest imported dates</h2>
-              <div className="data-list">
-                {dashboardData.recentDays.length > 0 ? (
-                  dashboardData.recentDays.map((day) => (
-                    <div className="data-row" key={day.workDate}>
-                      <div>
-                        <strong>{day.label}</strong>
-                        <span>{day.topActivity}</span>
-                      </div>
-                      <div className="data-row-meta">
-                        <strong>{formatHoursLabel(day.hours)}</strong>
-                        <span>{day.departmentCount} depts</span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p>No recent days are available for the current filter window.</p>
-                )}
-              </div>
-            </article>
-
             <article className="panel panel-span-2 chart-panel">
               <p className="panel-label">Department breakdown</p>
               <h2>Hours by department</h2>
