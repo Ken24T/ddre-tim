@@ -731,46 +731,6 @@ export default function App() {
           </article>
         ) : null}
       </section>
-
-      <section className="api-detail-grid">
-        <article className="panel panel-health panel-span-2">
-          <p className="panel-label">API health</p>
-          {healthState.phase === "loading" ? <h2>Checking local API...</h2> : null}
-          {healthState.phase === "ready" ? (
-            <>
-              <h2>{healthState.payload.status.toUpperCase()}</h2>
-              <p>Service: {healthState.payload.service}</p>
-              <p>Checked: {formatTimestamp(healthState.payload.now)}</p>
-            </>
-          ) : null}
-          {healthState.phase === "error" ? (
-            <>
-              <h2>API unavailable</h2>
-              <p>{healthState.message}</p>
-              <p>Start the local API with <code>npm run dev:api</code>.</p>
-            </>
-          ) : null}
-        </article>
-
-        <article className="panel">
-          <p className="panel-label">Read model source</p>
-          {dashboardData ? (
-            <>
-              <h2>{formatTimestamp(dashboardData.importedAt)}</h2>
-              <p>
-                The API is serving this dashboard from <code>{dashboardData.sourceFile}</code>. Refresh the seed after
-                workbook changes with <code>npm run import:tim-records</code>.
-              </p>
-              <p>{dashboardData.scopeLabel} within {dashboardData.filters.selectedDepartment ?? "all departments"}.</p>
-            </>
-          ) : (
-            <>
-              <h2>Loading dashboard...</h2>
-              <p>Waiting for the API read model to return imported history.</p>
-            </>
-          )}
-        </article>
-      </section>
     </main>
   );
 }
