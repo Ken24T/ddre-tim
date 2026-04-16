@@ -78,7 +78,8 @@ body {
 .summary-grid,
 .grid,
 .control-panel,
-.focus-panel {
+.focus-panel,
+.scope-panel {
   max-width: 1120px;
   margin-left: auto;
   margin-right: auto;
@@ -250,6 +251,14 @@ body {
   margin-bottom: 20px;
 }
 
+.scope-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.9fr);
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+
 .control-tools {
   display: grid;
   gap: 16px;
@@ -345,6 +354,57 @@ body {
   text-transform: uppercase;
 }
 
+.user-filter-selection {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+}
+
+.user-filter-selection small,
+.user-filter-summary,
+.user-filter-toolbar small,
+.user-filter-empty {
+  color: var(--text-muted);
+}
+
+.user-filter-selection small,
+.user-filter-toolbar small,
+.user-filter-empty {
+  font-size: 0.86rem;
+}
+
+.user-filter-summary,
+.user-filter-empty {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.user-filter-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: end;
+}
+
+.user-filter-search {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.user-filter-search span,
+.scope-chip span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.user-filter-search input::placeholder {
+  color: var(--text-muted);
+}
+
 .user-chip-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
@@ -422,6 +482,7 @@ body {
 
 .filter-form input,
 .filter-form select,
+.user-filter-search input,
 .button {
   border-radius: 16px;
   border: 1px solid rgba(213, 234, 244, 0.16);
@@ -433,7 +494,8 @@ body {
 }
 
 .filter-form input,
-.filter-form select {
+.filter-form select,
+.user-filter-search input {
   width: 100%;
   min-width: 0;
 }
@@ -444,6 +506,7 @@ body {
 
 .filter-form input:focus,
 .filter-form select:focus,
+.user-filter-search input:focus,
 .button:focus {
   outline: 2px solid rgba(146, 208, 200, 0.5);
   outline-offset: 2px;
@@ -490,6 +553,46 @@ body {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
   margin-bottom: 18px;
+}
+
+.scope-copy {
+  max-width: 24rem;
+}
+
+.scope-copy .panel-label,
+.scope-hint {
+  margin-top: 0;
+}
+
+.scope-hint {
+  margin-bottom: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.scope-chip-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.scope-chip {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(238, 248, 252, 0.05);
+  border: 1px solid rgba(209, 234, 245, 0.08);
+}
+
+.scope-chip strong {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.scope-chip small {
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .stat-card {
@@ -547,6 +650,25 @@ body {
   overflow: hidden;
 }
 
+.chart-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.chart-toolbar-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.chart-toolbar .button {
+  min-height: 40px;
+  padding-inline: 14px;
+}
+
 .pie-chart-layout {
   display: grid;
   grid-template-columns: minmax(220px, 0.95fr) minmax(240px, 1.05fr);
@@ -583,6 +705,18 @@ body {
 
 .pie-chart-slice {
   transition: opacity 160ms ease;
+}
+
+.pie-chart-slice.is-clickable {
+  cursor: pointer;
+}
+
+.pie-chart-slice.is-dimmed {
+  opacity: 0.18;
+}
+
+.pie-chart-slice.is-active {
+  opacity: 1;
 }
 
 .pie-chart-slice-bottom {
@@ -632,6 +766,32 @@ body {
   border-radius: 18px;
   background: rgba(238, 248, 252, 0.05);
   border: 1px solid rgba(209, 234, 245, 0.08);
+}
+
+.pie-chart-row.is-dimmed {
+  opacity: 0.42;
+}
+
+.pie-chart-row.is-active {
+  border-color: rgba(146, 208, 200, 0.34);
+  background: linear-gradient(180deg, rgba(231, 245, 252, 0.15), rgba(114, 188, 181, 0.08));
+}
+
+.pie-chart-row-button {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pie-chart-row-button:hover {
+  border-color: rgba(213, 234, 244, 0.2);
+}
+
+.pie-chart-row-button:focus-visible {
+  outline: 2px solid rgba(146, 208, 200, 0.5);
+  outline-offset: 2px;
 }
 
 .pie-chart-row-copy,
@@ -728,8 +888,7 @@ body {
 }
 
 .trend-value,
-.trend-label,
-.user-mix-meta {
+.trend-label {
   color: var(--text-muted);
 }
 
@@ -748,6 +907,11 @@ body {
   border-radius: 22px;
   background: rgba(238, 248, 252, 0.04);
   border: 1px solid rgba(209, 234, 245, 0.08);
+  transition: opacity 160ms ease, border-color 160ms ease;
+}
+
+.user-activity-card.is-dimmed {
+  opacity: 0.5;
 }
 
 .user-activity-card-header {
@@ -767,6 +931,13 @@ body {
   color: var(--text-secondary);
   font-size: 0.94rem;
   white-space: nowrap;
+}
+
+.user-activity-card-summary {
+  margin: -4px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.55;
 }
 
 .user-activity-card .pie-chart-layout {
@@ -789,6 +960,7 @@ body {
 }
 
 @media (max-width: 980px) {
+  .scope-panel,
   .focus-panel,
   .control-panel,
   .summary-grid,
@@ -838,6 +1010,17 @@ body {
   .user-filter-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .user-filter-selection {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .user-filter-toolbar,
+  .chart-toolbar {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .filter-form {

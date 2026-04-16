@@ -36,7 +36,7 @@ const dashboardFocusOptions: Array<{ id: DashboardFocus; label: string; helper: 
   { id: "all", label: "All charts", helper: "Full dashboard", cardCount: 6 },
   { id: "monthly", label: "Hours by User", helper: "Monthly trend", cardCount: 1 },
   { id: "departments", label: "Departments", helper: "Share and split", cardCount: 2 },
-  { id: "activities", label: "Activity by User", helper: "Overall and per user", cardCount: 2 }
+  { id: "activities", label: "Activity views", helper: "Mix and by user", cardCount: 2 }
 ];
 
 function createEmptyFilters(): FilterFormState {
@@ -164,10 +164,16 @@ interface UserBreakdownPieCard {
   label: string;
   color: string;
   totalHours: number;
+  summary: string;
   slices: BreakdownPieSlice[];
 }
 
 const breakdownPiePalette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#7CB8DD", "#6EA6CF", "#5E8FC3", "#4B79B4"];
+const scopeDateFormatter = new Intl.DateTimeFormat("en-AU", {
+  day: "numeric",
+  month: "short",
+  year: "numeric"
+});
 
 function buildBreakdownColorMap(rows: BreakdownRow[], extraLabels: string[] = []): Map<string, string> {
   const labels = [...rows.map((row) => row.label)];
@@ -219,6 +225,75 @@ function buildBreakdownPieSlices(rows: BreakdownRow[], options: BreakdownPieOpti
   });
 }
 
+function parseDateValue(value: string): Date | null {
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day);
+}
+
+function formatScopeDate(value: string): string {
+  const parsed = parseDateValue(value);
+
+  return parsed ? scopeDateFormatter.format(parsed) : value;
+}
+
+function formatScopeDateRange(from: string, to: string): string {
+  if (from === to) {
+    return formatScopeDate(from);
+  }
+
+  return `${formatScopeDate(from)} to ${formatScopeDate(to)}`;
+}
+
+function formatSummaryShare(share: number): string {
+  const percentage = share * 100;
+
+  return `${percentage < 10 ? percentage.toFixed(1) : Math.round(percentage)}%`;
+}
+
+function buildSliceSummary(slices: BreakdownPieSlice[]): string {
+  const preferredSlices = slices.filter((slice) => slice.label !== "Other");
+  const summarySlices = (preferredSlices.length > 0 ? preferredSlices : slices).slice(0, 3);
+
+  if (summarySlices.length === 0) {
+    return "No recorded mix in this scope.";
+  }
+
+  if (summarySlices.length === 1) {
+    return `${summarySlices[0]?.label ?? "Recorded work"} accounts for ${formatSummaryShare(summarySlices[0]?.share ?? 0)} of this user's time.`;
+  }
+
+  return summarySlices.map((slice) => `${slice.label} ${formatSummaryShare(slice.share)}`).join(", ");
+}
+
+function summarizeSelectedUsers(
+  users: DashboardResponse["filters"]["availableUsers"],
+  totalUsers: number
+): string {
+  if (users.length === 0) {
+    return "No users selected";
+  }
+
+  if (users.length === totalUsers) {
+    return `All ${totalUsers} users`;
+  }
+
+  if (users.length === 1) {
+    return users[0]?.displayName ?? "1 user selected";
+  }
+
+  const preview = users.slice(0, 3).map((user) => user.displayName);
+
+  return preview.length === users.length ? preview.join(", ") : `${preview.join(", ")} +${users.length - preview.length} more`;
+}
+
 function buildUserBreakdownPieCards(
   breakdownRows: Array<{
     label: string;
@@ -248,17 +323,19 @@ function buildUserBreakdownPieCards(
       const userBreakdowns = [...(breakdownsByUser.get(userRow.userId) ?? [])].sort((left, right) => {
         return right.hours - left.hours || left.label.localeCompare(right.label, "en-AU");
       });
+      const slices = buildBreakdownPieSlices(userBreakdowns, {
+        maxRows: 5,
+        collapseRemainingLabel: "Other",
+        colorByLabel
+      });
 
       return {
         userId: userRow.userId,
         label: userRow.label,
         color: userRow.color,
         totalHours: userRow.hours,
-        slices: buildBreakdownPieSlices(userBreakdowns, {
-          maxRows: 5,
-          collapseRemainingLabel: "Other",
-          colorByLabel
-        })
+        summary: buildSliceSummary(slices),
+        slices
       };
     })
     .filter((card) => card.slices.length > 0);
@@ -267,12 +344,32 @@ function buildUserBreakdownPieCards(
 function BreakdownPieLayout({
   slices,
   totalHours,
-  ariaLabel
+  ariaLabel,
+  activeLabel,
+  onSliceToggle
 }: {
   slices: BreakdownPieSlice[];
   totalHours: number;
   ariaLabel: string;
+  activeLabel?: string;
+  onSliceToggle?: (label: string) => void;
 }) {
+  function getSliceStateClassName(label: string): string {
+    if (!activeLabel) {
+      return "";
+    }
+
+    return activeLabel === label ? " is-active" : " is-dimmed";
+  }
+
+  function handleSliceToggle(label: string): void {
+    if (!onSliceToggle || label === "Other") {
+      return;
+    }
+
+    onSliceToggle(label);
+  }
+
   return (
     <div className="pie-chart-layout">
       <div className="pie-chart-wrap">
@@ -282,20 +379,22 @@ function BreakdownPieLayout({
           {slices.length === 1 ? (
             <>
               <ellipse
-                className="pie-chart-slice pie-chart-slice-bottom"
+                className={`pie-chart-slice pie-chart-slice-bottom${getSliceStateClassName(slices[0]?.label ?? "")}${slices[0]?.label !== "Other" && onSliceToggle ? " is-clickable" : ""}`}
                 cx={pieChartCenterX}
                 cy={pieChartCenterY + pieChartDepth}
                 rx={pieChartRadiusX}
                 ry={pieChartRadiusY}
                 fill={slices[0]?.sideColor}
+                onClick={slices[0]?.label !== "Other" && onSliceToggle ? () => handleSliceToggle(slices[0]?.label ?? "") : undefined}
               />
               <ellipse
-                className="pie-chart-slice pie-chart-slice-top"
+                className={`pie-chart-slice pie-chart-slice-top${getSliceStateClassName(slices[0]?.label ?? "")}${slices[0]?.label !== "Other" && onSliceToggle ? " is-clickable" : ""}`}
                 cx={pieChartCenterX}
                 cy={pieChartCenterY}
                 rx={pieChartRadiusX}
                 ry={pieChartRadiusY}
                 fill={slices[0]?.color}
+                onClick={slices[0]?.label !== "Other" && onSliceToggle ? () => handleSliceToggle(slices[0]?.label ?? "") : undefined}
               >
                 <title>{`${slices[0]?.label ?? "Department"}: ${formatHoursLabel(slices[0]?.hours ?? 0)}`}</title>
               </ellipse>
@@ -304,12 +403,24 @@ function BreakdownPieLayout({
             <>
               <g className="pie-chart-bottom-layer">
                 {slices.map((slice) => (
-                  <path className="pie-chart-slice pie-chart-slice-bottom" d={slice.bottomPath} fill={slice.sideColor} key={`${slice.label}-bottom`} />
+                  <path
+                    className={`pie-chart-slice pie-chart-slice-bottom${getSliceStateClassName(slice.label)}${slice.label !== "Other" && onSliceToggle ? " is-clickable" : ""}`}
+                    d={slice.bottomPath}
+                    fill={slice.sideColor}
+                    key={`${slice.label}-bottom`}
+                    onClick={slice.label !== "Other" && onSliceToggle ? () => handleSliceToggle(slice.label) : undefined}
+                  />
                 ))}
               </g>
               <g className="pie-chart-top-layer">
                 {slices.map((slice) => (
-                  <path className="pie-chart-slice pie-chart-slice-top" d={slice.topPath} fill={slice.color} key={slice.label}>
+                  <path
+                    className={`pie-chart-slice pie-chart-slice-top${getSliceStateClassName(slice.label)}${slice.label !== "Other" && onSliceToggle ? " is-clickable" : ""}`}
+                    d={slice.topPath}
+                    fill={slice.color}
+                    key={slice.label}
+                    onClick={slice.label !== "Other" && onSliceToggle ? () => handleSliceToggle(slice.label) : undefined}
+                  >
                     <title>{`${slice.label}: ${formatHoursLabel(slice.hours)} (${(slice.share * 100).toFixed(1)}%)`}</title>
                   </path>
                 ))}
@@ -325,18 +436,40 @@ function BreakdownPieLayout({
       </div>
 
       <div className="pie-chart-legend">
-        {slices.map((slice) => (
-          <div className="pie-chart-row" key={slice.label}>
-            <div className="pie-chart-row-copy">
-              <span className="legend-swatch" style={{ background: slice.color }} />
-              <strong>{slice.label}</strong>
+        {slices.map((slice) => {
+          const isSelectable = slice.label !== "Other" && Boolean(onSliceToggle);
+          const rowClassName = `pie-chart-row${getSliceStateClassName(slice.label)}`;
+          const rowContent = (
+            <>
+              <div className="pie-chart-row-copy">
+                <span className="legend-swatch" style={{ background: slice.color }} />
+                <strong>{slice.label}</strong>
+              </div>
+              <div className="pie-chart-row-values">
+                <span>{(slice.share * 100).toFixed(1)}%</span>
+                <strong>{formatHoursLabel(slice.hours)}</strong>
+              </div>
+            </>
+          );
+
+          return isSelectable ? (
+            <button
+              aria-pressed={activeLabel === slice.label}
+              className={`${rowClassName} pie-chart-row-button`}
+              key={slice.label}
+              onClick={() => {
+                handleSliceToggle(slice.label);
+              }}
+              type="button"
+            >
+              {rowContent}
+            </button>
+          ) : (
+            <div className={rowClassName} key={slice.label}>
+              {rowContent}
             </div>
-            <div className="pie-chart-row-values">
-              <span>{(slice.share * 100).toFixed(1)}%</span>
-              <strong>{formatHoursLabel(slice.hours)}</strong>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -348,6 +481,9 @@ export default function App() {
   const [draftFilters, setDraftFilters] = useState<FilterFormState>(createEmptyFilters());
   const [appliedFilters, setAppliedFilters] = useState<DashboardQueryValues>({});
   const [dashboardFocus, setDashboardFocus] = useState<DashboardFocus>("all");
+  const [userSearch, setUserSearch] = useState("");
+  const [activeDepartmentLabel, setActiveDepartmentLabel] = useState<string | undefined>(undefined);
+  const [activeActivityLabel, setActiveActivityLabel] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -436,6 +572,9 @@ export default function App() {
   }
 
   function handleResetFilters(): void {
+    setUserSearch("");
+    setActiveDepartmentLabel(undefined);
+    setActiveActivityLabel(undefined);
     setDraftFilters(createEmptyFilters());
     setAppliedFilters({});
   }
@@ -473,10 +612,23 @@ export default function App() {
     }));
   }
 
+  function toggleDepartmentHighlight(label: string): void {
+    setActiveDepartmentLabel((current) => (current === label ? undefined : label));
+  }
+
+  function toggleActivityHighlight(label: string): void {
+    setActiveActivityLabel((current) => (current === label ? undefined : label));
+  }
+
   const dashboardData = dashboardState.phase === "ready" || dashboardState.phase === "refreshing" ? dashboardState.data : null;
+  const allUsers = dashboardData?.filters.availableUsers ?? [];
+  const selectedUsers = allUsers.filter((user) => user.isSelected);
+  const normalizedUserSearch = userSearch.trim().toLowerCase();
+  const visibleUsers = allUsers.filter((user) => user.displayName.toLowerCase().includes(normalizedUserSearch));
+  const selectedUserSummary = dashboardData ? summarizeSelectedUsers(selectedUsers, allUsers.length) : "Loading users";
+  const selectedUserMeta = dashboardData ? `${selectedUsers.length} of ${allUsers.length} selected` : "Waiting for user scope";
   const summaryCards = dashboardData ? buildSummaryCards(dashboardData) : [];
   const monthlyChartMax = dashboardData ? Math.max(...dashboardData.monthlyUserTotals.map((month) => month.totalHours), 0) : 0;
-  const selectedUsers = dashboardData?.filters.availableUsers.filter((user) => user.isSelected) ?? [];
   const userRows = dashboardData?.userBreakdown ?? [];
   const departmentBreakdownRows = dashboardData?.departmentBreakdown ?? [];
   const departmentColorByLabel = buildBreakdownColorMap(departmentBreakdownRows, ["Other"]);
@@ -487,15 +639,23 @@ export default function App() {
   });
   const departmentPieTotal = departmentPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const activityBreakdownRows = dashboardData?.activityBreakdown ?? [];
-  const activityRows = activityBreakdownRows.slice(0, 8) ?? [];
   const departmentUserRows = dashboardData?.departmentUserBreakdown ?? [];
   const departmentUserPieCards = buildUserBreakdownPieCards(departmentUserRows, userRows, departmentColorByLabel);
   const activityColorByLabel = buildBreakdownColorMap(activityBreakdownRows, ["Other"]);
-  const activityPieSlices = buildBreakdownPieSlices(activityRows, {
+  const activityPieSlices = buildBreakdownPieSlices(activityBreakdownRows, {
+    maxRows: 7,
+    collapseRemainingLabel: "Other",
     colorByLabel: activityColorByLabel
   });
   const activityPieTotal = activityPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const activityUserPieCards = buildUserBreakdownPieCards(dashboardData?.activityUserBreakdown ?? [], userRows, activityColorByLabel);
+  const activeDepartmentHighlight =
+    activeDepartmentLabel && departmentBreakdownRows.some((row) => row.label === activeDepartmentLabel) ? activeDepartmentLabel : undefined;
+  const activeActivityHighlight =
+    activeActivityLabel && activityBreakdownRows.some((row) => row.label === activeActivityLabel) ? activeActivityLabel : undefined;
+  const dateWindowLabel = dashboardData
+    ? formatScopeDateRange(dashboardData.filters.selectedFrom, dashboardData.filters.selectedTo)
+    : "Waiting for dates";
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
   const apiStatusTone = healthState.phase === "ready" ? "online" : healthState.phase === "error" ? "offline" : "checking";
   const apiStatusLabel =
@@ -584,7 +744,32 @@ export default function App() {
           <div className="user-filter-bank">
             <div className="user-filter-header">
               <span>User scope</span>
-              <strong>{dashboardData?.scopeLabel ?? "Loading users"}</strong>
+              <div className="user-filter-selection">
+                <strong>{dashboardData ? selectedUserMeta : "Loading users"}</strong>
+                <small>{dashboardData?.scopeLabel ?? "Waiting for user scope"}</small>
+              </div>
+            </div>
+
+            <p className="user-filter-summary">{selectedUserSummary}</p>
+
+            <div className="user-filter-toolbar">
+              <label className="user-filter-search">
+                <span>Find user</span>
+                <input
+                  disabled={dashboardBusy && !dashboardData}
+                  onChange={(event) => {
+                    setUserSearch(event.target.value);
+                  }}
+                  placeholder="Search by name"
+                  type="search"
+                  value={userSearch}
+                />
+              </label>
+              <small>
+                {normalizedUserSearch
+                  ? `${visibleUsers.length} match${visibleUsers.length === 1 ? "" : "es"}`
+                  : `${allUsers.length} available`}
+              </small>
             </div>
 
             <div className="user-chip-list">
@@ -598,7 +783,7 @@ export default function App() {
                 <small>{dashboardData ? formatHoursLabel(dashboardData.stats.totalHours) : "..."}</small>
               </button>
 
-              {(dashboardData?.filters.availableUsers ?? []).map((user) => (
+              {visibleUsers.map((user) => (
                 <button
                   className={`user-chip${user.isSelected ? " is-active" : ""}`}
                   disabled={dashboardBusy && !dashboardData}
@@ -615,7 +800,9 @@ export default function App() {
               ))}
             </div>
 
-            <p className="user-filter-hint">Selected users stay in scope while you adjust department or date.</p>
+            {dashboardData && visibleUsers.length === 0 ? <p className="user-filter-empty">No users match this search.</p> : null}
+
+            <p className="user-filter-hint">Selected users stay in scope while you search, adjust department, or change the date window.</p>
           </div>
 
           <form className="filter-form" onSubmit={handleApplyFilters}>
@@ -696,6 +883,41 @@ export default function App() {
       ) : null}
 
       {dashboardData ? (
+        <section className="panel scope-panel">
+          <div className="scope-copy">
+            <p className="panel-label">Current scope</p>
+            <p className="scope-hint">The charts below reflect this exact reporting window, including the latest imported read model.</p>
+          </div>
+
+          <div className="scope-chip-list">
+            <div className="scope-chip">
+              <span>Users</span>
+              <strong>{selectedUserSummary}</strong>
+              <small>{selectedUserMeta}</small>
+            </div>
+
+            <div className="scope-chip">
+              <span>Department</span>
+              <strong>{dashboardData.filters.selectedDepartment ?? "All departments"}</strong>
+              <small>{dashboardData.stats.departmentCount} departments represented</small>
+            </div>
+
+            <div className="scope-chip">
+              <span>Date window</span>
+              <strong>{dateWindowLabel}</strong>
+              <small>{formatHoursLabel(dashboardData.stats.totalHours)} imported hours in view</small>
+            </div>
+
+            <div className="scope-chip">
+              <span>Data freshness</span>
+              <strong>{formatTimestamp(dashboardData.importedAt)}</strong>
+              <small>Latest dashboard import</small>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {dashboardData ? (
         <section className="panel focus-panel">
           <div className="focus-copy">
             <p className="panel-label">Dashboard focus</p>
@@ -730,7 +952,7 @@ export default function App() {
             {showMonthlyCharts ? (
               <article className="panel panel-span-2 chart-panel">
                 <p className="panel-label">Monthly trend</p>
-                  <h2>Hours by User</h2>
+                <h2>Hours by User</h2>
                 {dashboardData.monthlyUserTotals.length > 0 ? (
                   <>
                     <div className="trend-chart" role="img" aria-label="Monthly stacked user hours chart">
@@ -774,8 +996,32 @@ export default function App() {
               <article className="panel panel-span-2 chart-panel">
                 <p className="panel-label">Department chart</p>
                 <h2>Where the selected users are spending time</h2>
+                <div className="chart-toolbar">
+                  <p className="chart-toolbar-copy">
+                    {activeDepartmentHighlight
+                      ? `Highlighting ${activeDepartmentHighlight} across both department charts.`
+                      : "Select a named department slice or legend row to highlight it across both department charts."}
+                  </p>
+                  {activeDepartmentHighlight ? (
+                    <button
+                      className="button"
+                      onClick={() => {
+                        setActiveDepartmentLabel(undefined);
+                      }}
+                      type="button"
+                    >
+                      Clear highlight
+                    </button>
+                  ) : null}
+                </div>
                 {departmentPieSlices.length > 0 ? (
-                  <BreakdownPieLayout slices={departmentPieSlices} totalHours={departmentPieTotal} ariaLabel="Department share 3D pie chart" />
+                  <BreakdownPieLayout
+                    activeLabel={activeDepartmentHighlight}
+                    ariaLabel="Department share 3D pie chart"
+                    onSliceToggle={toggleDepartmentHighlight}
+                    slices={departmentPieSlices}
+                    totalHours={departmentPieTotal}
+                  />
                 ) : (
                   <p>No department data in the current filter window.</p>
                 )}
@@ -790,7 +1036,10 @@ export default function App() {
                   <>
                     <div className="user-activity-pies" role="img" aria-label="Department breakdown pie charts by user">
                       {departmentUserPieCards.map((card) => (
-                        <div className="user-activity-card" key={card.userId}>
+                        <div
+                          className={`user-activity-card${activeDepartmentHighlight && !card.slices.some((slice) => slice.label === activeDepartmentHighlight) ? " is-dimmed" : ""}`}
+                          key={card.userId}
+                        >
                           <div className="user-activity-card-header">
                             <div className="user-activity-card-title">
                               <span className="legend-swatch" style={{ background: card.color }} />
@@ -799,7 +1048,11 @@ export default function App() {
                             <span className="user-activity-card-total">{formatHoursLabel(card.totalHours)}</span>
                           </div>
 
+                          <p className="user-activity-card-summary">Top mix: {card.summary}</p>
+
                           <BreakdownPieLayout
+                            activeLabel={activeDepartmentHighlight}
+                            onSliceToggle={toggleDepartmentHighlight}
                             slices={card.slices}
                             totalHours={card.totalHours}
                             ariaLabel={`${card.label} department breakdown pie chart`}
@@ -816,10 +1069,34 @@ export default function App() {
 
             {showActivityCharts ? (
               <article className="panel panel-span-2 chart-panel">
-                <p className="panel-label">Activity breakdown</p>
-                  <h2>Activity by User</h2>
+                <p className="panel-label">Activity overview</p>
+                <h2>Overall Activity Mix</h2>
+                <div className="chart-toolbar">
+                  <p className="chart-toolbar-copy">
+                    {activeActivityHighlight
+                      ? `Highlighting ${activeActivityHighlight} across both activity charts.`
+                      : "Select a named activity slice or legend row to highlight it across both activity charts."}
+                  </p>
+                  {activeActivityHighlight ? (
+                    <button
+                      className="button"
+                      onClick={() => {
+                        setActiveActivityLabel(undefined);
+                      }}
+                      type="button"
+                    >
+                      Clear highlight
+                    </button>
+                  ) : null}
+                </div>
                 {activityPieSlices.length > 0 ? (
-                  <BreakdownPieLayout slices={activityPieSlices} totalHours={activityPieTotal} ariaLabel="Activity breakdown 3D pie chart" />
+                  <BreakdownPieLayout
+                    activeLabel={activeActivityHighlight}
+                    ariaLabel="Activity breakdown 3D pie chart"
+                    onSliceToggle={toggleActivityHighlight}
+                    slices={activityPieSlices}
+                    totalHours={activityPieTotal}
+                  />
                 ) : (
                   <p>No activity breakdown is available for the current filter window.</p>
                 )}
@@ -834,7 +1111,10 @@ export default function App() {
                   <>
                     <div className="user-activity-pies" role="img" aria-label="Activity breakdown pie charts by user">
                       {activityUserPieCards.map((card) => (
-                        <div className="user-activity-card" key={card.userId}>
+                        <div
+                          className={`user-activity-card${activeActivityHighlight && !card.slices.some((slice) => slice.label === activeActivityHighlight) ? " is-dimmed" : ""}`}
+                          key={card.userId}
+                        >
                           <div className="user-activity-card-header">
                             <div className="user-activity-card-title">
                               <span className="legend-swatch" style={{ background: card.color }} />
@@ -843,7 +1123,11 @@ export default function App() {
                             <span className="user-activity-card-total">{formatHoursLabel(card.totalHours)}</span>
                           </div>
 
+                          <p className="user-activity-card-summary">Top mix: {card.summary}</p>
+
                           <BreakdownPieLayout
+                            activeLabel={activeActivityHighlight}
+                            onSliceToggle={toggleActivityHighlight}
                             slices={card.slices}
                             totalHours={card.totalHours}
                             ariaLabel={`${card.label} activity breakdown pie chart`}
