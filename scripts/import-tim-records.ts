@@ -6,8 +6,15 @@ import * as XLSX from "xlsx";
 
 type WorksheetRow = Array<string | number | Date | null>;
 
+interface ImportedHistoricalUser {
+  id: string;
+  displayName: string;
+  isSynthetic: boolean;
+}
+
 interface ImportedHistoricalRecord {
   id: string;
+  userId: string;
   workDate: string;
   employeeName: string;
   departmentName: string;
@@ -22,9 +29,29 @@ interface ImportedHistoricalSeed {
   employeeFilter: string;
   importedAt: string;
   recordCount: number;
+  users: ImportedHistoricalUser[];
   departments: string[];
   activities: string[];
   records: ImportedHistoricalRecord[];
+}
+
+interface ImportedHistoricalRecordDraft {
+  userId: string;
+  workDate: string;
+  employeeName: string;
+  departmentName: string;
+  activityName: string;
+  hours: number;
+  sourceRowNumber: number;
+}
+
+interface SyntheticUserProfile {
+  displayName: string;
+  dayOffset: number;
+  hourMultiplier: number;
+  includeEvery: number;
+  skipOffset: number;
+  departmentHourMultipliers: Record<string, number>;
 }
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -33,6 +60,44 @@ const defaultWorkbookPath = "/home/ken/Downloads/TiM Metrics.xlsx";
 const defaultOutputPath = resolve(repoRoot, "infra/seeds/ken-boyle-historical-tim-records.json");
 const targetEmployee = "Ken Boyle";
 const targetSheetName = "TiM Records";
+const syntheticUserProfiles: SyntheticUserProfile[] = [
+  {
+    displayName: "Alice Martin",
+    dayOffset: 1,
+    hourMultiplier: 0.88,
+    includeEvery: 5,
+    skipOffset: 0,
+    departmentHourMultipliers: {
+      Sales: 1.14,
+      "Business Development": 1.1,
+      "Property Management": 0.76
+    }
+  },
+  {
+    displayName: "Ben Carter",
+    dayOffset: -2,
+    hourMultiplier: 1.06,
+    includeEvery: 4,
+    skipOffset: 1,
+    departmentHourMultipliers: {
+      Administration: 1.12,
+      Office: 1.08,
+      Sales: 0.82
+    }
+  },
+  {
+    displayName: "Mia Chen",
+    dayOffset: 3,
+    hourMultiplier: 0.79,
+    includeEvery: 6,
+    skipOffset: 2,
+    departmentHourMultipliers: {
+      Accounts: 1.18,
+      Office: 1.1,
+      "Business Development": 0.84
+    }
+  }
+];
 
 function normalizeWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, " ");
@@ -40,6 +105,17 @@ function normalizeWhitespace(value: string): string {
 
 function normalizeComparisonValue(value: string): string {
   return normalizeWhitespace(value).toLocaleLowerCase("en-AU");
+}
+
+function slugify(value: string): string {
+  return normalizeWhitespace(value)
+    .toLocaleLowerCase("en-AU")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function buildUserId(displayName: string): string {
+  return slugify(displayName);
 }
 
 function normalizeHeaderValue(value: string | number | Date | null): string {
@@ -125,8 +201,21 @@ function addHours(left: number, right: number): number {
   return Number((left + right).toFixed(2));
 }
 
-function buildStableId(record: Omit<ImportedHistoricalRecord, "id">): string {
+function scaleHours(value: number, multiplier: number): number {
+  return Number(Math.max(0.25, value * multiplier).toFixed(2));
+}
+
+function addDays(value: string, dayOffset: number): string {
+  const [year, month, day] = value.split("-").map((segment) => Number(segment));
+  const nextDate = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1));
+  nextDate.setUTCDate(nextDate.getUTCDate() + dayOffset);
+
+  return formatDateValue(nextDate.getUTCFullYear(), nextDate.getUTCMonth() + 1, nextDate.getUTCDate());
+}
+
+function buildStableId(record: ImportedHistoricalRecordDraft): string {
   const sourceKey = [
+    record.userId,
     record.workDate,
     normalizeComparisonValue(record.employeeName),
     normalizeComparisonValue(record.departmentName),
@@ -139,6 +228,57 @@ function buildStableId(record: Omit<ImportedHistoricalRecord, "id">): string {
 
 function isBlankRow(row: WorksheetRow): boolean {
   return row.every((value) => normalizeWhitespace(String(value ?? "")) === "");
+}
+
+function aggregateRecords(records: ImportedHistoricalRecordDraft[]): ImportedHistoricalRecordDraft[] {
+  const aggregatedRecords = new Map<string, ImportedHistoricalRecordDraft>();
+
+  for (const record of records) {
+    const duplicateKey = [
+      record.userId,
+      record.workDate,
+      normalizeComparisonValue(record.employeeName),
+      normalizeComparisonValue(record.departmentName),
+      normalizeComparisonValue(record.activityName)
+    ].join("|");
+
+    const existingRecord = aggregatedRecords.get(duplicateKey);
+
+    if (existingRecord) {
+      existingRecord.hours = addHours(existingRecord.hours, record.hours);
+      existingRecord.sourceRowNumber = Math.min(existingRecord.sourceRowNumber, record.sourceRowNumber);
+      continue;
+    }
+
+    aggregatedRecords.set(duplicateKey, { ...record });
+  }
+
+  return Array.from(aggregatedRecords.values());
+}
+
+function buildSyntheticRecords(
+  baseRecords: ImportedHistoricalRecordDraft[],
+  profile: SyntheticUserProfile
+): ImportedHistoricalRecordDraft[] {
+  const userId = buildUserId(profile.displayName);
+
+  return baseRecords.flatMap((record, index) => {
+    if ((index + profile.skipOffset) % profile.includeEvery === 0) {
+      return [];
+    }
+
+    const departmentMultiplier = profile.departmentHourMultipliers[record.departmentName] ?? 1;
+
+    return [{
+      userId,
+      workDate: addDays(record.workDate, profile.dayOffset),
+      employeeName: profile.displayName,
+      departmentName: record.departmentName,
+      activityName: record.activityName,
+      hours: scaleHours(record.hours, profile.hourMultiplier * departmentMultiplier),
+      sourceRowNumber: record.sourceRowNumber
+    }];
+  });
 }
 
 async function main(): Promise<void> {
@@ -169,7 +309,8 @@ async function main(): Promise<void> {
   const departmentColumn = getRequiredColumnIndex(headerIndex, "Department");
   const activityColumn = getRequiredColumnIndex(headerIndex, "Activity");
   const hoursColumn = getRequiredColumnIndex(headerIndex, "Hours");
-  const aggregatedRecords = new Map<string, Omit<ImportedHistoricalRecord, "id">>();
+  const importedUserId = buildUserId(targetEmployee);
+  const importedRecordDrafts: ImportedHistoricalRecordDraft[] = [];
 
   dataRows.forEach((row, index) => {
     const rowNumber = index + 2;
@@ -184,7 +325,8 @@ async function main(): Promise<void> {
       return;
     }
 
-    const recordWithoutId = {
+    const recordDraft: ImportedHistoricalRecordDraft = {
+      userId: importedUserId,
       workDate: parseAustralianDate(row[dateColumn], rowNumber),
       employeeName,
       departmentName: normalizeWhitespace(String(row[departmentColumn] ?? "")),
@@ -193,42 +335,50 @@ async function main(): Promise<void> {
       sourceRowNumber: rowNumber
     };
 
-    if (!recordWithoutId.departmentName) {
+    if (!recordDraft.departmentName) {
       throw new Error(`Row ${rowNumber}: Department is required.`);
     }
 
-    if (!recordWithoutId.activityName) {
+    if (!recordDraft.activityName) {
       throw new Error(`Row ${rowNumber}: Activity is required.`);
     }
 
-    const duplicateKey = [
-      recordWithoutId.workDate,
-      normalizeComparisonValue(recordWithoutId.employeeName),
-      normalizeComparisonValue(recordWithoutId.departmentName),
-      normalizeComparisonValue(recordWithoutId.activityName)
-    ].join("|");
-
-    const existingRecord = aggregatedRecords.get(duplicateKey);
-
-    if (existingRecord) {
-      existingRecord.hours = addHours(existingRecord.hours, recordWithoutId.hours);
-      existingRecord.sourceRowNumber = Math.min(existingRecord.sourceRowNumber, recordWithoutId.sourceRowNumber);
-      return;
-    }
-
-    aggregatedRecords.set(duplicateKey, recordWithoutId);
+    importedRecordDrafts.push(recordDraft);
   });
 
-  const importedRecords = Array.from(aggregatedRecords.values(), (record) => ({
+  const baseRecords = aggregateRecords(importedRecordDrafts);
+  const syntheticRecords = syntheticUserProfiles.flatMap((profile) => buildSyntheticRecords(baseRecords, profile));
+  const aggregatedRecords = aggregateRecords([...baseRecords, ...syntheticRecords]);
+  const importedRecords = aggregatedRecords.map((record) => ({
     id: buildStableId(record),
     ...record
   }));
 
   importedRecords.sort((left, right) => {
     return left.workDate.localeCompare(right.workDate)
+      || left.employeeName.localeCompare(right.employeeName)
       || left.departmentName.localeCompare(right.departmentName)
       || left.activityName.localeCompare(right.activityName)
       || left.sourceRowNumber - right.sourceRowNumber;
+  });
+
+  const users: ImportedHistoricalUser[] = [
+    {
+      id: importedUserId,
+      displayName: targetEmployee,
+      isSynthetic: false
+    },
+    ...syntheticUserProfiles.map((profile) => ({
+      id: buildUserId(profile.displayName),
+      displayName: profile.displayName,
+      isSynthetic: true
+    }))
+  ].sort((left, right) => {
+    if (left.isSynthetic !== right.isSynthetic) {
+      return left.isSynthetic ? 1 : -1;
+    }
+
+    return left.displayName.localeCompare(right.displayName, "en-AU");
   });
 
   const payload: ImportedHistoricalSeed = {
@@ -237,6 +387,7 @@ async function main(): Promise<void> {
     employeeFilter: targetEmployee,
     importedAt: new Date().toISOString(),
     recordCount: importedRecords.length,
+    users,
     departments: Array.from(new Set(importedRecords.map((record) => record.departmentName))).sort((left, right) => left.localeCompare(right)),
     activities: Array.from(new Set(importedRecords.map((record) => record.activityName))).sort((left, right) => left.localeCompare(right)),
     records: importedRecords
@@ -245,7 +396,7 @@ async function main(): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 
-  console.log(`Imported ${payload.recordCount} records for ${payload.employeeFilter}.`);
+  console.log(`Imported ${payload.recordCount} records from ${payload.employeeFilter} source rows across ${payload.users.length} users.`);
   console.log(`Wrote seed data to ${outputPath}.`);
 }
 

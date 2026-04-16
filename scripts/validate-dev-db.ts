@@ -49,22 +49,17 @@ async function main(): Promise<void> {
   const assignmentCount = readCount(db, "select count(*) as count from user_activity_assignments;");
   const historicalCount = readCount(db, "select count(*) as count from historical_tim_daily_records;");
   const settingsSnapshotCount = readCount(db, "select count(*) as count from user_settings_snapshots;");
+  const usersWithDefaultDepartmentCount = readCount(db, "select count(*) as count from users where default_department_id is not null;");
   const mappedUserCount = readCount(db, "select count(mapped_user_id) as count from historical_tim_daily_records;");
   const mappedDepartmentCount = readCount(db, "select count(mapped_department_id) as count from historical_tim_daily_records;");
   const mappedActivityCount = readCount(db, "select count(mapped_activity_id) as count from historical_tim_daily_records;");
-
-  const defaultDepartmentRow = db.public.one<{ display_name: string; default_department_name: string }>([
-    "select users.display_name, departments.name as default_department_name",
-    "from users",
-    "left join departments on departments.id = users.default_department_id;"
-  ].join("\n"));
 
   if (departmentCount !== generatedSeed.built.summary.departmentCount) {
     throw new Error(`Expected ${generatedSeed.built.summary.departmentCount} departments, found ${departmentCount}.`);
   }
 
-  if (userCount !== 1) {
-    throw new Error(`Expected 1 user, found ${userCount}.`);
+  if (userCount !== generatedSeed.built.summary.userCount) {
+    throw new Error(`Expected ${generatedSeed.built.summary.userCount} users, found ${userCount}.`);
   }
 
   if (activityCount !== generatedSeed.built.summary.activityCount) {
@@ -95,12 +90,12 @@ async function main(): Promise<void> {
     throw new Error(`Expected all historical rows to have mapped activities, but only ${mappedActivityCount} of ${historicalCount} were mapped.`);
   }
 
-  if (!defaultDepartmentRow.default_department_name) {
-    throw new Error(`Expected ${defaultDepartmentRow.display_name} to have a default department.`);
+  if (usersWithDefaultDepartmentCount !== userCount) {
+    throw new Error(`Expected all ${userCount} users to have default departments, but only ${usersWithDefaultDepartmentCount} did.`);
   }
 
   console.log(`Validated schema and seed in memory.`);
-  console.log(`Default department: ${defaultDepartmentRow.default_department_name}`);
+  console.log(`Users: ${userCount}`);
   console.log(`Departments: ${departmentCount}`);
   console.log(`Activities: ${activityCount}`);
   console.log(`Assignments: ${assignmentCount}`);

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 export interface ImportedHistoricalRecord {
   id: string;
+  userId?: string;
   workDate: string;
   employeeName: string;
   departmentName: string;
@@ -13,25 +14,30 @@ export interface ImportedHistoricalRecord {
   sourceRowNumber: number;
 }
 
+export interface ImportedHistoricalUser {
+  id: string;
+  displayName: string;
+  isSynthetic: boolean;
+}
+
 export interface ImportedHistoricalSeed {
   sourceFile: string;
   sheetName: string;
   employeeFilter: string;
   importedAt: string;
   recordCount: number;
+  users?: ImportedHistoricalUser[];
   departments: string[];
   activities: string[];
   records: ImportedHistoricalRecord[];
 }
 
 export interface HistoricalSeedSummary {
-  defaultDepartmentName: string;
-  defaultDepartmentId: string;
   departmentCount: number;
   activityCount: number;
   assignmentCount: number;
   recordCount: number;
-  userId: string;
+  userCount: number;
 }
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -59,6 +65,10 @@ function slugify(value: string): string {
     .toLocaleLowerCase("en-AU")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function buildHistoricalUserId(displayName: string): string {
+  return slugify(displayName);
 }
 
 function escapeSqlLiteral(value: string): string {
@@ -136,6 +146,30 @@ function pickDefaultDepartmentName(records: ImportedHistoricalRecord[]): string 
   return selectedDepartmentName;
 }
 
+function getSeedUsers(seed: ImportedHistoricalSeed): ImportedHistoricalUser[] {
+  if (seed.users && seed.users.length > 0) {
+    return uniqueSorted(seed.users.map((user) => user.displayName)).map((displayName) => {
+      const existingUser = seed.users?.find((user) => normalizeComparisonValue(user.displayName) === normalizeComparisonValue(displayName));
+
+      return {
+        id: existingUser?.id || buildHistoricalUserId(displayName),
+        displayName,
+        isSynthetic: existingUser?.isSynthetic ?? false
+      };
+    });
+  }
+
+  return uniqueSorted(seed.records.map((record) => record.employeeName)).map((displayName) => ({
+    id: buildHistoricalUserId(displayName),
+    displayName,
+    isSynthetic: false
+  }));
+}
+
+function getRecordUserId(record: ImportedHistoricalRecord): string {
+  return record.userId ?? buildHistoricalUserId(record.employeeName);
+}
+
 function assertImportedHistoricalSeed(value: unknown): asserts value is ImportedHistoricalSeed {
   if (!value || typeof value !== "object") {
     throw new Error("Historical seed file must contain an object payload.");
@@ -175,13 +209,24 @@ export async function readImportedHistoricalSeed(seedPath = defaultHistoricalSee
 
 export function buildHistoricalSeedSql(seed: ImportedHistoricalSeed): { sql: string; summary: HistoricalSeedSummary } {
   const importedAt = seed.importedAt;
-  const displayName = toProperCase(seed.employeeFilter);
-  const normalizedDisplayName = normalizeComparisonValue(seed.employeeFilter);
-  const userId = toStableUuid(`user:${normalizedDisplayName}`);
+  const seedUsers = getSeedUsers(seed);
+  const userRows = seedUsers.map((user) => {
+    const userRecords = seed.records.filter((record) => getRecordUserId(record) === user.id);
+    const defaultDepartmentName = pickDefaultDepartmentName(userRecords);
+
+    return {
+      id: toStableUuid(`user:${user.id}`),
+      displayName: toProperCase(user.displayName),
+      normalizedDisplayName: normalizeComparisonValue(user.displayName),
+      defaultDepartmentId: toStableUuid(`department:${slugify(defaultDepartmentName)}`),
+      isActive: true,
+      createdAt: importedAt,
+      updatedAt: importedAt
+    };
+  });
+  const userIdBySeedUserId = new Map(seedUsers.map((user, index) => [user.id, userRows[index]?.id ?? toStableUuid(`user:${user.id}`)]));
   const departmentNames = uniqueSorted(seed.departments.length > 0 ? seed.departments : seed.records.map((record) => record.departmentName));
   const activityNames = uniqueSorted(seed.activities.length > 0 ? seed.activities : seed.records.map((record) => record.activityName));
-  const defaultDepartmentName = pickDefaultDepartmentName(seed.records);
-  const defaultDepartmentId = toStableUuid(`department:${slugify(defaultDepartmentName)}`);
   const departmentRows = departmentNames.map((departmentName) => ({
     id: toStableUuid(`department:${slugify(departmentName)}`),
     slug: slugify(departmentName),
@@ -211,19 +256,21 @@ export function buildHistoricalSeedSql(seed: ImportedHistoricalSeed): { sql: str
       isSystem: false,
       isActive: true,
       departmentId: null,
-      createdByUserId: userId,
+      createdByUserId: null,
       createdAt: importedAt,
       updatedAt: importedAt
     }))
   ];
-  const assignmentRows = activityRows.map((activity, index) => ({
-    userId,
-    activityId: activity.id,
-    sortOrder: index,
-    isHidden: false,
-    createdAt: importedAt,
-    updatedAt: importedAt
-  }));
+  const assignmentRows = userRows.flatMap((user) => {
+    return activityRows.map((activity, index) => ({
+      userId: user.id,
+      activityId: activity.id,
+      sortOrder: index,
+      isHidden: false,
+      createdAt: importedAt,
+      updatedAt: importedAt
+    }));
+  });
 
   const historicalRows = seed.records.map((record) => ({
     id: toStableUuid(`historical:${record.id}`),
@@ -236,14 +283,14 @@ export function buildHistoricalSeedSql(seed: ImportedHistoricalSeed): { sql: str
     sourceFile: seed.sourceFile,
     sourceRowNumber: record.sourceRowNumber,
     importedAt,
-    mappedUserId: userId,
+    mappedUserId: userIdBySeedUserId.get(getRecordUserId(record)) ?? toStableUuid(`user:${getRecordUserId(record)}`),
     mappedDepartmentId: toStableUuid(`department:${slugify(record.departmentName)}`),
     mappedActivityId: toStableUuid(`activity:${slugify(record.activityName)}`),
     createdAt: importedAt
   }));
 
   const statements = [
-    `-- Generated from ${seed.sourceFile} (${seed.sheetName}) for ${displayName}`,
+    `-- Generated from ${seed.sourceFile} (${seed.sheetName}) for ${userRows.length} users`,
     "begin;",
     buildInsertStatement(
       "departments",
@@ -266,7 +313,15 @@ export function buildHistoricalSeedSql(seed: ImportedHistoricalSeed): { sql: str
     buildInsertStatement(
       "users",
       ["id", "display_name", "normalized_display_name", "default_department_id", "is_active", "created_at", "updated_at"],
-      [[userId, displayName, normalizedDisplayName, defaultDepartmentId, true, importedAt, importedAt]],
+      userRows.map((user) => [
+        user.id,
+        user.displayName,
+        user.normalizedDisplayName,
+        user.defaultDepartmentId,
+        user.isActive,
+        user.createdAt,
+        user.updatedAt
+      ]),
       [
         "on conflict (id) do update",
         "set display_name = excluded.display_name,",
@@ -375,13 +430,11 @@ export function buildHistoricalSeedSql(seed: ImportedHistoricalSeed): { sql: str
   return {
     sql: `${statements.join("\n\n")}\n`,
     summary: {
-      defaultDepartmentName,
-      defaultDepartmentId,
       departmentCount: departmentRows.length,
       activityCount: activityRows.length,
       assignmentCount: assignmentRows.length,
       recordCount: historicalRows.length,
-      userId
+      userCount: userRows.length
     }
   };
 }

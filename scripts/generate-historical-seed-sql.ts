@@ -17,11 +17,11 @@ async function main(): Promise<void> {
   await writeFile(outputPath, sql, "utf8");
 
   console.log(`Wrote SQL seed to ${outputPath}.`);
+  console.log(`Users: ${summary.userCount}`);
   console.log(`Departments: ${summary.departmentCount}`);
   console.log(`Activities: ${summary.activityCount}`);
   console.log(`Assignments: ${summary.assignmentCount}`);
   console.log(`Historical records: ${summary.recordCount}`);
-  console.log(`Default department: ${summary.defaultDepartmentName}`);
 }
 
 main().catch((error: unknown) => {
