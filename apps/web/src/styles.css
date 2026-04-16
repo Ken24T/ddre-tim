@@ -384,13 +384,15 @@ body {
 }
 
 .pie-chart-slice-bottom {
-  stroke: rgba(12, 20, 52, 0.34);
-  stroke-width: 1.5;
+  stroke: rgba(12, 20, 52, 0.14);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
 }
 
 .pie-chart-slice-top {
-  stroke: rgba(22, 33, 77, 0.92);
-  stroke-width: 2;
+  stroke: rgba(238, 248, 252, 0.18);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
 }
 
 .pie-chart-slice:hover {
