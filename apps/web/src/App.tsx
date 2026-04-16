@@ -137,7 +137,7 @@ function shadeHexColor(color: string, multiplier: number): string {
   return `#${channels.join("")}`;
 }
 
-interface DepartmentPieSlice {
+interface BreakdownPieSlice {
   label: string;
   hours: number;
   share: number;
@@ -147,15 +147,17 @@ interface DepartmentPieSlice {
   bottomPath: string;
 }
 
-interface DepartmentPieOptions {
+interface BreakdownRow {
+  label: string;
+  hours: number;
+}
+
+interface BreakdownPieOptions {
   maxRows?: number;
   collapseRemainingLabel?: string;
 }
 
-function buildDepartmentPieSlices(
-  rows: DashboardResponse["departmentBreakdown"],
-  options: DepartmentPieOptions = {}
-): DepartmentPieSlice[] {
+function buildBreakdownPieSlices(rows: BreakdownRow[], options: BreakdownPieOptions = {}): BreakdownPieSlice[] {
   const palette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#7CB8DD", "#6EA6CF", "#5E8FC3", "#4B79B4"];
   const maxRows = options.maxRows ?? rows.length;
   const baseRows = rows.slice(0, maxRows);
@@ -163,7 +165,7 @@ function buildDepartmentPieSlices(
   const remainingHours = remainingRows.reduce((total, row) => total + row.hours, 0);
   const chartRows =
     options.collapseRemainingLabel && remainingHours > 0
-      ? [...baseRows, { label: options.collapseRemainingLabel, hours: Number(remainingHours.toFixed(2)), dayCount: 0, recordCount: 0 }]
+      ? [...baseRows, { label: options.collapseRemainingLabel, hours: Number(remainingHours.toFixed(2)) }]
       : baseRows;
   const totalHours = chartRows.reduce((total, row) => total + row.hours, 0);
   let currentAngle = 0;
@@ -194,12 +196,12 @@ function buildDepartmentPieSlices(
   });
 }
 
-function DepartmentPieLayout({
+function BreakdownPieLayout({
   slices,
   totalHours,
   ariaLabel
 }: {
-  slices: DepartmentPieSlice[];
+  slices: BreakdownPieSlice[];
   totalHours: number;
   ariaLabel: string;
 }) {
@@ -407,15 +409,17 @@ export default function App() {
   const monthlyChartMax = dashboardData ? Math.max(...dashboardData.monthlyUserTotals.map((month) => month.totalHours), 0) : 0;
   const selectedUsers = dashboardData?.filters.availableUsers.filter((user) => user.isSelected) ?? [];
   const userRows = dashboardData?.userBreakdown ?? [];
-  const departmentPieSlices = buildDepartmentPieSlices(dashboardData?.departmentBreakdown ?? [], {
+  const departmentPieSlices = buildBreakdownPieSlices(dashboardData?.departmentBreakdown ?? [], {
     maxRows: 5,
     collapseRemainingLabel: "Other"
   });
   const departmentPieTotal = departmentPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const activityRows = dashboardData?.activityBreakdown.slice(0, 8) ?? [];
   const departmentRows = dashboardData?.departmentBreakdown.slice(0, 8) ?? [];
-  const departmentBreakdownPieSlices = buildDepartmentPieSlices(departmentRows);
+  const departmentBreakdownPieSlices = buildBreakdownPieSlices(departmentRows);
   const departmentBreakdownTotal = departmentBreakdownPieSlices.reduce((total, slice) => total + slice.hours, 0);
+  const activityPieSlices = buildBreakdownPieSlices(activityRows);
+  const activityPieTotal = activityPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const userChartMax = Math.max(...userRows.map((row) => row.hours), 0);
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
   const apiStatusTone = healthState.phase === "ready" ? "online" : healthState.phase === "error" ? "offline" : "checking";
@@ -686,7 +690,7 @@ export default function App() {
               <p className="panel-label">Department chart</p>
               <h2>Where the selected users are spending time</h2>
               {departmentPieSlices.length > 0 ? (
-                <DepartmentPieLayout slices={departmentPieSlices} totalHours={departmentPieTotal} ariaLabel="Department share 3D pie chart" />
+                <BreakdownPieLayout slices={departmentPieSlices} totalHours={departmentPieTotal} ariaLabel="Department share 3D pie chart" />
               ) : (
                 <p>No department data in the current filter window.</p>
               )}
@@ -719,7 +723,7 @@ export default function App() {
               <p className="panel-label">Department breakdown</p>
               <h2>Hours by department</h2>
               {departmentBreakdownPieSlices.length > 0 ? (
-                <DepartmentPieLayout
+                <BreakdownPieLayout
                   slices={departmentBreakdownPieSlices}
                   totalHours={departmentBreakdownTotal}
                   ariaLabel="Department breakdown 3D pie chart"
@@ -729,24 +733,14 @@ export default function App() {
               )}
             </article>
 
-            <article className="panel panel-span-2">
+            <article className="panel panel-span-2 chart-panel">
               <p className="panel-label">Activity breakdown</p>
               <h2>Top imported activities</h2>
-              <div className="data-list">
-                {activityRows.length > 0 ? (
-                  activityRows.map((row) => (
-                    <div className="data-row" key={row.label}>
-                      <div>
-                        <strong>{row.label}</strong>
-                        <span>{row.dayCount} days · {row.recordCount} records</span>
-                      </div>
-                      <strong>{formatHoursLabel(row.hours)}</strong>
-                    </div>
-                  ))
-                ) : (
-                  <p>No activity breakdown is available for the current filter window.</p>
-                )}
-              </div>
+              {activityPieSlices.length > 0 ? (
+                <BreakdownPieLayout slices={activityPieSlices} totalHours={activityPieTotal} ariaLabel="Activity breakdown 3D pie chart" />
+              ) : (
+                <p>No activity breakdown is available for the current filter window.</p>
+              )}
             </article>
           </>
         ) : null}
