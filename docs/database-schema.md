@@ -244,6 +244,7 @@ Import rules:
 - Filter workbook rows by `Employee = Ken Boyle` after trimming surrounding whitespace and normalizing comparison case
 - Preserve `Department` on every imported row because the same employee can legitimately perform work for multiple departments
 - Parse `Date` using Australian regional conventions and store the normalized result in `work_date`
+- Combine repeated `Date + Employee + Department + Activity` rows into a single imported record by summing `Hours`
 - Derive `Week` and `Month` after date normalization rather than trusting workbook labels as source-of-truth fields
 - Keep imported `Hours` as historical daily totals only; do not fabricate live event timestamps from them
 - Regenerate the current repo seed file with `npm run import:tim-records -- "/home/ken/Downloads/TiM Metrics.xlsx"`, which writes `infra/seeds/ken-boyle-historical-tim-records.json`

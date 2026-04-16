@@ -121,6 +121,10 @@ function parseHours(value: string | number | Date | null, rowNumber: number): nu
   return Number(parsedNumber.toFixed(2));
 }
 
+function addHours(left: number, right: number): number {
+  return Number((left + right).toFixed(2));
+}
+
 function buildStableId(record: Omit<ImportedHistoricalRecord, "id">): string {
   const sourceKey = [
     record.workDate,
@@ -165,8 +169,7 @@ async function main(): Promise<void> {
   const departmentColumn = getRequiredColumnIndex(headerIndex, "Department");
   const activityColumn = getRequiredColumnIndex(headerIndex, "Activity");
   const hoursColumn = getRequiredColumnIndex(headerIndex, "Hours");
-  const duplicateKeys = new Set<string>();
-  const importedRecords: ImportedHistoricalRecord[] = [];
+  const aggregatedRecords = new Map<string, Omit<ImportedHistoricalRecord, "id">>();
 
   dataRows.forEach((row, index) => {
     const rowNumber = index + 2;
@@ -205,16 +208,21 @@ async function main(): Promise<void> {
       normalizeComparisonValue(recordWithoutId.activityName)
     ].join("|");
 
-    if (duplicateKeys.has(duplicateKey)) {
-      throw new Error(`Duplicate Ken Boyle record detected at row ${rowNumber} for key '${duplicateKey}'.`);
+    const existingRecord = aggregatedRecords.get(duplicateKey);
+
+    if (existingRecord) {
+      existingRecord.hours = addHours(existingRecord.hours, recordWithoutId.hours);
+      existingRecord.sourceRowNumber = Math.min(existingRecord.sourceRowNumber, recordWithoutId.sourceRowNumber);
+      return;
     }
 
-    duplicateKeys.add(duplicateKey);
-    importedRecords.push({
-      id: buildStableId(recordWithoutId),
-      ...recordWithoutId
-    });
+    aggregatedRecords.set(duplicateKey, recordWithoutId);
   });
+
+  const importedRecords = Array.from(aggregatedRecords.values(), (record) => ({
+    id: buildStableId(record),
+    ...record
+  }));
 
   importedRecords.sort((left, right) => {
     return left.workDate.localeCompare(right.workDate)

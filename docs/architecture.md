@@ -68,4 +68,5 @@ This repository currently contains:
 
 - Shared contracts for activities and sync batches.
 - A starter API with a seeded activity catalog, user settings endpoints, and a sync endpoint.
+- A minimal Vite-based web shell for local dashboard testing.
 - Repo docs and structure for the desktop and web slices that follow.

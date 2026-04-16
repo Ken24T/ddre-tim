@@ -1,0 +1,109 @@
+:root {
+  color: #f7f2e8;
+  background:
+    radial-gradient(circle at top left, rgba(255, 183, 77, 0.28), transparent 28%),
+    radial-gradient(circle at 85% 20%, rgba(111, 214, 255, 0.22), transparent 24%),
+    linear-gradient(160deg, #102027 0%, #173240 48%, #0b1116 100%);
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.shell {
+  min-height: 100vh;
+  padding: 48px 20px 64px;
+}
+
+.hero {
+  max-width: 860px;
+  margin: 0 auto 32px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  color: #ffcc80;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 6vw, 4.8rem);
+  line-height: 0.95;
+}
+
+.lead {
+  max-width: 680px;
+  margin: 18px 0 0;
+  color: rgba(247, 242, 232, 0.82);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.panel {
+  padding: 24px;
+  border: 1px solid rgba(255, 244, 219, 0.12);
+  border-radius: 24px;
+  background: rgba(7, 16, 24, 0.62);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.panel-health {
+  background: linear-gradient(180deg, rgba(255, 183, 77, 0.16), rgba(7, 16, 24, 0.7));
+}
+
+.panel-label {
+  margin: 0 0 10px;
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(247, 242, 232, 0.6);
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 1.8rem;
+}
+
+.panel p {
+  margin: 0 0 10px;
+  color: rgba(247, 242, 232, 0.82);
+  line-height: 1.55;
+}
+
+.panel code {
+  font-family: "Consolas", "Liberation Mono", monospace;
+  font-size: 0.95em;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shell {
+    padding-top: 32px;
+  }
+}

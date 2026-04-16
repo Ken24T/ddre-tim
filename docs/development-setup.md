@@ -11,7 +11,9 @@
 
 1. Run `npm install` at the repo root.
 2. Start the API with `npm run dev:api`.
-3. Open `http://localhost:4000/health` to confirm the service is running.
+3. Start the web workspace with `npm run dev:web` if you want the local dashboard shell.
+4. Open `http://localhost:4000/health` to confirm the API is running.
+5. Open `http://localhost:5173` to confirm the Vite dashboard is running.
 
 By default the current API still uses in-memory storage for user settings if no database connection string is configured.
 
@@ -41,6 +43,7 @@ The importer currently:
 - parses workbook dates using Australian day-first conventions
 - imports only rows belonging to Ken Boyle
 - preserves department per row so cross-department work remains intact
+- combines repeated `Date + Employee + Department + Activity` rows into a single record by summing `Hours`
 
 ## Local Database Artifacts
 
@@ -60,6 +63,7 @@ If Docker is available later, `infra/docker-compose.yml` mounts `infra/sql` into
 ## Current Local Services
 
 - API: `http://localhost:4000`
+- Web dashboard shell: `http://localhost:5173`
 - PostgreSQL: scaffolded through `infra/docker-compose.yml`
 
 ## Runtime Planning Target
@@ -83,5 +87,5 @@ Operational assumptions for this target:
 ## Next Setup Slices
 
 - Add the Tauri desktop workspace.
-- Add a Vite-based web workspace.
 - Add database migrations and API persistence.
+- Expand the web workspace from a local shell into real dashboard read models and views.

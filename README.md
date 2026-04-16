@@ -10,6 +10,7 @@ The current runtime target is a zero-cost office-hosted deployment: the shared A
 - Shared domain contracts for activities, user settings, and sync batches.
 - A minimal Fastify API with health, activity catalog, user settings, and sync-batch endpoints.
 - User settings can now persist in PostgreSQL when `DATABASE_URL` is configured, while local development can still fall back to in-memory storage.
+- A minimal Vite + React web workspace for local dashboard testing.
 - A repeatable workbook import script that generates Ken Boyle-only historical seed data for future persistence and reporting work.
 - An initial PostgreSQL schema plus generated SQL seed files for local development and future persistence work.
 - Core architecture and workflow docs to keep implementation decisions explicit.
@@ -18,7 +19,7 @@ The current runtime target is a zero-cost office-hosted deployment: the shared A
 
 - `apps/desktop`: Cinnamon-first tray application built with Tauri.
 - `apps/api`: Central ingest and read-model API.
-- `apps/web`: Web viewer for live activity and reporting.
+- `apps/web`: Vite-based web viewer workspace for dashboard development and local testing.
 - `packages/contracts`: Shared schemas and types used across the system.
 - `docs`: Architecture, ADRs, workflow, and platform notes.
 
@@ -29,5 +30,6 @@ The current runtime target is a zero-cost office-hosted deployment: the shared A
 3. Run `npm run dev:api` to start the initial API.
 4. Optional: run `npm run import:tim-records -- "/home/ken/Downloads/TiM Metrics.xlsx"` to regenerate the historical Ken Boyle seed data.
 5. Optional: run `npm run db:generate-seed && npm run db:validate` to refresh and validate the local SQL seed artifacts.
+6. Optional: run `npm run dev:web` to start the local Vite dashboard shell.
 
 See `docs/development-setup.md` for more detail.

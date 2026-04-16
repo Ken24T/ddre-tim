@@ -51,7 +51,7 @@ The consolidated cross-repo application prompt is expected to be discoverable th
 | `README.md` | High-level project summary and quick start |
 | `apps/api/` | Fastify API for activity catalog, user settings, sync ingest, and later reporting |
 | `apps/desktop/` | Planned Tauri desktop tray app for Cinnamon-first activity capture |
-| `apps/web/` | Planned manager-facing dashboard |
+| `apps/web/` | Vite-based manager-dashboard workspace for local browser testing and future reporting views |
 | `packages/contracts/` | Shared Zod schemas and TypeScript types for API and clients |
 | `docs/architecture.md` | Core system design and product constraints |
 | `docs/product-workflow.md` | Expected user and manager workflows |
@@ -79,9 +79,10 @@ npm install                      # Install workspace dependencies
 npm run typecheck               # Validate contracts and API TypeScript
 npm run build                   # Build contracts and API
 npm run dev:api                 # Start the API in watch mode
+npm run dev:web                 # Start the local Vite dashboard shell
 ```
 
-There is no desktop or web build yet. Do not invent additional commands in docs or instructions until those workspaces actually exist.
+There is no desktop build yet. The web workspace now exists as a local Vite shell; do not invent additional commands beyond the current repo state.
 
 ## Current Stack
 
@@ -91,6 +92,7 @@ There is no desktop or web build yet. Do not invent additional commands in docs 
 - npm workspaces
 - TypeScript in strict mode
 - Fastify for the API
+- Vite + React for the initial web shell
 - Zod for shared schemas and validation
 
 ### Planned next

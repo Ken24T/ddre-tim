@@ -1,5 +1,15 @@
 # Web Viewer
 
-This directory will host the web application that renders live activity state, session history, and reporting views from API read models.
+This workspace now contains a minimal Vite + React dashboard shell for local testing.
 
-The initial web slice should consume derived read models rather than raw event tables.
+Current scope:
+
+- verify that a browser-based TiM surface can run locally in this repo
+- proxy local API requests during development
+- provide a concrete place for future manager-facing reporting views
+
+Current commands:
+
+- `npm run dev:web` from the repo root
+- `npm run build --workspace @ddre/web`
+- `npm run typecheck --workspace @ddre/web`
