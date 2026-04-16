@@ -345,6 +345,88 @@ body {
   overflow: hidden;
 }
 
+.pie-chart-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.95fr) minmax(240px, 1.05fr);
+  gap: 24px;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.pie-chart-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+
+.pie-chart-svg {
+  width: min(100%, 320px);
+  height: auto;
+  overflow: visible;
+}
+
+.pie-chart-base {
+  fill: rgba(225, 242, 250, 0.06);
+}
+
+.pie-chart-slice {
+  stroke: rgba(22, 33, 77, 0.92);
+  stroke-width: 2;
+  transition: opacity 160ms ease;
+}
+
+.pie-chart-slice:hover {
+  opacity: 0.88;
+}
+
+.pie-chart-total {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.pie-chart-total span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pie-chart-total strong {
+  font-size: 1.1rem;
+}
+
+.pie-chart-legend {
+  display: grid;
+  gap: 12px;
+}
+
+.pie-chart-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(238, 248, 252, 0.05);
+  border: 1px solid rgba(209, 234, 245, 0.08);
+}
+
+.pie-chart-row-copy,
+.pie-chart-row-values {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.pie-chart-row-values {
+  margin-left: auto;
+}
+
+.pie-chart-row-values span {
+  color: var(--text-muted);
+}
+
 .trend-chart {
   display: grid;
   grid-auto-flow: column;
@@ -493,6 +575,10 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .pie-chart-layout {
+    grid-template-columns: 1fr;
+  }
+
   .filter-form {
     grid-template-columns: 1fr 1fr;
   }
@@ -518,7 +604,9 @@ body {
 
   .filter-actions,
   .data-row,
-  .share-track-wrap {
+  .share-track-wrap,
+  .pie-chart-row,
+  .pie-chart-row-values {
     flex-direction: column;
     align-items: stretch;
   }

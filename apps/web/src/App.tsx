@@ -79,6 +79,58 @@ function barWidth(hours: number, maxHours: number): string {
   return `${Math.max(8, (hours / maxHours) * 100)}%`;
 }
 
+function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number): { x: number; y: number } {
+  const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180;
+
+  return {
+    x: centerX + radius * Math.cos(angleInRadians),
+    y: centerY + radius * Math.sin(angleInRadians)
+  };
+}
+
+function describePieSlicePath(centerX: number, centerY: number, radius: number, startAngle: number, endAngle: number): string {
+  const start = polarToCartesian(centerX, centerY, radius, endAngle);
+  const end = polarToCartesian(centerX, centerY, radius, startAngle);
+  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+
+  return [
+    `M ${centerX} ${centerY}`,
+    `L ${end.x} ${end.y}`,
+    `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${start.x} ${start.y}`,
+    "Z"
+  ].join(" ");
+}
+
+function buildDepartmentPieSlices(rows: DashboardResponse["departmentBreakdown"]): Array<{
+  label: string;
+  hours: number;
+  share: number;
+  color: string;
+  path: string;
+}> {
+  const palette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#6EA6CF", "#4B79B4"];
+  const baseRows = rows.slice(0, 5);
+  const otherHours = rows.slice(5).reduce((total, row) => total + row.hours, 0);
+  const chartRows = otherHours > 0 ? [...baseRows, { label: "Other", hours: Number(otherHours.toFixed(2)), dayCount: 0, recordCount: 0 }] : baseRows;
+  const totalHours = chartRows.reduce((total, row) => total + row.hours, 0);
+  let currentAngle = 0;
+
+  return chartRows.map((row, index) => {
+    const share = totalHours === 0 ? 0 : row.hours / totalHours;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + share * 360;
+    currentAngle = endAngle;
+
+    return {
+      label: row.label,
+      hours: row.hours,
+      share,
+      color: palette[index] ?? palette[palette.length - 1] ?? "#6EA6CF",
+      path: describePieSlicePath(110, 110, 92, startAngle, endAngle)
+    };
+  });
+}
+
 export default function App() {
   const [healthState, setHealthState] = useState<HealthState>({ phase: "loading" });
   const [dashboardState, setDashboardState] = useState<DashboardState>({ phase: "loading" });
@@ -214,11 +266,11 @@ export default function App() {
   const monthlyChartMax = dashboardData ? Math.max(...dashboardData.monthlyUserTotals.map((month) => month.totalHours), 0) : 0;
   const selectedUsers = dashboardData?.filters.availableUsers.filter((user) => user.isSelected) ?? [];
   const userRows = dashboardData?.userBreakdown ?? [];
-  const departmentChartRows = dashboardData?.departmentBreakdown.slice(0, 5) ?? [];
+  const departmentPieSlices = buildDepartmentPieSlices(dashboardData?.departmentBreakdown ?? []);
+  const departmentPieTotal = departmentPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const activityRows = dashboardData?.activityBreakdown.slice(0, 8) ?? [];
   const departmentRows = dashboardData?.departmentBreakdown.slice(0, 8) ?? [];
   const userChartMax = Math.max(...userRows.map((row) => row.hours), 0);
-  const departmentChartMax = Math.max(...departmentChartRows.map((row) => row.hours), 0);
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
 
   return (
@@ -470,22 +522,50 @@ export default function App() {
             <article className="panel panel-span-2 chart-panel">
               <p className="panel-label">Department chart</p>
               <h2>Where the selected users are spending time</h2>
-              {departmentChartRows.length > 0 ? (
-                <div className="share-chart" role="img" aria-label="Department hours comparison chart">
-                  {departmentChartRows.map((row) => (
-                    <div className="share-row" key={row.label}>
-                      <div className="share-copy">
-                        <strong>{row.label}</strong>
-                        <span>{row.dayCount} days · {row.recordCount} records</span>
-                      </div>
-                      <div className="share-track-wrap">
-                        <div className="share-track">
-                          <span className="share-fill" style={{ width: barWidth(row.hours, departmentChartMax) }} />
-                        </div>
-                        <strong>{formatHoursLabel(row.hours)}</strong>
-                      </div>
+              {departmentPieSlices.length > 0 ? (
+                <div className="pie-chart-layout">
+                  <div className="pie-chart-wrap">
+                    <svg className="pie-chart-svg" viewBox="0 0 220 220" role="img" aria-label="Department share pie chart">
+                      <circle className="pie-chart-base" cx="110" cy="110" r="92" />
+                      {departmentPieSlices.length === 1 ? (
+                        <circle
+                          className="pie-chart-slice"
+                          cx="110"
+                          cy="110"
+                          r="92"
+                          fill={departmentPieSlices[0]?.color}
+                        >
+                          <title>{`${departmentPieSlices[0]?.label ?? "Department"}: ${formatHoursLabel(departmentPieSlices[0]?.hours ?? 0)}`}</title>
+                        </circle>
+                      ) : (
+                        departmentPieSlices.map((slice) => (
+                          <path className="pie-chart-slice" d={slice.path} fill={slice.color} key={slice.label}>
+                            <title>{`${slice.label}: ${formatHoursLabel(slice.hours)} (${(slice.share * 100).toFixed(1)}%)`}</title>
+                          </path>
+                        ))
+                      )}
+                    </svg>
+
+                    <div className="pie-chart-total">
+                      <span>Total</span>
+                      <strong>{formatHoursLabel(departmentPieTotal)}</strong>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="pie-chart-legend">
+                    {departmentPieSlices.map((slice) => (
+                      <div className="pie-chart-row" key={slice.label}>
+                        <div className="pie-chart-row-copy">
+                          <span className="legend-swatch" style={{ background: slice.color }} />
+                          <strong>{slice.label}</strong>
+                        </div>
+                        <div className="pie-chart-row-values">
+                          <span>{(slice.share * 100).toFixed(1)}%</span>
+                          <strong>{formatHoursLabel(slice.hours)}</strong>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <p>No department data in the current filter window.</p>
