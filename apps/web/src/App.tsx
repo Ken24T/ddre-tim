@@ -730,7 +730,7 @@ export default function App() {
             {showMonthlyCharts ? (
               <article className="panel panel-span-2 chart-panel">
                 <p className="panel-label">Monthly trend</p>
-                <h2>Stacked hours by user</h2>
+                  <h2>Hours by User</h2>
                 {dashboardData.monthlyUserTotals.length > 0 ? (
                   <>
                     <div className="trend-chart" role="img" aria-label="Monthly stacked user hours chart">
@@ -817,7 +817,7 @@ export default function App() {
             {showActivityCharts ? (
               <article className="panel panel-span-2 chart-panel">
                 <p className="panel-label">Activity breakdown</p>
-                <h2>Top imported activities</h2>
+                  <h2>Activity by User</h2>
                 {activityPieSlices.length > 0 ? (
                   <BreakdownPieLayout slices={activityPieSlices} totalHours={activityPieTotal} ariaLabel="Activity breakdown 3D pie chart" />
                 ) : (
