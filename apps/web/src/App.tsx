@@ -137,7 +137,7 @@ function shadeHexColor(color: string, multiplier: number): string {
   return `#${channels.join("")}`;
 }
 
-function buildDepartmentPieSlices(rows: DashboardResponse["departmentBreakdown"]): Array<{
+interface DepartmentPieSlice {
   label: string;
   hours: number;
   share: number;
@@ -145,11 +145,26 @@ function buildDepartmentPieSlices(rows: DashboardResponse["departmentBreakdown"]
   sideColor: string;
   topPath: string;
   bottomPath: string;
-}> {
-  const palette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#6EA6CF", "#4B79B4"];
-  const baseRows = rows.slice(0, 5);
-  const otherHours = rows.slice(5).reduce((total, row) => total + row.hours, 0);
-  const chartRows = otherHours > 0 ? [...baseRows, { label: "Other", hours: Number(otherHours.toFixed(2)), dayCount: 0, recordCount: 0 }] : baseRows;
+}
+
+interface DepartmentPieOptions {
+  maxRows?: number;
+  collapseRemainingLabel?: string;
+}
+
+function buildDepartmentPieSlices(
+  rows: DashboardResponse["departmentBreakdown"],
+  options: DepartmentPieOptions = {}
+): DepartmentPieSlice[] {
+  const palette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#7CB8DD", "#6EA6CF", "#5E8FC3", "#4B79B4"];
+  const maxRows = options.maxRows ?? rows.length;
+  const baseRows = rows.slice(0, maxRows);
+  const remainingRows = rows.slice(maxRows);
+  const remainingHours = remainingRows.reduce((total, row) => total + row.hours, 0);
+  const chartRows =
+    options.collapseRemainingLabel && remainingHours > 0
+      ? [...baseRows, { label: options.collapseRemainingLabel, hours: Number(remainingHours.toFixed(2)), dayCount: 0, recordCount: 0 }]
+      : baseRows;
   const totalHours = chartRows.reduce((total, row) => total + row.hours, 0);
   let currentAngle = 0;
 
@@ -158,13 +173,14 @@ function buildDepartmentPieSlices(rows: DashboardResponse["departmentBreakdown"]
     const startAngle = currentAngle;
     const endAngle = currentAngle + share * 360;
     currentAngle = endAngle;
+    const color = palette[index % palette.length] ?? "#6EA6CF";
 
     return {
       label: row.label,
       hours: row.hours,
       share,
-      color: palette[index] ?? palette[palette.length - 1] ?? "#6EA6CF",
-      sideColor: shadeHexColor(palette[index] ?? palette[palette.length - 1] ?? "#6EA6CF", 0.68),
+      color,
+      sideColor: shadeHexColor(color, 0.68),
       topPath: describePieSlicePath(pieChartCenterX, pieChartCenterY, pieChartRadiusX, pieChartRadiusY, startAngle, endAngle),
       bottomPath: describePieSlicePath(
         pieChartCenterX,
@@ -176,6 +192,84 @@ function buildDepartmentPieSlices(rows: DashboardResponse["departmentBreakdown"]
       )
     };
   });
+}
+
+function DepartmentPieLayout({
+  slices,
+  totalHours,
+  ariaLabel
+}: {
+  slices: DepartmentPieSlice[];
+  totalHours: number;
+  ariaLabel: string;
+}) {
+  return (
+    <div className="pie-chart-layout">
+      <div className="pie-chart-wrap">
+        <svg className="pie-chart-svg" viewBox="0 0 220 220" role="img" aria-label={ariaLabel}>
+          <ellipse className="pie-chart-shadow" cx={pieChartCenterX} cy={pieChartCenterY + pieChartDepth + 56} rx="78" ry="22" />
+          <ellipse className="pie-chart-base pie-chart-base-bottom" cx={pieChartCenterX} cy={pieChartCenterY + pieChartDepth} rx={pieChartRadiusX} ry={pieChartRadiusY} />
+          {slices.length === 1 ? (
+            <>
+              <ellipse
+                className="pie-chart-slice pie-chart-slice-bottom"
+                cx={pieChartCenterX}
+                cy={pieChartCenterY + pieChartDepth}
+                rx={pieChartRadiusX}
+                ry={pieChartRadiusY}
+                fill={slices[0]?.sideColor}
+              />
+              <ellipse
+                className="pie-chart-slice pie-chart-slice-top"
+                cx={pieChartCenterX}
+                cy={pieChartCenterY}
+                rx={pieChartRadiusX}
+                ry={pieChartRadiusY}
+                fill={slices[0]?.color}
+              >
+                <title>{`${slices[0]?.label ?? "Department"}: ${formatHoursLabel(slices[0]?.hours ?? 0)}`}</title>
+              </ellipse>
+            </>
+          ) : (
+            <>
+              <g className="pie-chart-bottom-layer">
+                {slices.map((slice) => (
+                  <path className="pie-chart-slice pie-chart-slice-bottom" d={slice.bottomPath} fill={slice.sideColor} key={`${slice.label}-bottom`} />
+                ))}
+              </g>
+              <g className="pie-chart-top-layer">
+                {slices.map((slice) => (
+                  <path className="pie-chart-slice pie-chart-slice-top" d={slice.topPath} fill={slice.color} key={slice.label}>
+                    <title>{`${slice.label}: ${formatHoursLabel(slice.hours)} (${(slice.share * 100).toFixed(1)}%)`}</title>
+                  </path>
+                ))}
+              </g>
+            </>
+          )}
+        </svg>
+
+        <div className="pie-chart-total">
+          <span>Total</span>
+          <strong>{formatHoursLabel(totalHours)}</strong>
+        </div>
+      </div>
+
+      <div className="pie-chart-legend">
+        {slices.map((slice) => (
+          <div className="pie-chart-row" key={slice.label}>
+            <div className="pie-chart-row-copy">
+              <span className="legend-swatch" style={{ background: slice.color }} />
+              <strong>{slice.label}</strong>
+            </div>
+            <div className="pie-chart-row-values">
+              <span>{(slice.share * 100).toFixed(1)}%</span>
+              <strong>{formatHoursLabel(slice.hours)}</strong>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
@@ -313,10 +407,15 @@ export default function App() {
   const monthlyChartMax = dashboardData ? Math.max(...dashboardData.monthlyUserTotals.map((month) => month.totalHours), 0) : 0;
   const selectedUsers = dashboardData?.filters.availableUsers.filter((user) => user.isSelected) ?? [];
   const userRows = dashboardData?.userBreakdown ?? [];
-  const departmentPieSlices = buildDepartmentPieSlices(dashboardData?.departmentBreakdown ?? []);
+  const departmentPieSlices = buildDepartmentPieSlices(dashboardData?.departmentBreakdown ?? [], {
+    maxRows: 5,
+    collapseRemainingLabel: "Other"
+  });
   const departmentPieTotal = departmentPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const activityRows = dashboardData?.activityBreakdown.slice(0, 8) ?? [];
   const departmentRows = dashboardData?.departmentBreakdown.slice(0, 8) ?? [];
+  const departmentBreakdownPieSlices = buildDepartmentPieSlices(departmentRows);
+  const departmentBreakdownTotal = departmentBreakdownPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const userChartMax = Math.max(...userRows.map((row) => row.hours), 0);
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
   const apiStatusTone = healthState.phase === "ready" ? "online" : healthState.phase === "error" ? "offline" : "checking";
@@ -587,71 +686,7 @@ export default function App() {
               <p className="panel-label">Department chart</p>
               <h2>Where the selected users are spending time</h2>
               {departmentPieSlices.length > 0 ? (
-                <div className="pie-chart-layout">
-                  <div className="pie-chart-wrap">
-                    <svg className="pie-chart-svg" viewBox="0 0 220 220" role="img" aria-label="Department share 3D pie chart">
-                      <ellipse className="pie-chart-shadow" cx={pieChartCenterX} cy={pieChartCenterY + pieChartDepth + 56} rx="78" ry="22" />
-                      <ellipse className="pie-chart-base pie-chart-base-bottom" cx={pieChartCenterX} cy={pieChartCenterY + pieChartDepth} rx={pieChartRadiusX} ry={pieChartRadiusY} />
-                      {departmentPieSlices.length === 1 ? (
-                        <>
-                          <ellipse
-                            className="pie-chart-slice pie-chart-slice-bottom"
-                            cx={pieChartCenterX}
-                            cy={pieChartCenterY + pieChartDepth}
-                            rx={pieChartRadiusX}
-                            ry={pieChartRadiusY}
-                            fill={departmentPieSlices[0]?.sideColor}
-                          />
-                          <ellipse
-                            className="pie-chart-slice pie-chart-slice-top"
-                            cx={pieChartCenterX}
-                            cy={pieChartCenterY}
-                            rx={pieChartRadiusX}
-                            ry={pieChartRadiusY}
-                            fill={departmentPieSlices[0]?.color}
-                          >
-                            <title>{`${departmentPieSlices[0]?.label ?? "Department"}: ${formatHoursLabel(departmentPieSlices[0]?.hours ?? 0)}`}</title>
-                          </ellipse>
-                        </>
-                      ) : (
-                        <>
-                          <g className="pie-chart-bottom-layer">
-                            {departmentPieSlices.map((slice) => (
-                              <path className="pie-chart-slice pie-chart-slice-bottom" d={slice.bottomPath} fill={slice.sideColor} key={`${slice.label}-bottom`} />
-                            ))}
-                          </g>
-                          <g className="pie-chart-top-layer">
-                            {departmentPieSlices.map((slice) => (
-                              <path className="pie-chart-slice pie-chart-slice-top" d={slice.topPath} fill={slice.color} key={slice.label}>
-                                <title>{`${slice.label}: ${formatHoursLabel(slice.hours)} (${(slice.share * 100).toFixed(1)}%)`}</title>
-                              </path>
-                            ))}
-                          </g>
-                        </>
-                      )}
-                    </svg>
-
-                    <div className="pie-chart-total">
-                      <span>Total</span>
-                      <strong>{formatHoursLabel(departmentPieTotal)}</strong>
-                    </div>
-                  </div>
-
-                  <div className="pie-chart-legend">
-                    {departmentPieSlices.map((slice) => (
-                      <div className="pie-chart-row" key={slice.label}>
-                        <div className="pie-chart-row-copy">
-                          <span className="legend-swatch" style={{ background: slice.color }} />
-                          <strong>{slice.label}</strong>
-                        </div>
-                        <div className="pie-chart-row-values">
-                          <span>{(slice.share * 100).toFixed(1)}%</span>
-                          <strong>{formatHoursLabel(slice.hours)}</strong>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <DepartmentPieLayout slices={departmentPieSlices} totalHours={departmentPieTotal} ariaLabel="Department share 3D pie chart" />
               ) : (
                 <p>No department data in the current filter window.</p>
               )}
@@ -680,24 +715,18 @@ export default function App() {
               </div>
             </article>
 
-            <article className="panel panel-span-2">
+            <article className="panel panel-span-2 chart-panel">
               <p className="panel-label">Department breakdown</p>
               <h2>Hours by department</h2>
-              <div className="data-list">
-                {departmentRows.length > 0 ? (
-                  departmentRows.map((row) => (
-                    <div className="data-row" key={row.label}>
-                      <div>
-                        <strong>{row.label}</strong>
-                        <span>{row.dayCount} days · {row.recordCount} records</span>
-                      </div>
-                      <strong>{formatHoursLabel(row.hours)}</strong>
-                    </div>
-                  ))
-                ) : (
-                  <p>No department breakdown is available for the current filter window.</p>
-                )}
-              </div>
+              {departmentBreakdownPieSlices.length > 0 ? (
+                <DepartmentPieLayout
+                  slices={departmentBreakdownPieSlices}
+                  totalHours={departmentBreakdownTotal}
+                  ariaLabel="Department breakdown 3D pie chart"
+                />
+              ) : (
+                <p>No department breakdown is available for the current filter window.</p>
+              )}
             </article>
 
             <article className="panel panel-span-2">
