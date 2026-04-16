@@ -32,12 +32,12 @@ type DashboardState =
 
 type DashboardFocus = "all" | "monthly" | "users" | "departments" | "activities";
 
-const dashboardFocusOptions: Array<{ id: DashboardFocus; label: string; helper: string }> = [
-  { id: "all", label: "All charts", helper: "See the full dashboard" },
-  { id: "monthly", label: "Monthly trends", helper: "Month-to-month movement" },
-  { id: "users", label: "Users", helper: "Selected user contribution" },
-  { id: "departments", label: "Departments", helper: "Department share and split" },
-  { id: "activities", label: "Activities", helper: "Top imported activities" }
+const dashboardFocusOptions: Array<{ id: DashboardFocus; label: string; helper: string; cardCount: number }> = [
+  { id: "all", label: "All charts", helper: "Full dashboard", cardCount: 5 },
+  { id: "monthly", label: "Monthly trends", helper: "Month by month", cardCount: 1 },
+  { id: "users", label: "Users", helper: "Contribution view", cardCount: 1 },
+  { id: "departments", label: "Departments", helper: "Share and split", cardCount: 2 },
+  { id: "activities", label: "Activities", helper: "Top activities", cardCount: 1 }
 ];
 
 function createEmptyFilters(): FilterFormState {
@@ -637,7 +637,7 @@ export default function App() {
         <section className="panel focus-panel">
           <div className="focus-copy">
             <p className="panel-label">Dashboard focus</p>
-            <p className="focus-hint">Choose which chart group to show without changing the users, department, or date scope.</p>
+            <p className="focus-hint">Show a chart group without changing the users, department, or date scope.</p>
           </div>
 
           <div className="focus-chip-list" role="group" aria-label="Dashboard focus controls">
@@ -652,7 +652,10 @@ export default function App() {
                 type="button"
               >
                 <span>{option.label}</span>
-                <small>{option.helper}</small>
+                <span className="focus-chip-meta">
+                  <small>{option.helper}</small>
+                  <em>{`${option.cardCount} card${option.cardCount === 1 ? "" : "s"}`}</em>
+                </span>
               </button>
             ))}
           </div>
