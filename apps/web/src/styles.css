@@ -363,16 +363,34 @@ body {
   width: min(100%, 320px);
   height: auto;
   overflow: visible;
+  filter: drop-shadow(0 18px 24px rgba(7, 12, 34, 0.28));
 }
 
 .pie-chart-base {
   fill: rgba(225, 242, 250, 0.06);
 }
 
+.pie-chart-base-bottom {
+  fill: rgba(123, 158, 198, 0.16);
+}
+
+.pie-chart-shadow {
+  fill: rgba(8, 12, 32, 0.32);
+  filter: blur(4px);
+}
+
 .pie-chart-slice {
+  transition: opacity 160ms ease;
+}
+
+.pie-chart-slice-bottom {
+  stroke: rgba(12, 20, 52, 0.34);
+  stroke-width: 1.5;
+}
+
+.pie-chart-slice-top {
   stroke: rgba(22, 33, 77, 0.92);
   stroke-width: 2;
-  transition: opacity 160ms ease;
 }
 
 .pie-chart-slice:hover {

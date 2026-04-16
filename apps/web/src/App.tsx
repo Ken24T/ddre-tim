@@ -79,26 +79,62 @@ function barWidth(hours: number, maxHours: number): string {
   return `${Math.max(8, (hours / maxHours) * 100)}%`;
 }
 
-function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number): { x: number; y: number } {
+const pieChartCenterX = 110;
+const pieChartCenterY = 94;
+const pieChartRadiusX = 92;
+const pieChartRadiusY = 68;
+const pieChartDepth = 18;
+
+function polarToCartesian(
+  centerX: number,
+  centerY: number,
+  radiusX: number,
+  radiusY: number,
+  angleInDegrees: number
+): { x: number; y: number } {
   const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180;
 
   return {
-    x: centerX + radius * Math.cos(angleInRadians),
-    y: centerY + radius * Math.sin(angleInRadians)
+    x: centerX + radiusX * Math.cos(angleInRadians),
+    y: centerY + radiusY * Math.sin(angleInRadians)
   };
 }
 
-function describePieSlicePath(centerX: number, centerY: number, radius: number, startAngle: number, endAngle: number): string {
-  const start = polarToCartesian(centerX, centerY, radius, endAngle);
-  const end = polarToCartesian(centerX, centerY, radius, startAngle);
+function describePieSlicePath(
+  centerX: number,
+  centerY: number,
+  radiusX: number,
+  radiusY: number,
+  startAngle: number,
+  endAngle: number
+): string {
+  const start = polarToCartesian(centerX, centerY, radiusX, radiusY, endAngle);
+  const end = polarToCartesian(centerX, centerY, radiusX, radiusY, startAngle);
   const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
 
   return [
     `M ${centerX} ${centerY}`,
     `L ${end.x} ${end.y}`,
-    `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${start.x} ${start.y}`,
+    `A ${radiusX} ${radiusY} 0 ${largeArcFlag} 1 ${start.x} ${start.y}`,
     "Z"
   ].join(" ");
+}
+
+function shadeHexColor(color: string, multiplier: number): string {
+  const normalized = color.replace("#", "");
+
+  if (normalized.length !== 6) {
+    return color;
+  }
+
+  const channels = [0, 2, 4].map((offset) => {
+    const parsed = Number.parseInt(normalized.slice(offset, offset + 2), 16);
+    const nextValue = Math.max(0, Math.min(255, Math.round(parsed * multiplier)));
+
+    return nextValue.toString(16).padStart(2, "0").toUpperCase();
+  });
+
+  return `#${channels.join("")}`;
 }
 
 function buildDepartmentPieSlices(rows: DashboardResponse["departmentBreakdown"]): Array<{
@@ -106,7 +142,9 @@ function buildDepartmentPieSlices(rows: DashboardResponse["departmentBreakdown"]
   hours: number;
   share: number;
   color: string;
-  path: string;
+  sideColor: string;
+  topPath: string;
+  bottomPath: string;
 }> {
   const palette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#6EA6CF", "#4B79B4"];
   const baseRows = rows.slice(0, 5);
@@ -126,7 +164,16 @@ function buildDepartmentPieSlices(rows: DashboardResponse["departmentBreakdown"]
       hours: row.hours,
       share,
       color: palette[index] ?? palette[palette.length - 1] ?? "#6EA6CF",
-      path: describePieSlicePath(110, 110, 92, startAngle, endAngle)
+      sideColor: shadeHexColor(palette[index] ?? palette[palette.length - 1] ?? "#6EA6CF", 0.68),
+      topPath: describePieSlicePath(pieChartCenterX, pieChartCenterY, pieChartRadiusX, pieChartRadiusY, startAngle, endAngle),
+      bottomPath: describePieSlicePath(
+        pieChartCenterX,
+        pieChartCenterY + pieChartDepth,
+        pieChartRadiusX,
+        pieChartRadiusY,
+        startAngle,
+        endAngle
+      )
     };
   });
 }
@@ -525,24 +572,45 @@ export default function App() {
               {departmentPieSlices.length > 0 ? (
                 <div className="pie-chart-layout">
                   <div className="pie-chart-wrap">
-                    <svg className="pie-chart-svg" viewBox="0 0 220 220" role="img" aria-label="Department share pie chart">
-                      <circle className="pie-chart-base" cx="110" cy="110" r="92" />
+                    <svg className="pie-chart-svg" viewBox="0 0 220 220" role="img" aria-label="Department share 3D pie chart">
+                      <ellipse className="pie-chart-shadow" cx={pieChartCenterX} cy={pieChartCenterY + pieChartDepth + 56} rx="78" ry="22" />
+                      <ellipse className="pie-chart-base pie-chart-base-bottom" cx={pieChartCenterX} cy={pieChartCenterY + pieChartDepth} rx={pieChartRadiusX} ry={pieChartRadiusY} />
                       {departmentPieSlices.length === 1 ? (
-                        <circle
-                          className="pie-chart-slice"
-                          cx="110"
-                          cy="110"
-                          r="92"
-                          fill={departmentPieSlices[0]?.color}
-                        >
-                          <title>{`${departmentPieSlices[0]?.label ?? "Department"}: ${formatHoursLabel(departmentPieSlices[0]?.hours ?? 0)}`}</title>
-                        </circle>
+                        <>
+                          <ellipse
+                            className="pie-chart-slice pie-chart-slice-bottom"
+                            cx={pieChartCenterX}
+                            cy={pieChartCenterY + pieChartDepth}
+                            rx={pieChartRadiusX}
+                            ry={pieChartRadiusY}
+                            fill={departmentPieSlices[0]?.sideColor}
+                          />
+                          <ellipse
+                            className="pie-chart-slice pie-chart-slice-top"
+                            cx={pieChartCenterX}
+                            cy={pieChartCenterY}
+                            rx={pieChartRadiusX}
+                            ry={pieChartRadiusY}
+                            fill={departmentPieSlices[0]?.color}
+                          >
+                            <title>{`${departmentPieSlices[0]?.label ?? "Department"}: ${formatHoursLabel(departmentPieSlices[0]?.hours ?? 0)}`}</title>
+                          </ellipse>
+                        </>
                       ) : (
-                        departmentPieSlices.map((slice) => (
-                          <path className="pie-chart-slice" d={slice.path} fill={slice.color} key={slice.label}>
-                            <title>{`${slice.label}: ${formatHoursLabel(slice.hours)} (${(slice.share * 100).toFixed(1)}%)`}</title>
-                          </path>
-                        ))
+                        <>
+                          <g className="pie-chart-bottom-layer">
+                            {departmentPieSlices.map((slice) => (
+                              <path className="pie-chart-slice pie-chart-slice-bottom" d={slice.bottomPath} fill={slice.sideColor} key={`${slice.label}-bottom`} />
+                            ))}
+                          </g>
+                          <g className="pie-chart-top-layer">
+                            {departmentPieSlices.map((slice) => (
+                              <path className="pie-chart-slice pie-chart-slice-top" d={slice.topPath} fill={slice.color} key={slice.label}>
+                                <title>{`${slice.label}: ${formatHoursLabel(slice.hours)} (${(slice.share * 100).toFixed(1)}%)`}</title>
+                              </path>
+                            ))}
+                          </g>
+                        </>
                       )}
                     </svg>
 
