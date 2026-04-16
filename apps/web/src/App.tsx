@@ -34,9 +34,9 @@ type DashboardFocus = "all" | "monthly" | "departments" | "activities";
 
 const dashboardFocusOptions: Array<{ id: DashboardFocus; label: string; helper: string; cardCount: number }> = [
   { id: "all", label: "All charts", helper: "Full dashboard", cardCount: 6 },
-  { id: "monthly", label: "Monthly trends", helper: "Month by month", cardCount: 1 },
+  { id: "monthly", label: "Hours by User", helper: "Monthly trend", cardCount: 1 },
   { id: "departments", label: "Departments", helper: "Share and split", cardCount: 2 },
-  { id: "activities", label: "Activities", helper: "What users do", cardCount: 2 }
+  { id: "activities", label: "Activity by User", helper: "Overall and per user", cardCount: 2 }
 ];
 
 function createEmptyFilters(): FilterFormState {
