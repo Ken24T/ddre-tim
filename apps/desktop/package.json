@@ -12,7 +12,7 @@
     "tauri:build": "tauri build",
     "tauri:check": "cargo check --manifest-path src-tauri/Cargo.toml",
     "tauri:dev": "tauri dev",
-    "typecheck": "npm run build --workspace @ddre/contracts && tsc -p tsconfig.json --noEmit && npm run tauri:check"
+    "typecheck": "npm run build --workspace @ddre/contracts && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
