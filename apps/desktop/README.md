@@ -1,14 +1,19 @@
 # Desktop App
 
-This directory will host the Cinnamon-first Tauri tray application.
+This workspace now contains the first Cinnamon-first desktop shell for TiM.
 
-The app is intended to auto-start when the user logs into the OS session so activity capture is available without manual launch.
+Current slice:
 
-The first desktop slice should provide:
+- a Vite + React desktop shell with a native Tauri host
+- a Cinnamon tray icon preview plus queued GNOME and Windows icon variants
+- a mutable native tray menu that mirrors the configured activity list
+- a menu-driven activity picker backed by `GET /v1/users/:userId/settings`
+- first-run settings backed by `PUT /v1/users/:userId/settings`
+- sync and note events queued through a local SQLite outbox before `POST /v1/sync-batches`
+- Cinnamon autostart management for packaged builds
+- a quick-selector panel for longer activity lists and notes
 
-- A tray icon with a menu-driven activity picker.
-- A settings menu for one-time Propercase name entry and CRUD management of the user's timed activity list.
-- A system-managed `Not Timed` activity that is always available from the tray menu.
-- Recent activities and a stop or idle action.
-- Sync status visibility.
-- A compact selector window for longer lists or notes.
+Still planned next:
+
+- GNOME and Windows tray-host compatibility work
+- packaging and install flow for the native desktop host

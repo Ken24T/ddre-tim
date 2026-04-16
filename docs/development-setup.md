@@ -5,17 +5,31 @@
 - Node.js 22 or newer
 - npm 10 or newer
 - Rust stable toolchain
+- Linux desktop headers for Tauri on Cinnamon: `libgtk-3-dev`, `libsoup-3.0-dev`, and `libwebkit2gtk-4.1-dev`
 - Docker Desktop or Docker Engine for local PostgreSQL later
 
 ## First Run
 
 1. Run `npm install` at the repo root.
 2. Start the API with `npm run dev:api`.
-3. Start the web workspace with `npm run dev:web` if you want the local dashboard prototype.
-4. Open `http://localhost:4000/health` to confirm the API is running.
-5. Open `http://localhost:5173` to confirm the Vite dashboard is running.
+3. Optional: start the Cinnamon-first desktop workspace with `npm run dev:desktop`.
+4. Optional: start the web workspace with `npm run dev:web` if you want the local dashboard prototype.
+5. Open `http://localhost:4000/health` to confirm the API is running.
+6. Open `http://localhost:5174` to confirm the desktop frontend dev server is running when the Tauri host starts.
+7. Open `http://localhost:5173` to confirm the Vite dashboard is running.
 
 By default the current API still uses in-memory storage for user settings if no database connection string is configured.
+
+The desktop workspace now has two local execution modes:
+
+- `npm run dev:desktop` starts the native Tauri host and the desktop frontend together.
+- `npm run dev:web --workspace @ddre/desktop` builds or previews the browser fallback shell without launching the native host.
+
+Current Cinnamon-native behavior:
+
+- the tray menu is owned by Tauri and updated in place from the React shell
+- activity and note events are queued in a per-user local SQLite outbox before being flushed to `POST /v1/sync-batches`
+- autostart management exists for Cinnamon and GNOME sessions, but stays disabled in development builds so login does not point at a local debug binary
 
 ## API Persistence
 
@@ -64,6 +78,7 @@ If Docker is available later, `infra/docker-compose.yml` mounts `infra/sql` into
 ## Current Local Services
 
 - API: `http://localhost:4000`
+- Desktop frontend dev server: `http://localhost:5174`
 - Web dashboard prototype: `http://localhost:5173`
 - PostgreSQL: scaffolded through `infra/docker-compose.yml`
 
@@ -87,6 +102,6 @@ Operational assumptions for this target:
 
 ## Next Setup Slices
 
-- Add the Tauri desktop workspace.
 - Expand API persistence beyond user-settings snapshots into sync batches and activity events.
 - Expand the web workspace from a local shell into real dashboard read models and views.
+- Add GNOME and Windows native tray-host compatibility work on top of the shared desktop shell.

@@ -50,7 +50,7 @@ The consolidated cross-repo application prompt is expected to be discoverable th
 |------|---------|
 | `README.md` | High-level project summary and quick start |
 | `apps/api/` | Fastify API for activity catalog, user settings, sync ingest, and later reporting |
-| `apps/desktop/` | Planned Tauri desktop tray app for Cinnamon-first activity capture |
+| `apps/desktop/` | Cinnamon-first desktop workspace with a local tray shell and future Tauri host wiring |
 | `apps/web/` | Vite-based manager-dashboard workspace for local browser testing and future reporting views |
 | `packages/contracts/` | Shared Zod schemas and TypeScript types for API and clients |
 | `docs/architecture.md` | Core system design and product constraints |
@@ -76,13 +76,12 @@ Use the root workspace commands unless there is a good reason to target a single
 
 ```bash
 npm install                      # Install workspace dependencies
-npm run typecheck               # Validate contracts and API TypeScript
-npm run build                   # Build contracts and API
+npm run typecheck               # Validate contracts, API, desktop, and web TypeScript
+npm run build                   # Build contracts, API, desktop, and web workspaces
 npm run dev:api                 # Start the API in watch mode
+npm run dev:desktop             # Start the Cinnamon-first desktop shell
 npm run dev:web                 # Start the local Vite dashboard shell
 ```
-
-There is no desktop build yet. The web workspace now exists as a local Vite shell; do not invent additional commands beyond the current repo state.
 
 ## Current Stack
 
@@ -92,13 +91,12 @@ There is no desktop build yet. The web workspace now exists as a local Vite shel
 - npm workspaces
 - TypeScript in strict mode
 - Fastify for the API
-- Vite + React for the initial web shell
+- Vite + React for the desktop and web shells
 - Zod for shared schemas and validation
 
 ### Planned next
 
 - Tauri v2 for the desktop tray app
-- React + TypeScript for the web dashboard
 - PostgreSQL as the authoritative datastore
 - Per-user local SQLite in the desktop app for offline queueing
 

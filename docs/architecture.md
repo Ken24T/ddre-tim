@@ -68,5 +68,6 @@ This repository currently contains:
 
 - Shared contracts for activities and sync batches.
 - A starter API with a seeded activity catalog, user settings endpoints, and a sync endpoint.
+- A Cinnamon-first desktop workspace shell that uses the real settings and sync API surfaces.
 - A minimal Vite-based web shell for local dashboard testing.
-- Repo docs and structure for the desktop and web slices that follow.
+- Repo docs and structure for the deeper desktop and web slices that follow.
