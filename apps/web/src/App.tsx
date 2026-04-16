@@ -176,6 +176,7 @@ interface UserBreakdownStackSegment {
 interface UserBreakdownStackCard {
   userId: string;
   label: string;
+  color: string;
   totalHours: number;
   dayCount: number;
   recordCount: number;
@@ -300,6 +301,7 @@ function buildUserBreakdownStackCards(
     .map((userRow) => ({
       userId: userRow.userId,
       label: userRow.label,
+      color: userRow.color,
       totalHours: userRow.hours,
       dayCount: userRow.dayCount,
       recordCount: userRow.recordCount,
@@ -846,12 +848,20 @@ export default function App() {
                 <h2>How each selected user divides time across departments</h2>
                 {departmentUserBars.length > 0 ? (
                   <>
-                    <div className="user-mix-chart" role="img" aria-label="Department mix by user stacked bar chart">
+                    <div className="user-activity-pies" role="img" aria-label="Department mix by user stacked bar chart">
                       {departmentUserBars.map((bar) => (
-                        <div className="user-mix-column" key={bar.userId}>
-                          <span className="user-mix-value">{formatHoursLabel(bar.totalHours)}</span>
-                          <span className="user-mix-stack" style={{ height: barHeight(bar.totalHours, departmentUserMaxHours) }}>
-                            {bar.segments.map((segment) => (
+                        <div className="user-activity-card" key={bar.userId}>
+                          <div className="user-activity-card-header">
+                            <div className="user-activity-card-title">
+                              <span className="legend-swatch" style={{ background: bar.color }} />
+                              <strong>{bar.label}</strong>
+                            </div>
+                            <span className="user-activity-card-total">{formatHoursLabel(bar.totalHours)}</span>
+                          </div>
+
+                          <div className="user-mix-card-body">
+                            <span className="user-mix-stack" style={{ height: barHeight(bar.totalHours, departmentUserMaxHours) }}>
+                              {bar.segments.map((segment) => (
                                 <span
                                   className="user-mix-segment"
                                   key={segment.label}
@@ -862,10 +872,11 @@ export default function App() {
                                   }}
                                 />
                               ))}
-                          </span>
-                          <div className="user-mix-label-block">
-                            <span className="user-mix-label">{bar.label}</span>
-                            <span className="user-mix-meta">{bar.dayCount} days · {bar.recordCount} records</span>
+                            </span>
+
+                            <div className="user-mix-label-block">
+                              <span className="user-mix-meta">{bar.dayCount} days · {bar.recordCount} records</span>
+                            </div>
                           </div>
                         </div>
                       ))}

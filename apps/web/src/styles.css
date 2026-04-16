@@ -733,36 +733,13 @@ body {
   color: var(--text-muted);
 }
 
-.user-mix-chart {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 18px;
-  align-items: stretch;
-  min-height: 280px;
-  margin-top: 22px;
-}
 
-.user-mix-column {
+.user-mix-card-body {
   display: grid;
-  grid-template-rows: auto minmax(180px, 1fr) auto;
+  grid-template-rows: minmax(180px, 1fr) auto;
   align-items: stretch;
   justify-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.user-mix-value,
-.user-mix-label {
-  font-size: 0.92rem;
-  text-align: center;
-}
-
-.user-mix-value {
-  color: var(--text-secondary);
-}
-
-.user-mix-label {
-  font-weight: 600;
+  gap: 12px;
 }
 
 .user-mix-label-block {
@@ -779,7 +756,7 @@ body {
   display: flex;
   flex-direction: column-reverse;
   justify-content: flex-start;
-  width: min(100%, 108px);
+  width: min(100%, 112px);
   min-height: 14%;
   align-self: end;
   overflow: hidden;
@@ -830,6 +807,10 @@ body {
   color: var(--text-secondary);
   font-size: 0.94rem;
   white-space: nowrap;
+}
+
+.user-activity-card .user-mix-stack {
+  margin-inline: auto;
 }
 
 .user-activity-card .pie-chart-layout {
