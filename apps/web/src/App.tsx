@@ -165,10 +165,32 @@ interface BreakdownRow {
 interface BreakdownPieOptions {
   maxRows?: number;
   collapseRemainingLabel?: string;
+  colorByLabel?: Map<string, string>;
+}
+
+interface UserActivityPieCard {
+  userId: string;
+  label: string;
+  color: string;
+  totalHours: number;
+  slices: BreakdownPieSlice[];
+}
+
+const breakdownPiePalette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#7CB8DD", "#6EA6CF", "#5E8FC3", "#4B79B4"];
+
+function buildBreakdownColorMap(rows: BreakdownRow[], extraLabels: string[] = []): Map<string, string> {
+  const labels = [...rows.map((row) => row.label)];
+
+  for (const label of extraLabels) {
+    if (!labels.includes(label)) {
+      labels.push(label);
+    }
+  }
+
+  return new Map(labels.map((label, index) => [label, breakdownPiePalette[index % breakdownPiePalette.length] ?? "#6EA6CF"]));
 }
 
 function buildBreakdownPieSlices(rows: BreakdownRow[], options: BreakdownPieOptions = {}): BreakdownPieSlice[] {
-  const palette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#7CB8DD", "#6EA6CF", "#5E8FC3", "#4B79B4"];
   const maxRows = options.maxRows ?? rows.length;
   const baseRows = rows.slice(0, maxRows);
   const remainingRows = rows.slice(maxRows);
@@ -185,7 +207,7 @@ function buildBreakdownPieSlices(rows: BreakdownRow[], options: BreakdownPieOpti
     const startAngle = currentAngle;
     const endAngle = currentAngle + share * 360;
     currentAngle = endAngle;
-    const color = palette[index % palette.length] ?? "#6EA6CF";
+    const color = options.colorByLabel?.get(row.label) ?? breakdownPiePalette[index % breakdownPiePalette.length] ?? "#6EA6CF";
 
     return {
       label: row.label,
@@ -204,6 +226,45 @@ function buildBreakdownPieSlices(rows: BreakdownRow[], options: BreakdownPieOpti
       )
     };
   });
+}
+
+function buildUserActivityPieCards(
+  activityRows: DashboardResponse["activityUserBreakdown"],
+  userRows: DashboardResponse["userBreakdown"],
+  activityColorByLabel: Map<string, string>
+): UserActivityPieCard[] {
+  const activitiesByUser = new Map<string, BreakdownRow[]>();
+
+  for (const activityRow of activityRows) {
+    for (const segment of activityRow.segments) {
+      const userActivities = activitiesByUser.get(segment.userId) ?? [];
+      userActivities.push({
+        label: activityRow.label,
+        hours: segment.hours
+      });
+      activitiesByUser.set(segment.userId, userActivities);
+    }
+  }
+
+  return userRows
+    .map((userRow) => {
+      const userActivities = [...(activitiesByUser.get(userRow.userId) ?? [])].sort((left, right) => {
+        return right.hours - left.hours || left.label.localeCompare(right.label, "en-AU");
+      });
+
+      return {
+        userId: userRow.userId,
+        label: userRow.label,
+        color: userRow.color,
+        totalHours: userRow.hours,
+        slices: buildBreakdownPieSlices(userActivities, {
+          maxRows: 5,
+          collapseRemainingLabel: "Other",
+          colorByLabel: activityColorByLabel
+        })
+      };
+    })
+    .filter((card) => card.slices.length > 0);
 }
 
 function BreakdownPieLayout({
@@ -425,17 +486,18 @@ export default function App() {
     collapseRemainingLabel: "Other"
   });
   const departmentPieTotal = departmentPieSlices.reduce((total, slice) => total + slice.hours, 0);
-  const activityRows = dashboardData?.activityBreakdown.slice(0, 8) ?? [];
+  const activityBreakdownRows = dashboardData?.activityBreakdown ?? [];
+  const activityRows = activityBreakdownRows.slice(0, 8) ?? [];
   const departmentUserRows = dashboardData?.departmentUserBreakdown.slice(0, 8) ?? [];
   const departmentUserLegendUsers = selectedUsers.filter((user) => {
     return departmentUserRows.some((row) => row.segments.some((segment) => segment.userId === user.id));
   });
-  const activityUserRows = dashboardData?.activityUserBreakdown.slice(0, 8) ?? [];
-  const activityUserLegendUsers = selectedUsers.filter((user) => {
-    return activityUserRows.some((row) => row.segments.some((segment) => segment.userId === user.id));
+  const activityColorByLabel = buildBreakdownColorMap(activityBreakdownRows, ["Other"]);
+  const activityPieSlices = buildBreakdownPieSlices(activityRows, {
+    colorByLabel: activityColorByLabel
   });
-  const activityPieSlices = buildBreakdownPieSlices(activityRows);
   const activityPieTotal = activityPieSlices.reduce((total, slice) => total + slice.hours, 0);
+  const activityUserPieCards = buildUserActivityPieCards(dashboardData?.activityUserBreakdown ?? [], userRows, activityColorByLabel);
   const userChartMax = Math.max(...userRows.map((row) => row.hours), 0);
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
   const apiStatusTone = healthState.phase === "ready" ? "online" : healthState.phase === "error" ? "offline" : "checking";
@@ -819,47 +881,27 @@ export default function App() {
               <article className="panel panel-span-2 chart-panel">
                 <p className="panel-label">Activity by user</p>
                 <h2>What selected users are spending time doing</h2>
-                {activityUserRows.length > 0 ? (
+                {activityUserPieCards.length > 0 ? (
                   <>
-                    <div className="split-by-user-chart" role="img" aria-label="Activity by user stacked chart">
-                      {activityUserRows.map((row) => (
-                        <div className="share-row" key={row.label}>
-                          <div className="share-copy">
-                            <strong>{row.label}</strong>
-                            <span>{row.dayCount} days · {row.recordCount} records</span>
-                          </div>
-
-                          <div className="share-track-wrap split-by-user-track-wrap">
-                            <div className="split-by-user-track">
-                              {row.segments.map((segment) => (
-                                <span
-                                  className="split-by-user-segment"
-                                  key={segment.userId}
-                                  title={`${segment.label}: ${formatHoursLabel(segment.hours)}`}
-                                  style={{
-                                    background: segment.color,
-                                    width: `${row.totalHours === 0 ? 0 : (segment.hours / row.totalHours) * 100}%`
-                                  }}
-                                />
-                              ))}
+                    <div className="user-activity-pies" role="img" aria-label="Activity breakdown pie charts by user">
+                      {activityUserPieCards.map((card) => (
+                        <div className="user-activity-card" key={card.userId}>
+                          <div className="user-activity-card-header">
+                            <div className="user-activity-card-title">
+                              <span className="legend-swatch" style={{ background: card.color }} />
+                              <strong>{card.label}</strong>
                             </div>
-
-                            <strong>{formatHoursLabel(row.totalHours)}</strong>
+                            <span className="user-activity-card-total">{formatHoursLabel(card.totalHours)}</span>
                           </div>
+
+                          <BreakdownPieLayout
+                            slices={card.slices}
+                            totalHours={card.totalHours}
+                            ariaLabel={`${card.label} activity breakdown pie chart`}
+                          />
                         </div>
                       ))}
                     </div>
-
-                    {activityUserLegendUsers.length > 0 ? (
-                      <div className="chart-legend">
-                        {activityUserLegendUsers.map((user) => (
-                          <div className="legend-item" key={user.id}>
-                            <span className="legend-swatch" style={{ background: user.color }} />
-                            <span>{user.displayName}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
                   </>
                 ) : (
                   <p>No activity-by-user data is available for the current filter window.</p>
