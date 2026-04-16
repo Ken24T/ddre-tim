@@ -129,7 +129,7 @@ body {
 
 .control-panel {
   display: grid;
-  grid-template-columns: minmax(240px, 1.1fr) minmax(0, 1.6fr);
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.9fr);
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -137,6 +137,7 @@ body {
 .control-tools {
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 .user-filter-bank {
@@ -159,8 +160,8 @@ body {
 }
 
 .user-chip-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
 
@@ -168,7 +169,7 @@ body {
   --chip-accent: rgba(238, 248, 252, 0.28);
   display: grid;
   gap: 2px;
-  min-width: 144px;
+  min-width: 0;
   padding: 12px 14px;
   border-radius: 18px;
   border: 1px solid rgba(213, 234, 244, 0.12);
@@ -205,9 +206,13 @@ body {
   margin-top: 0;
 }
 
+.control-copy {
+  max-width: 22rem;
+}
+
 .filter-form {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: minmax(180px, 1.15fr) repeat(2, minmax(150px, 0.95fr)) auto;
   gap: 14px;
   align-items: end;
 }
@@ -250,6 +255,7 @@ body {
 .filter-actions {
   display: flex;
   gap: 10px;
+  align-self: stretch;
 }
 
 .button {
