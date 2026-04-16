@@ -408,13 +408,14 @@ export default function App() {
                 <>
                   <div className="trend-chart" role="img" aria-label="Monthly stacked user hours chart">
                     {dashboardData.monthlyUserTotals.map((month) => (
-                      <div className="trend-column" key={month.monthKey} title={`${month.label}: ${formatHoursLabel(month.totalHours)}`}>
+                      <div className="trend-column" key={month.monthKey}>
                         <span className="trend-value">{formatHoursLabel(month.totalHours)}</span>
                         <span className="trend-stack" style={{ height: barHeight(month.totalHours, monthlyChartMax) }}>
                           {month.segments.map((segment) => (
                             <span
                               className="trend-segment"
                               key={segment.userId}
+                              title={`${segment.label}: ${formatHoursLabel(segment.hours)}`}
                               style={{
                                 background: segment.color,
                                 height: `${month.totalHours === 0 ? 0 : (segment.hours / month.totalHours) * 100}%`
