@@ -237,11 +237,12 @@ Notes:
 
 ## Historical Import Rules
 
-For the current legacy import slice, only import rows belonging to `Ken Boyle`.
+For the current legacy import slice, use rows belonging to `Ken Boyle` as the source workbook slice, then expand the generated dev seed into a multi-user dashboard dataset.
 
 Import rules:
 
 - Filter workbook rows by `Employee = Ken Boyle` after trimming surrounding whitespace and normalizing comparison case
+- Generate additional deterministic synthetic users from that imported source slice so dashboard filters and charts can be exercised against multi-user data during development
 - Preserve `Department` on every imported row because the same employee can legitimately perform work for multiple departments
 - Parse `Date` using Australian regional conventions and store the normalized result in `work_date`
 - Combine repeated `Date + Employee + Department + Activity` rows into a single imported record by summing `Hours`
@@ -263,10 +264,10 @@ Purpose of `user_settings_snapshots`:
 
 Current behavior of the generated seed:
 
-- inserts a single Ken Boyle user row
-- derives the user's default department from the imported department with the highest total hours
+- inserts one imported Ken Boyle user plus deterministic synthetic users for dashboard testing
+- derives each user's default department from the imported department with the highest total hours for that user
 - inserts shared timed activities from the imported workbook rows plus the system-managed `Not Timed` activity
-- loads all 368 Ken Boyle historical rows into `historical_tim_daily_records` with mapped user, department, and activity ids
+- loads all generated historical rows into `historical_tim_daily_records` with mapped user, department, and activity ids
 
 Validation commands:
 

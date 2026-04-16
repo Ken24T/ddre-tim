@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent, type MouseEvent } from "react";
 import {
   fetchDashboardSnapshot,
   formatHoursLabel,
@@ -46,19 +46,19 @@ function buildSummaryCards(data: DashboardResponse): Array<{ label: string; valu
       helper: `${data.stats.recordCount} combined daily records`
     },
     {
-      label: "Worked days",
-      value: String(data.stats.workdayCount),
-      helper: `${formatHoursLabel(data.stats.averageHoursPerDay)} average per day`
+      label: "Selected users",
+      value: String(data.stats.selectedUserCount),
+      helper: data.scopeLabel
+    },
+    {
+      label: "User-days",
+      value: String(data.stats.userDayCount),
+      helper: `${formatHoursLabel(data.stats.averageHoursPerUserDay)} average per user-day`
     },
     {
       label: "Departments",
       value: String(data.stats.departmentCount),
       helper: `${data.stats.activityCount} activities in scope`
-    },
-    {
-      label: "Scope",
-      value: data.filters.selectedDepartment ?? "All departments",
-      helper: data.dateRangeLabel
     }
   ];
 }
@@ -159,14 +159,15 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [appliedFilters.department, appliedFilters.from, appliedFilters.to]);
+  }, [appliedFilters.department, appliedFilters.from, appliedFilters.to, appliedFilters.userIds?.join("|")]);
 
   function handleApplyFilters(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     setAppliedFilters({
       department: draftFilters.department || undefined,
       from: draftFilters.from || undefined,
-      to: draftFilters.to || undefined
+      to: draftFilters.to || undefined,
+      userIds: appliedFilters.userIds
     });
   }
 
@@ -175,12 +176,48 @@ export default function App() {
     setAppliedFilters({});
   }
 
+  function handleAllUsersClick(): void {
+    setAppliedFilters((current) => ({
+      ...current,
+      userIds: undefined
+    }));
+  }
+
+  function handleUserChipClick(userId: string, event: MouseEvent<HTMLButtonElement>): void {
+    if (!dashboardData) {
+      return;
+    }
+
+    const currentSelection = dashboardData.filters.selectedUserIds;
+    let nextSelection: string[];
+
+    if (event.ctrlKey || event.metaKey) {
+      nextSelection = currentSelection.includes(userId)
+        ? currentSelection.filter((selectedUserId) => selectedUserId !== userId)
+        : [...currentSelection, userId];
+    } else {
+      nextSelection = [userId];
+    }
+
+    const normalizedSelection = nextSelection.length === 0 || nextSelection.length === dashboardData.filters.availableUsers.length
+      ? undefined
+      : nextSelection;
+
+    setAppliedFilters((current) => ({
+      ...current,
+      userIds: normalizedSelection
+    }));
+  }
+
   const dashboardData = dashboardState.phase === "ready" || dashboardState.phase === "refreshing" ? dashboardState.data : null;
   const summaryCards = dashboardData ? buildSummaryCards(dashboardData) : [];
-  const monthlyChartMax = dashboardData ? Math.max(...dashboardData.monthlyTotals.map((month) => month.hours), 0) : 0;
+  const monthlyChartMax = dashboardData ? Math.max(...dashboardData.monthlyUserTotals.map((month) => month.totalHours), 0) : 0;
+  const selectedUsers = dashboardData?.filters.availableUsers.filter((user) => user.isSelected) ?? [];
+  const userRows = dashboardData?.userBreakdown ?? [];
   const departmentChartRows = dashboardData?.departmentBreakdown.slice(0, 5) ?? [];
   const activityRows = dashboardData?.activityBreakdown.slice(0, 8) ?? [];
   const departmentRows = dashboardData?.departmentBreakdown.slice(0, 8) ?? [];
+  const userChartMax = Math.max(...userRows.map((row) => row.hours), 0);
   const departmentChartMax = Math.max(...departmentChartRows.map((row) => row.hours), 0);
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
 
@@ -188,10 +225,11 @@ export default function App() {
     <main className="shell">
       <section className="hero">
         <p className="eyebrow">Time in Motion</p>
-        <h1>{dashboardData?.employeeName ?? "Manager dashboard"}</h1>
+        <h1>{dashboardData?.scopeLabel ?? "Manager dashboard"}</h1>
         <p className="lead">
           The dashboard now reads from the API instead of importing seed data directly, giving us a real manager-facing
-          read model to shape while persistence work continues underneath.
+          read model to shape while persistence work continues underneath. User chips now let you isolate one employee
+          or combine several people into the same reporting scope.
         </p>
         <div className="hero-meta">
           <span>{dashboardData ? `Imported from ${dashboardData.sourceFile}` : "Loading imported history"}</span>
@@ -203,72 +241,111 @@ export default function App() {
       <section className="panel control-panel">
         <div className="control-copy">
           <p className="panel-label">Manager filters</p>
-          <h2>Department and date window</h2>
-          <p>Start narrowing the imported history before manager scopes and saved views become persistent features.</p>
+          <h2>Users, department, and date window</h2>
+          <p>Plain click isolates one user. Ctrl/Cmd-click adds or removes extra users from the same reporting scope.</p>
         </div>
 
-        <form className="filter-form" onSubmit={handleApplyFilters}>
-          <label>
-            <span>Department</span>
-            <select
-              value={draftFilters.department}
-              onChange={(event) => {
-                setDraftFilters((current) => ({
-                  ...current,
-                  department: event.target.value
-                }));
-              }}
-            >
-              <option value="">All departments</option>
-              {(dashboardData?.filters.availableDepartments ?? []).map((department) => (
-                <option key={department} value={department}>
-                  {department}
-                </option>
+        <div className="control-tools">
+          <div className="user-filter-bank">
+            <div className="user-filter-header">
+              <span>User scope</span>
+              <strong>{dashboardData?.scopeLabel ?? "Loading users"}</strong>
+            </div>
+
+            <div className="user-chip-list">
+              <button
+                className={`user-chip${dashboardData && dashboardData.filters.selectedUserIds.length === dashboardData.filters.availableUsers.length ? " is-active" : ""}`}
+                disabled={dashboardBusy && !dashboardData}
+                onClick={handleAllUsersClick}
+                type="button"
+              >
+                <span>All users</span>
+                <small>{dashboardData ? formatHoursLabel(dashboardData.stats.totalHours) : "..."}</small>
+              </button>
+
+              {(dashboardData?.filters.availableUsers ?? []).map((user) => (
+                <button
+                  className={`user-chip${user.isSelected ? " is-active" : ""}`}
+                  disabled={dashboardBusy && !dashboardData}
+                  key={user.id}
+                  onClick={(event) => {
+                    handleUserChipClick(user.id, event);
+                  }}
+                  style={{ "--chip-accent": user.color } as CSSProperties}
+                  type="button"
+                >
+                  <span>{user.displayName}</span>
+                  <small>{formatHoursLabel(user.totalHours)}</small>
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
 
-          <label>
-            <span>From</span>
-            <input
-              max={dashboardData?.filters.maxDate}
-              min={dashboardData?.filters.minDate}
-              type="date"
-              value={draftFilters.from}
-              onChange={(event) => {
-                setDraftFilters((current) => ({
-                  ...current,
-                  from: event.target.value
-                }));
-              }}
-            />
-          </label>
-
-          <label>
-            <span>To</span>
-            <input
-              max={dashboardData?.filters.maxDate}
-              min={dashboardData?.filters.minDate}
-              type="date"
-              value={draftFilters.to}
-              onChange={(event) => {
-                setDraftFilters((current) => ({
-                  ...current,
-                  to: event.target.value
-                }));
-              }}
-            />
-          </label>
-
-          <div className="filter-actions">
-            <button className="button button-primary" disabled={dashboardBusy} type="submit">
-              {dashboardState.phase === "refreshing" ? "Refreshing..." : "Apply filters"}
-            </button>
-            <button className="button" disabled={dashboardBusy && !dashboardData} onClick={handleResetFilters} type="button">
-              Reset
-            </button>
+            <p className="user-filter-hint">Selected users stay in scope while you adjust department or date.</p>
           </div>
-        </form>
+
+          <form className="filter-form" onSubmit={handleApplyFilters}>
+            <label>
+              <span>Department</span>
+              <select
+                value={draftFilters.department}
+                onChange={(event) => {
+                  setDraftFilters((current) => ({
+                    ...current,
+                    department: event.target.value
+                  }));
+                }}
+              >
+                <option value="">All departments</option>
+                {(dashboardData?.filters.availableDepartments ?? []).map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span>From</span>
+              <input
+                max={dashboardData?.filters.maxDate}
+                min={dashboardData?.filters.minDate}
+                type="date"
+                value={draftFilters.from}
+                onChange={(event) => {
+                  setDraftFilters((current) => ({
+                    ...current,
+                    from: event.target.value
+                  }));
+                }}
+              />
+            </label>
+
+            <label>
+              <span>To</span>
+              <input
+                max={dashboardData?.filters.maxDate}
+                min={dashboardData?.filters.minDate}
+                type="date"
+                value={draftFilters.to}
+                onChange={(event) => {
+                  setDraftFilters((current) => ({
+                    ...current,
+                    to: event.target.value
+                  }));
+                }}
+              />
+            </label>
+
+            <div className="filter-actions">
+              <button className="button button-primary" disabled={dashboardBusy} type="submit">
+                {dashboardState.phase === "refreshing" ? "Refreshing..." : "Apply filters"}
+              </button>
+              <button className="button" disabled={dashboardBusy && !dashboardData} onClick={handleResetFilters} type="button">
+                Reset
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
 
       {dashboardData ? (
@@ -312,6 +389,7 @@ export default function App() {
                 The API is serving this dashboard from <code>{dashboardData.sourceFile}</code>. Refresh the seed after
                 workbook changes with <code>npm run import:tim-records</code>.
               </p>
+              <p>{dashboardData.scopeLabel} within {dashboardData.filters.selectedDepartment ?? "all departments"}.</p>
             </>
           ) : (
             <>
@@ -325,25 +403,72 @@ export default function App() {
           <>
             <article className="panel panel-span-2 chart-panel">
               <p className="panel-label">Monthly trend</p>
-              <h2>Imported hours across the selected window</h2>
-              {dashboardData.monthlyTotals.length > 0 ? (
-                <div className="trend-chart" role="img" aria-label="Monthly hours chart">
-                  {dashboardData.monthlyTotals.map((month) => (
-                    <div className="trend-column" key={month.monthKey} title={`${month.label}: ${formatHoursLabel(month.hours)}`}>
-                      <span className="trend-value">{formatHoursLabel(month.hours)}</span>
-                      <span className="trend-bar" style={{ height: barHeight(month.hours, monthlyChartMax) }} />
-                      <span className="trend-label">{month.label}</span>
-                    </div>
-                  ))}
-                </div>
+              <h2>Stacked hours by user</h2>
+              {dashboardData.monthlyUserTotals.length > 0 ? (
+                <>
+                  <div className="trend-chart" role="img" aria-label="Monthly stacked user hours chart">
+                    {dashboardData.monthlyUserTotals.map((month) => (
+                      <div className="trend-column" key={month.monthKey} title={`${month.label}: ${formatHoursLabel(month.totalHours)}`}>
+                        <span className="trend-value">{formatHoursLabel(month.totalHours)}</span>
+                        <span className="trend-stack" style={{ height: barHeight(month.totalHours, monthlyChartMax) }}>
+                          {month.segments.map((segment) => (
+                            <span
+                              className="trend-segment"
+                              key={segment.userId}
+                              style={{
+                                background: segment.color,
+                                height: `${month.totalHours === 0 ? 0 : (segment.hours / month.totalHours) * 100}%`
+                              }}
+                            />
+                          ))}
+                        </span>
+                        <span className="trend-label">{month.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="chart-legend">
+                    {selectedUsers.map((user) => (
+                      <div className="legend-item" key={user.id}>
+                        <span className="legend-swatch" style={{ background: user.color }} />
+                        <span>{user.displayName}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <p>No monthly data in the current filter window.</p>
               )}
             </article>
 
             <article className="panel chart-panel">
+              <p className="panel-label">User comparison</p>
+              <h2>Selected user contribution</h2>
+              {userRows.length > 0 ? (
+                <div className="share-chart" role="img" aria-label="User hours comparison chart">
+                  {userRows.map((row) => (
+                    <div className="share-row" key={row.userId}>
+                      <div className="share-copy">
+                        <strong>{row.label}</strong>
+                        <span>{row.dayCount} days · {row.recordCount} records</span>
+                      </div>
+                      <div className="share-track-wrap">
+                        <div className="share-track">
+                          <span className="share-fill" style={{ width: barWidth(row.hours, userChartMax), background: row.color }} />
+                        </div>
+                        <strong>{formatHoursLabel(row.hours)}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No user data in the current filter window.</p>
+              )}
+            </article>
+
+            <article className="panel panel-span-2 chart-panel">
               <p className="panel-label">Department chart</p>
-              <h2>Where the time is landing</h2>
+              <h2>Where the selected users are spending time</h2>
               {departmentChartRows.length > 0 ? (
                 <div className="share-chart" role="img" aria-label="Department hours comparison chart">
                   {departmentChartRows.map((row) => (

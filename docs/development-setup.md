@@ -41,7 +41,8 @@ To regenerate the current historical seed data from the workbook:
 The importer currently:
 
 - parses workbook dates using Australian day-first conventions
-- imports only rows belonging to Ken Boyle
+- uses Ken Boyle workbook rows as the imported source slice
+- expands that source slice into additional deterministic synthetic users for multi-user dashboard testing
 - preserves department per row so cross-department work remains intact
 - combines repeated `Date + Employee + Department + Activity` rows into a single record by summing `Hours`
 

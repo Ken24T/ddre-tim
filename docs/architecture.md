@@ -60,7 +60,7 @@ The current deployment assumption is that dashboard access happens from machines
 
 The primary database should store normalized users, departments, activities, and append-only activity events. Reporting totals such as daily hours, weekly totals, month labels, and chart aggregates should be derived from those facts rather than authored directly.
 
-The reviewed legacy workbook shape is useful as an import and reporting reference, but not as the source-of-truth live schema. For the current historical backfill slice, import only Ken Boyle records and normalize workbook dates using Australian day-first conventions before deriving reporting periods. See `docs/database-schema.md` for the proposed table layout and the rationale for excluding derived fields such as `Week` and `Month` from primary tables.
+The reviewed legacy workbook shape is useful as an import and reporting reference, but not as the source-of-truth live schema. For the current historical backfill slice, use Ken Boyle workbook rows as the trusted source slice, normalize workbook dates using Australian day-first conventions, and derive multi-user dashboard test data from that seed before building reporting views. See `docs/database-schema.md` for the proposed table layout and the rationale for excluding derived fields such as `Week` and `Month` from primary tables.
 
 ## Initial Implementation Slice
 

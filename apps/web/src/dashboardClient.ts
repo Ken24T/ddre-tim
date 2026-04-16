@@ -2,20 +2,35 @@ export interface DashboardQueryValues {
   department?: string;
   from?: string;
   to?: string;
+  userIds?: string[];
 }
 
 export interface DashboardSummaryStats {
   totalHours: number;
   workdayCount: number;
   averageHoursPerDay: number;
+  userDayCount: number;
+  averageHoursPerUserDay: number;
+  selectedUserCount: number;
   departmentCount: number;
   activityCount: number;
+  recordCount: number;
+}
+
+export interface DashboardUserOption {
+  id: string;
+  displayName: string;
+  color: string;
+  isSelected: boolean;
+  totalHours: number;
   recordCount: number;
 }
 
 export interface DashboardFilters {
   availableDepartments: string[];
   selectedDepartment: string | null;
+  availableUsers: DashboardUserOption[];
+  selectedUserIds: string[];
   selectedFrom: string;
   selectedTo: string;
   minDate: string;
@@ -24,6 +39,15 @@ export interface DashboardFilters {
 
 export interface DashboardBreakdownRow {
   label: string;
+  hours: number;
+  dayCount: number;
+  recordCount: number;
+}
+
+export interface DashboardUserBreakdownRow {
+  userId: string;
+  label: string;
+  color: string;
   hours: number;
   dayCount: number;
   recordCount: number;
@@ -43,17 +67,34 @@ export interface DashboardMonthlyTotal {
   hours: number;
 }
 
+export interface DashboardMonthlyUserSegment {
+  userId: string;
+  label: string;
+  color: string;
+  hours: number;
+}
+
+export interface DashboardMonthlyUserTotal {
+  monthKey: string;
+  label: string;
+  totalHours: number;
+  segments: DashboardMonthlyUserSegment[];
+}
+
 export interface DashboardResponse {
+  scopeLabel: string;
   employeeName: string;
   sourceFile: string;
   importedAt: string;
   dateRangeLabel: string;
   filters: DashboardFilters;
   stats: DashboardSummaryStats;
+  userBreakdown: DashboardUserBreakdownRow[];
   departmentBreakdown: DashboardBreakdownRow[];
   activityBreakdown: DashboardBreakdownRow[];
   recentDays: DashboardRecentDay[];
   monthlyTotals: DashboardMonthlyTotal[];
+  monthlyUserTotals: DashboardMonthlyUserTotal[];
 }
 
 function buildDashboardUrl(query: DashboardQueryValues): string {
@@ -69,6 +110,10 @@ function buildDashboardUrl(query: DashboardQueryValues): string {
 
   if (query.to) {
     params.set("to", query.to);
+  }
+
+  for (const userId of query.userIds ?? []) {
+    params.append("userId", userId);
   }
 
   const queryString = params.toString();
