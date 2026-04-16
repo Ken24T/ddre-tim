@@ -30,6 +30,6 @@ The current runtime target is a zero-cost office-hosted deployment: the shared A
 3. Run `npm run dev:api` to start the initial API.
 4. Optional: run `npm run import:tim-records -- "/home/ken/Downloads/TiM Metrics.xlsx"` to regenerate the historical Ken Boyle seed data.
 5. Optional: run `npm run db:generate-seed && npm run db:validate` to refresh and validate the local SQL seed artifacts.
-6. Optional: run `npm run dev:web` to start the local Vite dashboard shell.
+6. Optional: run `npm run dev:web` to start the local API-backed dashboard prototype.
 
 See `docs/development-setup.md` for more detail.

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 const timestampSchema = z.string().datetime({ offset: true });
+const calendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const yearMonthSchema = z.string().regex(/^\d{4}-\d{2}$/);
 const reservedNonTimedActivitySlug = "not-timed";
 
 function normalizeWhitespace(value: string): string {
@@ -165,10 +167,85 @@ export const syncAckSchema = z.object({
   receivedAt: timestampSchema
 });
 
+export const dashboardQuerySchema = z
+  .object({
+    department: z.string().trim().min(1).optional(),
+    from: calendarDateSchema.optional(),
+    to: calendarDateSchema.optional()
+  })
+  .superRefine((query, context) => {
+    if (query.from && query.to && query.from > query.to) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "from must be before or equal to to",
+        path: ["from"]
+      });
+    }
+  });
+
+export const dashboardSummaryStatsSchema = z.object({
+  totalHours: z.number().nonnegative(),
+  workdayCount: z.number().int().nonnegative(),
+  averageHoursPerDay: z.number().nonnegative(),
+  departmentCount: z.number().int().nonnegative(),
+  activityCount: z.number().int().nonnegative(),
+  recordCount: z.number().int().nonnegative()
+});
+
+export const dashboardFiltersSchema = z.object({
+  availableDepartments: z.array(z.string().min(1)),
+  selectedDepartment: z.string().min(1).nullable(),
+  selectedFrom: calendarDateSchema,
+  selectedTo: calendarDateSchema,
+  minDate: calendarDateSchema,
+  maxDate: calendarDateSchema
+});
+
+export const dashboardBreakdownRowSchema = z.object({
+  label: z.string().min(1),
+  hours: z.number().nonnegative(),
+  dayCount: z.number().int().nonnegative(),
+  recordCount: z.number().int().nonnegative()
+});
+
+export const dashboardRecentDaySchema = z.object({
+  workDate: calendarDateSchema,
+  label: z.string().min(1),
+  hours: z.number().nonnegative(),
+  departmentCount: z.number().int().nonnegative(),
+  topActivity: z.string().min(1)
+});
+
+export const dashboardMonthlyTotalSchema = z.object({
+  monthKey: yearMonthSchema,
+  label: z.string().min(1),
+  hours: z.number().nonnegative()
+});
+
+export const dashboardResponseSchema = z.object({
+  employeeName: z.string().min(1),
+  sourceFile: z.string().min(1),
+  importedAt: timestampSchema,
+  dateRangeLabel: z.string().min(1),
+  filters: dashboardFiltersSchema,
+  stats: dashboardSummaryStatsSchema,
+  departmentBreakdown: z.array(dashboardBreakdownRowSchema),
+  activityBreakdown: z.array(dashboardBreakdownRowSchema),
+  recentDays: z.array(dashboardRecentDaySchema),
+  monthlyTotals: z.array(dashboardMonthlyTotalSchema)
+});
+
 export type Activity = z.infer<typeof activitySchema>;
 export type ActivityDraft = z.infer<typeof activityDraftSchema>;
 export type ActivityCatalogResponse = z.infer<typeof activityCatalogResponseSchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
+export type DashboardBreakdownRow = z.infer<typeof dashboardBreakdownRowSchema>;
+export type DashboardFilters = z.infer<typeof dashboardFiltersSchema>;
+export type DashboardMonthlyTotal = z.infer<typeof dashboardMonthlyTotalSchema>;
+export type DashboardQuery = z.infer<typeof dashboardQuerySchema>;
+export type DashboardRecentDay = z.infer<typeof dashboardRecentDaySchema>;
+export type DashboardResponse = z.infer<typeof dashboardResponseSchema>;
+export type DashboardSummaryStats = z.infer<typeof dashboardSummaryStatsSchema>;
 export type Department = z.infer<typeof departmentSchema>;
 export type SyncBatch = z.infer<typeof syncBatchSchema>;
 export type SyncAck = z.infer<typeof syncAckSchema>;

@@ -1,12 +1,12 @@
 # Web Viewer
 
-This workspace now contains a minimal Vite + React dashboard shell for local testing.
+This workspace now contains the first Vite + React manager-dashboard prototype for local testing.
 
 Current scope:
 
-- verify that a browser-based TiM surface can run locally in this repo
-- proxy local API requests during development
-- provide a concrete place for future manager-facing reporting views
+- consume the API-backed dashboard read model during local development
+- provide manager-facing filters and early reporting charts from the imported historical seed
+- remain the concrete place for future manager-facing reporting views
 
 Current commands:
 

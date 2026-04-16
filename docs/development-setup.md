@@ -11,7 +11,7 @@
 
 1. Run `npm install` at the repo root.
 2. Start the API with `npm run dev:api`.
-3. Start the web workspace with `npm run dev:web` if you want the local dashboard shell.
+3. Start the web workspace with `npm run dev:web` if you want the local dashboard prototype.
 4. Open `http://localhost:4000/health` to confirm the API is running.
 5. Open `http://localhost:5173` to confirm the Vite dashboard is running.
 
@@ -63,7 +63,7 @@ If Docker is available later, `infra/docker-compose.yml` mounts `infra/sql` into
 ## Current Local Services
 
 - API: `http://localhost:4000`
-- Web dashboard shell: `http://localhost:5173`
+- Web dashboard prototype: `http://localhost:5173`
 - PostgreSQL: scaffolded through `infra/docker-compose.yml`
 
 ## Runtime Planning Target
@@ -87,5 +87,5 @@ Operational assumptions for this target:
 ## Next Setup Slices
 
 - Add the Tauri desktop workspace.
-- Add database migrations and API persistence.
+- Expand API persistence beyond user-settings snapshots into sync batches and activity events.
 - Expand the web workspace from a local shell into real dashboard read models and views.

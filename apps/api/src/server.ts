@@ -1,12 +1,14 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import {
   activityCatalogResponseSchema,
+  dashboardResponseSchema,
   syncAckSchema,
   syncBatchSchema,
   userSettingsSchema,
   userSettingsUpdateSchema
 } from "@ddre/contracts";
 import { ZodError } from "zod";
+import { getDashboardReadModel } from "./dashboard.js";
 import { getActivityCatalog } from "./data.js";
 import { createUserSettingsStore, type UserSettingsStore } from "./settings.js";
 
@@ -46,6 +48,10 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
 
   server.get("/v1/activities", async () => {
     return activityCatalogResponseSchema.parse(getActivityCatalog());
+  });
+
+  server.get("/v1/dashboard", async (request) => {
+    return dashboardResponseSchema.parse(await getDashboardReadModel(request.query));
   });
 
   server.get("/v1/users/:userId/settings", async (request) => {
