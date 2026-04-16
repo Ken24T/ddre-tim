@@ -44,6 +44,21 @@ export interface DashboardBreakdownRow {
   recordCount: number;
 }
 
+export interface DashboardDepartmentUserSegment {
+  userId: string;
+  label: string;
+  color: string;
+  hours: number;
+}
+
+export interface DashboardDepartmentUserRow {
+  label: string;
+  totalHours: number;
+  dayCount: number;
+  recordCount: number;
+  segments: DashboardDepartmentUserSegment[];
+}
+
 export interface DashboardUserBreakdownRow {
   userId: string;
   label: string;
@@ -91,6 +106,7 @@ export interface DashboardResponse {
   stats: DashboardSummaryStats;
   userBreakdown: DashboardUserBreakdownRow[];
   departmentBreakdown: DashboardBreakdownRow[];
+  departmentUserBreakdown: DashboardDepartmentUserRow[];
   activityBreakdown: DashboardBreakdownRow[];
   recentDays: DashboardRecentDay[];
   monthlyTotals: DashboardMonthlyTotal[];

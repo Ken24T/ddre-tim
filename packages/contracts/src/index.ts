@@ -236,6 +236,21 @@ export const dashboardUserBreakdownRowSchema = z.object({
   recordCount: z.number().int().nonnegative()
 });
 
+export const dashboardDepartmentUserSegmentSchema = z.object({
+  userId: z.string().min(1),
+  label: z.string().min(1),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  hours: z.number().nonnegative()
+});
+
+export const dashboardDepartmentUserRowSchema = z.object({
+  label: z.string().min(1),
+  totalHours: z.number().nonnegative(),
+  dayCount: z.number().int().nonnegative(),
+  recordCount: z.number().int().nonnegative(),
+  segments: z.array(dashboardDepartmentUserSegmentSchema)
+});
+
 export const dashboardRecentDaySchema = z.object({
   workDate: calendarDateSchema,
   label: z.string().min(1),
@@ -274,6 +289,7 @@ export const dashboardResponseSchema = z.object({
   stats: dashboardSummaryStatsSchema,
   userBreakdown: z.array(dashboardUserBreakdownRowSchema),
   departmentBreakdown: z.array(dashboardBreakdownRowSchema),
+  departmentUserBreakdown: z.array(dashboardDepartmentUserRowSchema),
   activityBreakdown: z.array(dashboardBreakdownRowSchema),
   recentDays: z.array(dashboardRecentDaySchema),
   monthlyTotals: z.array(dashboardMonthlyTotalSchema),
@@ -285,6 +301,7 @@ export type ActivityDraft = z.infer<typeof activityDraftSchema>;
 export type ActivityCatalogResponse = z.infer<typeof activityCatalogResponseSchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
 export type DashboardBreakdownRow = z.infer<typeof dashboardBreakdownRowSchema>;
+export type DashboardDepartmentUserRow = z.infer<typeof dashboardDepartmentUserRowSchema>;
 export type DashboardFilters = z.infer<typeof dashboardFiltersSchema>;
 export type DashboardMonthlyTotal = z.infer<typeof dashboardMonthlyTotalSchema>;
 export type DashboardQuery = z.infer<typeof dashboardQuerySchema>;
