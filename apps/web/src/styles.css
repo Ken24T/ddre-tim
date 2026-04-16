@@ -734,46 +734,6 @@ body {
 }
 
 
-.user-mix-card-body {
-  display: grid;
-  grid-template-rows: minmax(180px, 1fr) auto;
-  align-items: stretch;
-  justify-items: center;
-  gap: 12px;
-}
-
-.user-mix-label-block {
-  display: grid;
-  gap: 4px;
-  text-align: center;
-}
-
-.user-mix-meta {
-  font-size: 0.8rem;
-}
-
-.user-mix-stack {
-  display: flex;
-  flex-direction: column-reverse;
-  justify-content: flex-start;
-  width: min(100%, 112px);
-  min-height: 14%;
-  align-self: end;
-  overflow: hidden;
-  border-radius: 18px 18px 10px 10px;
-  background: rgba(225, 242, 250, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(238, 248, 252, 0.08);
-}
-
-.user-mix-segment {
-  display: block;
-  width: 100%;
-}
-
-.user-mix-segment + .user-mix-segment {
-  box-shadow: 0 -1px 0 rgba(10, 16, 42, 0.16);
-}
-
 .user-activity-pies {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -807,10 +767,6 @@ body {
   color: var(--text-secondary);
   font-size: 0.94rem;
   white-space: nowrap;
-}
-
-.user-activity-card .user-mix-stack {
-  margin-inline: auto;
 }
 
 .user-activity-card .pie-chart-layout {

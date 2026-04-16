@@ -159,28 +159,12 @@ interface BreakdownPieOptions {
   colorByLabel?: Map<string, string>;
 }
 
-interface UserActivityPieCard {
+interface UserBreakdownPieCard {
   userId: string;
   label: string;
   color: string;
   totalHours: number;
   slices: BreakdownPieSlice[];
-}
-
-interface UserBreakdownStackSegment {
-  label: string;
-  hours: number;
-  color: string;
-}
-
-interface UserBreakdownStackCard {
-  userId: string;
-  label: string;
-  color: string;
-  totalHours: number;
-  dayCount: number;
-  recordCount: number;
-  segments: UserBreakdownStackSegment[];
 }
 
 const breakdownPiePalette = ["#EEF8FC", "#D9EAF2", "#B9D9EA", "#92D0C8", "#7CB8DD", "#6EA6CF", "#5E8FC3", "#4B79B4"];
@@ -235,27 +219,33 @@ function buildBreakdownPieSlices(rows: BreakdownRow[], options: BreakdownPieOpti
   });
 }
 
-function buildUserActivityPieCards(
-  activityRows: DashboardResponse["activityUserBreakdown"],
+function buildUserBreakdownPieCards(
+  breakdownRows: Array<{
+    label: string;
+    segments: Array<{
+      userId: string;
+      hours: number;
+    }>;
+  }>,
   userRows: DashboardResponse["userBreakdown"],
-  activityColorByLabel: Map<string, string>
-): UserActivityPieCard[] {
-  const activitiesByUser = new Map<string, BreakdownRow[]>();
+  colorByLabel: Map<string, string>
+): UserBreakdownPieCard[] {
+  const breakdownsByUser = new Map<string, BreakdownRow[]>();
 
-  for (const activityRow of activityRows) {
-    for (const segment of activityRow.segments) {
-      const userActivities = activitiesByUser.get(segment.userId) ?? [];
-      userActivities.push({
-        label: activityRow.label,
+  for (const breakdownRow of breakdownRows) {
+    for (const segment of breakdownRow.segments) {
+      const userBreakdowns = breakdownsByUser.get(segment.userId) ?? [];
+      userBreakdowns.push({
+        label: breakdownRow.label,
         hours: segment.hours
       });
-      activitiesByUser.set(segment.userId, userActivities);
+      breakdownsByUser.set(segment.userId, userBreakdowns);
     }
   }
 
   return userRows
     .map((userRow) => {
-      const userActivities = [...(activitiesByUser.get(userRow.userId) ?? [])].sort((left, right) => {
+      const userBreakdowns = [...(breakdownsByUser.get(userRow.userId) ?? [])].sort((left, right) => {
         return right.hours - left.hours || left.label.localeCompare(right.label, "en-AU");
       });
 
@@ -264,55 +254,14 @@ function buildUserActivityPieCards(
         label: userRow.label,
         color: userRow.color,
         totalHours: userRow.hours,
-        slices: buildBreakdownPieSlices(userActivities, {
+        slices: buildBreakdownPieSlices(userBreakdowns, {
           maxRows: 5,
           collapseRemainingLabel: "Other",
-          colorByLabel: activityColorByLabel
+          colorByLabel
         })
       };
     })
     .filter((card) => card.slices.length > 0);
-}
-
-function buildUserBreakdownStackCards(
-  breakdownRows: DashboardResponse["departmentUserBreakdown"],
-  userRows: DashboardResponse["userBreakdown"],
-  colorByLabel: Map<string, string>,
-  labelOrder: string[]
-): UserBreakdownStackCard[] {
-  const segmentsByUser = new Map<string, UserBreakdownStackSegment[]>();
-  const labelRank = new Map(labelOrder.map((label, index) => [label, index]));
-
-  for (const breakdownRow of breakdownRows) {
-    const segmentColor = colorByLabel.get(breakdownRow.label) ?? "#6EA6CF";
-
-    for (const segment of breakdownRow.segments) {
-      const userSegments = segmentsByUser.get(segment.userId) ?? [];
-      userSegments.push({
-        label: breakdownRow.label,
-        hours: segment.hours,
-        color: segmentColor
-      });
-      segmentsByUser.set(segment.userId, userSegments);
-    }
-  }
-
-  return userRows
-    .map((userRow) => ({
-      userId: userRow.userId,
-      label: userRow.label,
-      color: userRow.color,
-      totalHours: userRow.hours,
-      dayCount: userRow.dayCount,
-      recordCount: userRow.recordCount,
-      segments: [...(segmentsByUser.get(userRow.userId) ?? [])].sort((left, right) => {
-        const leftRank = labelRank.get(left.label) ?? Number.MAX_SAFE_INTEGER;
-        const rightRank = labelRank.get(right.label) ?? Number.MAX_SAFE_INTEGER;
-
-        return leftRank - rightRank || right.hours - left.hours || left.label.localeCompare(right.label, "en-AU");
-      })
-    }))
-    .filter((card) => card.segments.length > 0);
 }
 
 function BreakdownPieLayout({
@@ -540,22 +489,13 @@ export default function App() {
   const activityBreakdownRows = dashboardData?.activityBreakdown ?? [];
   const activityRows = activityBreakdownRows.slice(0, 8) ?? [];
   const departmentUserRows = dashboardData?.departmentUserBreakdown ?? [];
-  const departmentUserBars = buildUserBreakdownStackCards(
-    departmentUserRows,
-    userRows,
-    departmentColorByLabel,
-    departmentBreakdownRows.map((row) => row.label)
-  );
-  const departmentUserMaxHours = Math.max(...departmentUserBars.map((bar) => bar.totalHours), 0);
-  const departmentLegendRows = departmentBreakdownRows.filter((row) => {
-    return departmentUserBars.some((bar) => bar.segments.some((segment) => segment.label === row.label));
-  });
+  const departmentUserPieCards = buildUserBreakdownPieCards(departmentUserRows, userRows, departmentColorByLabel);
   const activityColorByLabel = buildBreakdownColorMap(activityBreakdownRows, ["Other"]);
   const activityPieSlices = buildBreakdownPieSlices(activityRows, {
     colorByLabel: activityColorByLabel
   });
   const activityPieTotal = activityPieSlices.reduce((total, slice) => total + slice.hours, 0);
-  const activityUserPieCards = buildUserActivityPieCards(dashboardData?.activityUserBreakdown ?? [], userRows, activityColorByLabel);
+  const activityUserPieCards = buildUserBreakdownPieCards(dashboardData?.activityUserBreakdown ?? [], userRows, activityColorByLabel);
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
   const apiStatusTone = healthState.phase === "ready" ? "online" : healthState.phase === "error" ? "offline" : "checking";
   const apiStatusLabel =
@@ -846,52 +786,27 @@ export default function App() {
               <article className="panel panel-span-2 chart-panel">
                 <p className="panel-label">Department by user</p>
                 <h2>How each selected user divides time across departments</h2>
-                {departmentUserBars.length > 0 ? (
+                {departmentUserPieCards.length > 0 ? (
                   <>
-                    <div className="user-activity-pies" role="img" aria-label="Department mix by user stacked bar chart">
-                      {departmentUserBars.map((bar) => (
-                        <div className="user-activity-card" key={bar.userId}>
+                    <div className="user-activity-pies" role="img" aria-label="Department breakdown pie charts by user">
+                      {departmentUserPieCards.map((card) => (
+                        <div className="user-activity-card" key={card.userId}>
                           <div className="user-activity-card-header">
                             <div className="user-activity-card-title">
-                              <span className="legend-swatch" style={{ background: bar.color }} />
-                              <strong>{bar.label}</strong>
+                              <span className="legend-swatch" style={{ background: card.color }} />
+                              <strong>{card.label}</strong>
                             </div>
-                            <span className="user-activity-card-total">{formatHoursLabel(bar.totalHours)}</span>
+                            <span className="user-activity-card-total">{formatHoursLabel(card.totalHours)}</span>
                           </div>
 
-                          <div className="user-mix-card-body">
-                            <span className="user-mix-stack" style={{ height: barHeight(bar.totalHours, departmentUserMaxHours) }}>
-                              {bar.segments.map((segment) => (
-                                <span
-                                  className="user-mix-segment"
-                                  key={segment.label}
-                                  title={`${bar.label} · ${segment.label}: ${formatHoursLabel(segment.hours)}`}
-                                  style={{
-                                    background: segment.color,
-                                    height: `${bar.totalHours === 0 ? 0 : (segment.hours / bar.totalHours) * 100}%`
-                                  }}
-                                />
-                              ))}
-                            </span>
-
-                            <div className="user-mix-label-block">
-                              <span className="user-mix-meta">{bar.dayCount} days · {bar.recordCount} records</span>
-                            </div>
-                          </div>
+                          <BreakdownPieLayout
+                            slices={card.slices}
+                            totalHours={card.totalHours}
+                            ariaLabel={`${card.label} department breakdown pie chart`}
+                          />
                         </div>
                       ))}
                     </div>
-
-                    {departmentLegendRows.length > 0 ? (
-                      <div className="chart-legend">
-                        {departmentLegendRows.map((row) => (
-                          <div className="legend-item" key={row.label}>
-                            <span className="legend-swatch" style={{ background: departmentColorByLabel.get(row.label) ?? "#6EA6CF" }} />
-                            <span>{row.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
                   </>
                 ) : (
                   <p>No department-by-user data is available for the current filter window.</p>
