@@ -30,6 +30,16 @@ type DashboardState =
   | { phase: "ready"; data: DashboardResponse }
   | { phase: "error"; message: string };
 
+type DashboardFocus = "all" | "monthly" | "users" | "departments" | "activities";
+
+const dashboardFocusOptions: Array<{ id: DashboardFocus; label: string; helper: string }> = [
+  { id: "all", label: "All charts", helper: "See the full dashboard" },
+  { id: "monthly", label: "Monthly trends", helper: "Month-to-month movement" },
+  { id: "users", label: "Users", helper: "Selected user contribution" },
+  { id: "departments", label: "Departments", helper: "Department share and split" },
+  { id: "activities", label: "Activities", helper: "Top imported activities" }
+];
+
 function createEmptyFilters(): FilterFormState {
   return {
     department: "",
@@ -279,6 +289,7 @@ export default function App() {
   const [dashboardState, setDashboardState] = useState<DashboardState>({ phase: "loading" });
   const [draftFilters, setDraftFilters] = useState<FilterFormState>(createEmptyFilters());
   const [appliedFilters, setAppliedFilters] = useState<DashboardQueryValues>({});
+  const [dashboardFocus, setDashboardFocus] = useState<DashboardFocus>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -432,6 +443,10 @@ export default function App() {
       : healthState.phase === "error"
         ? "Open for connection details"
         : "Waiting for local health check";
+  const showMonthlyCharts = dashboardFocus === "all" || dashboardFocus === "monthly";
+  const showUserCharts = dashboardFocus === "all" || dashboardFocus === "users";
+  const showDepartmentCharts = dashboardFocus === "all" || dashboardFocus === "departments";
+  const showActivityCharts = dashboardFocus === "all" || dashboardFocus === "activities";
 
   return (
     <main className="shell">
@@ -618,144 +633,180 @@ export default function App() {
         </section>
       ) : null}
 
-      <section className="grid">
+      {dashboardData ? (
+        <section className="panel focus-panel">
+          <div className="focus-copy">
+            <p className="panel-label">Dashboard focus</p>
+            <p className="focus-hint">Choose which chart group to show without changing the users, department, or date scope.</p>
+          </div>
+
+          <div className="focus-chip-list" role="group" aria-label="Dashboard focus controls">
+            {dashboardFocusOptions.map((option) => (
+              <button
+                aria-pressed={dashboardFocus === option.id}
+                className={`focus-chip${dashboardFocus === option.id ? " is-active" : ""}`}
+                key={option.id}
+                onClick={() => {
+                  setDashboardFocus(option.id);
+                }}
+                type="button"
+              >
+                <span>{option.label}</span>
+                <small>{option.helper}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className={`grid${dashboardFocus === "all" ? "" : " is-focused"}`}>
         {dashboardData ? (
           <>
-            <article className="panel panel-span-2 chart-panel">
-              <p className="panel-label">Monthly trend</p>
-              <h2>Stacked hours by user</h2>
-              {dashboardData.monthlyUserTotals.length > 0 ? (
-                <>
-                  <div className="trend-chart" role="img" aria-label="Monthly stacked user hours chart">
-                    {dashboardData.monthlyUserTotals.map((month) => (
-                      <div className="trend-column" key={month.monthKey}>
-                        <span className="trend-value">{formatHoursLabel(month.totalHours)}</span>
-                        <span className="trend-stack" style={{ height: barHeight(month.totalHours, monthlyChartMax) }}>
-                          {month.segments.map((segment) => (
-                            <span
-                              className="trend-segment"
-                              key={segment.userId}
-                              title={`${segment.label}: ${formatHoursLabel(segment.hours)}`}
-                              style={{
-                                background: segment.color,
-                                height: `${month.totalHours === 0 ? 0 : (segment.hours / month.totalHours) * 100}%`
-                              }}
-                            />
-                          ))}
-                        </span>
-                        <span className="trend-label">{month.label}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="chart-legend">
-                    {selectedUsers.map((user) => (
-                      <div className="legend-item" key={user.id}>
-                        <span className="legend-swatch" style={{ background: user.color }} />
-                        <span>{user.displayName}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p>No monthly data in the current filter window.</p>
-              )}
-            </article>
-
-            <article className="panel chart-panel">
-              <p className="panel-label">User comparison</p>
-              <h2>Selected user contribution</h2>
-              {userRows.length > 0 ? (
-                <div className="share-chart" role="img" aria-label="User hours comparison chart">
-                  {userRows.map((row) => (
-                    <div className="share-row" key={row.userId}>
-                      <div className="share-copy">
-                        <strong>{row.label}</strong>
-                        <span>{row.dayCount} days · {row.recordCount} records</span>
-                      </div>
-                      <div className="share-track-wrap">
-                        <div className="share-track">
-                          <span className="share-fill" style={{ width: barWidth(row.hours, userChartMax), background: row.color }} />
-                        </div>
-                        <strong>{formatHoursLabel(row.hours)}</strong>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>No user data in the current filter window.</p>
-              )}
-            </article>
-
-            <article className="panel panel-span-2 chart-panel">
-              <p className="panel-label">Department chart</p>
-              <h2>Where the selected users are spending time</h2>
-              {departmentPieSlices.length > 0 ? (
-                <BreakdownPieLayout slices={departmentPieSlices} totalHours={departmentPieTotal} ariaLabel="Department share 3D pie chart" />
-              ) : (
-                <p>No department data in the current filter window.</p>
-              )}
-            </article>
-
-            <article className="panel panel-span-2 chart-panel">
-              <p className="panel-label">Department by user</p>
-              <h2>How each department is split across selected users</h2>
-              {departmentUserRows.length > 0 ? (
-                <>
-                  <div className="department-user-chart" role="img" aria-label="Department by user stacked chart">
-                    {departmentUserRows.map((row) => (
-                      <div className="share-row department-user-row" key={row.label}>
-                        <div className="share-copy">
-                          <strong>{row.label}</strong>
-                          <span>{row.dayCount} days · {row.recordCount} records</span>
-                        </div>
-
-                        <div className="share-track-wrap department-user-track-wrap">
-                          <div className="department-user-track">
-                            {row.segments.map((segment) => (
+            {showMonthlyCharts ? (
+              <article className="panel panel-span-2 chart-panel">
+                <p className="panel-label">Monthly trend</p>
+                <h2>Stacked hours by user</h2>
+                {dashboardData.monthlyUserTotals.length > 0 ? (
+                  <>
+                    <div className="trend-chart" role="img" aria-label="Monthly stacked user hours chart">
+                      {dashboardData.monthlyUserTotals.map((month) => (
+                        <div className="trend-column" key={month.monthKey}>
+                          <span className="trend-value">{formatHoursLabel(month.totalHours)}</span>
+                          <span className="trend-stack" style={{ height: barHeight(month.totalHours, monthlyChartMax) }}>
+                            {month.segments.map((segment) => (
                               <span
-                                className="department-user-segment"
+                                className="trend-segment"
                                 key={segment.userId}
                                 title={`${segment.label}: ${formatHoursLabel(segment.hours)}`}
                                 style={{
                                   background: segment.color,
-                                  width: `${row.totalHours === 0 ? 0 : (segment.hours / row.totalHours) * 100}%`
+                                  height: `${month.totalHours === 0 ? 0 : (segment.hours / month.totalHours) * 100}%`
                                 }}
                               />
                             ))}
-                          </div>
-
-                          <strong>{formatHoursLabel(row.totalHours)}</strong>
+                          </span>
+                          <span className="trend-label">{month.label}</span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
 
-                  {departmentUserLegendUsers.length > 0 ? (
                     <div className="chart-legend">
-                      {departmentUserLegendUsers.map((user) => (
+                      {selectedUsers.map((user) => (
                         <div className="legend-item" key={user.id}>
                           <span className="legend-swatch" style={{ background: user.color }} />
                           <span>{user.displayName}</span>
                         </div>
                       ))}
                     </div>
-                  ) : null}
-                </>
-              ) : (
-                <p>No department-by-user data is available for the current filter window.</p>
-              )}
-            </article>
+                  </>
+                ) : (
+                  <p>No monthly data in the current filter window.</p>
+                )}
+              </article>
+            ) : null}
 
-            <article className="panel panel-span-2 chart-panel">
-              <p className="panel-label">Activity breakdown</p>
-              <h2>Top imported activities</h2>
-              {activityPieSlices.length > 0 ? (
-                <BreakdownPieLayout slices={activityPieSlices} totalHours={activityPieTotal} ariaLabel="Activity breakdown 3D pie chart" />
-              ) : (
-                <p>No activity breakdown is available for the current filter window.</p>
-              )}
-            </article>
+            {showUserCharts ? (
+              <article className="panel chart-panel">
+                <p className="panel-label">User comparison</p>
+                <h2>Selected user contribution</h2>
+                {userRows.length > 0 ? (
+                  <div className="share-chart" role="img" aria-label="User hours comparison chart">
+                    {userRows.map((row) => (
+                      <div className="share-row" key={row.userId}>
+                        <div className="share-copy">
+                          <strong>{row.label}</strong>
+                          <span>{row.dayCount} days · {row.recordCount} records</span>
+                        </div>
+                        <div className="share-track-wrap">
+                          <div className="share-track">
+                            <span className="share-fill" style={{ width: barWidth(row.hours, userChartMax), background: row.color }} />
+                          </div>
+                          <strong>{formatHoursLabel(row.hours)}</strong>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No user data in the current filter window.</p>
+                )}
+              </article>
+            ) : null}
+
+            {showDepartmentCharts ? (
+              <article className="panel panel-span-2 chart-panel">
+                <p className="panel-label">Department chart</p>
+                <h2>Where the selected users are spending time</h2>
+                {departmentPieSlices.length > 0 ? (
+                  <BreakdownPieLayout slices={departmentPieSlices} totalHours={departmentPieTotal} ariaLabel="Department share 3D pie chart" />
+                ) : (
+                  <p>No department data in the current filter window.</p>
+                )}
+              </article>
+            ) : null}
+
+            {showDepartmentCharts ? (
+              <article className="panel panel-span-2 chart-panel">
+                <p className="panel-label">Department by user</p>
+                <h2>How each department is split across selected users</h2>
+                {departmentUserRows.length > 0 ? (
+                  <>
+                    <div className="department-user-chart" role="img" aria-label="Department by user stacked chart">
+                      {departmentUserRows.map((row) => (
+                        <div className="share-row department-user-row" key={row.label}>
+                          <div className="share-copy">
+                            <strong>{row.label}</strong>
+                            <span>{row.dayCount} days · {row.recordCount} records</span>
+                          </div>
+
+                          <div className="share-track-wrap department-user-track-wrap">
+                            <div className="department-user-track">
+                              {row.segments.map((segment) => (
+                                <span
+                                  className="department-user-segment"
+                                  key={segment.userId}
+                                  title={`${segment.label}: ${formatHoursLabel(segment.hours)}`}
+                                  style={{
+                                    background: segment.color,
+                                    width: `${row.totalHours === 0 ? 0 : (segment.hours / row.totalHours) * 100}%`
+                                  }}
+                                />
+                              ))}
+                            </div>
+
+                            <strong>{formatHoursLabel(row.totalHours)}</strong>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {departmentUserLegendUsers.length > 0 ? (
+                      <div className="chart-legend">
+                        {departmentUserLegendUsers.map((user) => (
+                          <div className="legend-item" key={user.id}>
+                            <span className="legend-swatch" style={{ background: user.color }} />
+                            <span>{user.displayName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <p>No department-by-user data is available for the current filter window.</p>
+                )}
+              </article>
+            ) : null}
+
+            {showActivityCharts ? (
+              <article className="panel panel-span-2 chart-panel">
+                <p className="panel-label">Activity breakdown</p>
+                <h2>Top imported activities</h2>
+                {activityPieSlices.length > 0 ? (
+                  <BreakdownPieLayout slices={activityPieSlices} totalHours={activityPieTotal} ariaLabel="Activity breakdown 3D pie chart" />
+                ) : (
+                  <p>No activity breakdown is available for the current filter window.</p>
+                )}
+              </article>
+            ) : null}
           </>
         ) : null}
 
