@@ -161,17 +161,17 @@ body {
 
 .user-chip-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+  gap: 8px;
 }
 
 .user-chip {
   --chip-accent: rgba(238, 248, 252, 0.28);
   display: grid;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
-  padding: 12px 14px;
-  border-radius: 18px;
+  padding: 10px 12px;
+  border-radius: 16px;
   border: 1px solid rgba(213, 234, 244, 0.12);
   background: rgba(231, 245, 252, 0.05);
   color: var(--text-primary);
@@ -195,6 +195,10 @@ body {
   font-weight: 600;
 }
 
+.user-chip small {
+  font-size: 0.94rem;
+}
+
 .user-chip small,
 .user-filter-hint {
   color: var(--text-muted);
@@ -212,7 +216,7 @@ body {
 
 .filter-form {
   display: grid;
-  grid-template-columns: minmax(180px, 1.15fr) repeat(2, minmax(150px, 0.95fr)) auto;
+  grid-template-columns: minmax(0, 1.15fr) repeat(2, minmax(0, 0.95fr)) max-content;
   gap: 14px;
   align-items: end;
 }
@@ -220,6 +224,7 @@ body {
 .filter-form label {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .filter-form span {
@@ -241,6 +246,12 @@ body {
   font: inherit;
 }
 
+.filter-form input,
+.filter-form select {
+  width: 100%;
+  min-width: 0;
+}
+
 .filter-form option {
   color: #10214d;
 }
@@ -255,12 +266,23 @@ body {
 .filter-actions {
   display: flex;
   gap: 10px;
-  align-self: stretch;
+  align-self: end;
+  justify-self: end;
 }
 
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.filter-actions .button {
+  min-height: 48px;
+  height: 48px;
+  padding-inline: 18px;
+  white-space: nowrap;
 }
 
 .button:hover:not(:disabled) {
