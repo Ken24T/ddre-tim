@@ -164,7 +164,7 @@ function buildUserBreakdown(
   })).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label, "en-AU"));
 }
 
-function buildDepartmentUserBreakdown(
+function buildBreakdownByUser(
   rows: Map<string, HistoricalRecord[]>,
   userById: Map<string, HistoricalUser>,
   userColorById: Map<string, string>
@@ -358,8 +358,9 @@ export async function getDashboardReadModel(rawQuery: unknown): Promise<Dashboar
 
   const userBreakdown = buildUserBreakdown(userRecords, userById, userColorById);
   const departmentBreakdown = buildBreakdown(departmentRecords);
-  const departmentUserBreakdown = buildDepartmentUserBreakdown(departmentRecords, userById, userColorById);
+  const departmentUserBreakdown = buildBreakdownByUser(departmentRecords, userById, userColorById);
   const activityBreakdown = buildBreakdown(activityRecords);
+  const activityUserBreakdown = buildBreakdownByUser(activityRecords, userById, userColorById);
   const totalHours = sumHours(filteredRecords);
   const workdayCount = new Set(filteredRecords.map((record) => record.workDate)).size;
   const userDayCount = new Set(filteredRecords.map((record) => `${getRecordUserId(record)}|${record.workDate}`)).size;
@@ -399,6 +400,7 @@ export async function getDashboardReadModel(rawQuery: unknown): Promise<Dashboar
     departmentBreakdown,
     departmentUserBreakdown,
     activityBreakdown,
+    activityUserBreakdown,
     recentDays: buildRecentDays(filteredRecords),
     monthlyTotals: buildMonthlyTotals(filteredRecords),
     monthlyUserTotals: buildMonthlyUserTotals(filteredRecords, userById, userColorById)

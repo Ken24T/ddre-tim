@@ -59,6 +59,10 @@ export interface DashboardDepartmentUserRow {
   segments: DashboardDepartmentUserSegment[];
 }
 
+export type DashboardActivityUserSegment = DashboardDepartmentUserSegment;
+
+export type DashboardActivityUserRow = DashboardDepartmentUserRow;
+
 export interface DashboardUserBreakdownRow {
   userId: string;
   label: string;
@@ -108,6 +112,7 @@ export interface DashboardResponse {
   departmentBreakdown: DashboardBreakdownRow[];
   departmentUserBreakdown: DashboardDepartmentUserRow[];
   activityBreakdown: DashboardBreakdownRow[];
+  activityUserBreakdown: DashboardActivityUserRow[];
   recentDays: DashboardRecentDay[];
   monthlyTotals: DashboardMonthlyTotal[];
   monthlyUserTotals: DashboardMonthlyUserTotal[];

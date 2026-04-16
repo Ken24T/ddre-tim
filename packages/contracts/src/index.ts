@@ -251,6 +251,10 @@ export const dashboardDepartmentUserRowSchema = z.object({
   segments: z.array(dashboardDepartmentUserSegmentSchema)
 });
 
+export const dashboardActivityUserSegmentSchema = dashboardDepartmentUserSegmentSchema;
+
+export const dashboardActivityUserRowSchema = dashboardDepartmentUserRowSchema;
+
 export const dashboardRecentDaySchema = z.object({
   workDate: calendarDateSchema,
   label: z.string().min(1),
@@ -291,6 +295,7 @@ export const dashboardResponseSchema = z.object({
   departmentBreakdown: z.array(dashboardBreakdownRowSchema),
   departmentUserBreakdown: z.array(dashboardDepartmentUserRowSchema),
   activityBreakdown: z.array(dashboardBreakdownRowSchema),
+  activityUserBreakdown: z.array(dashboardActivityUserRowSchema),
   recentDays: z.array(dashboardRecentDaySchema),
   monthlyTotals: z.array(dashboardMonthlyTotalSchema),
   monthlyUserTotals: z.array(dashboardMonthlyUserTotalSchema)
@@ -301,6 +306,7 @@ export type ActivityDraft = z.infer<typeof activityDraftSchema>;
 export type ActivityCatalogResponse = z.infer<typeof activityCatalogResponseSchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
 export type DashboardBreakdownRow = z.infer<typeof dashboardBreakdownRowSchema>;
+export type DashboardActivityUserRow = z.infer<typeof dashboardActivityUserRowSchema>;
 export type DashboardDepartmentUserRow = z.infer<typeof dashboardDepartmentUserRowSchema>;
 export type DashboardFilters = z.infer<typeof dashboardFiltersSchema>;
 export type DashboardMonthlyTotal = z.infer<typeof dashboardMonthlyTotalSchema>;

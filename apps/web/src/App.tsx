@@ -33,11 +33,11 @@ type DashboardState =
 type DashboardFocus = "all" | "monthly" | "users" | "departments" | "activities";
 
 const dashboardFocusOptions: Array<{ id: DashboardFocus; label: string; helper: string; cardCount: number }> = [
-  { id: "all", label: "All charts", helper: "Full dashboard", cardCount: 5 },
+  { id: "all", label: "All charts", helper: "Full dashboard", cardCount: 7 },
   { id: "monthly", label: "Monthly trends", helper: "Month by month", cardCount: 1 },
   { id: "users", label: "Users", helper: "Contribution view", cardCount: 1 },
   { id: "departments", label: "Departments", helper: "Share and split", cardCount: 2 },
-  { id: "activities", label: "Activities", helper: "Top activities", cardCount: 1 }
+  { id: "activities", label: "Activities", helper: "What users do", cardCount: 2 }
 ];
 
 function createEmptyFilters(): FilterFormState {
@@ -430,6 +430,10 @@ export default function App() {
   const departmentUserLegendUsers = selectedUsers.filter((user) => {
     return departmentUserRows.some((row) => row.segments.some((segment) => segment.userId === user.id));
   });
+  const activityUserRows = dashboardData?.activityUserBreakdown.slice(0, 8) ?? [];
+  const activityUserLegendUsers = selectedUsers.filter((user) => {
+    return activityUserRows.some((row) => row.segments.some((segment) => segment.userId === user.id));
+  });
   const activityPieSlices = buildBreakdownPieSlices(activityRows);
   const activityPieTotal = activityPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const userChartMax = Math.max(...userRows.map((row) => row.hours), 0);
@@ -753,7 +757,7 @@ export default function App() {
                 <h2>How each department is split across selected users</h2>
                 {departmentUserRows.length > 0 ? (
                   <>
-                    <div className="department-user-chart" role="img" aria-label="Department by user stacked chart">
+                    <div className="split-by-user-chart" role="img" aria-label="Department by user stacked chart">
                       {departmentUserRows.map((row) => (
                         <div className="share-row department-user-row" key={row.label}>
                           <div className="share-copy">
@@ -761,11 +765,11 @@ export default function App() {
                             <span>{row.dayCount} days · {row.recordCount} records</span>
                           </div>
 
-                          <div className="share-track-wrap department-user-track-wrap">
-                            <div className="department-user-track">
+                          <div className="share-track-wrap split-by-user-track-wrap">
+                            <div className="split-by-user-track">
                               {row.segments.map((segment) => (
                                 <span
-                                  className="department-user-segment"
+                                  className="split-by-user-segment"
                                   key={segment.userId}
                                   title={`${segment.label}: ${formatHoursLabel(segment.hours)}`}
                                   style={{
@@ -807,6 +811,58 @@ export default function App() {
                   <BreakdownPieLayout slices={activityPieSlices} totalHours={activityPieTotal} ariaLabel="Activity breakdown 3D pie chart" />
                 ) : (
                   <p>No activity breakdown is available for the current filter window.</p>
+                )}
+              </article>
+            ) : null}
+
+            {showActivityCharts ? (
+              <article className="panel panel-span-2 chart-panel">
+                <p className="panel-label">Activity by user</p>
+                <h2>What selected users are spending time doing</h2>
+                {activityUserRows.length > 0 ? (
+                  <>
+                    <div className="split-by-user-chart" role="img" aria-label="Activity by user stacked chart">
+                      {activityUserRows.map((row) => (
+                        <div className="share-row" key={row.label}>
+                          <div className="share-copy">
+                            <strong>{row.label}</strong>
+                            <span>{row.dayCount} days · {row.recordCount} records</span>
+                          </div>
+
+                          <div className="share-track-wrap split-by-user-track-wrap">
+                            <div className="split-by-user-track">
+                              {row.segments.map((segment) => (
+                                <span
+                                  className="split-by-user-segment"
+                                  key={segment.userId}
+                                  title={`${segment.label}: ${formatHoursLabel(segment.hours)}`}
+                                  style={{
+                                    background: segment.color,
+                                    width: `${row.totalHours === 0 ? 0 : (segment.hours / row.totalHours) * 100}%`
+                                  }}
+                                />
+                              ))}
+                            </div>
+
+                            <strong>{formatHoursLabel(row.totalHours)}</strong>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {activityUserLegendUsers.length > 0 ? (
+                      <div className="chart-legend">
+                        {activityUserLegendUsers.map((user) => (
+                          <div className="legend-item" key={user.id}>
+                            <span className="legend-swatch" style={{ background: user.color }} />
+                            <span>{user.displayName}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <p>No activity-by-user data is available for the current filter window.</p>
                 )}
               </article>
             ) : null}
