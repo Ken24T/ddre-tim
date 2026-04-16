@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { dashboardData, formatHoursLabel } from "./dashboardData.js";
 
 interface HealthPayload {
   service: string;
@@ -62,15 +63,29 @@ export default function App() {
     <main className="shell">
       <section className="hero">
         <p className="eyebrow">Time in Motion</p>
-        <h1>Office-hosted dashboard slice</h1>
+        <h1>{dashboardData.employeeName} dashboard prototype</h1>
         <p className="lead">
-          This local Vite workspace gives the repo a real browser surface for testing while the manager dashboard
-          read models are still being built.
+          This first dashboard slice is driven from the imported historical seed so we can shape the manager-facing
+          reporting surface before the live read models are finished.
         </p>
+        <div className="hero-meta">
+          <span>Imported from {dashboardData.sourceFile}</span>
+          <span>{dashboardData.dateRangeLabel}</span>
+        </div>
+      </section>
+
+      <section className="summary-grid">
+        {dashboardData.summaryCards.map((card) => (
+          <article className="panel stat-card" key={card.label}>
+            <p className="panel-label">{card.label}</p>
+            <h2>{card.value}</h2>
+            <p>{card.helper}</p>
+          </article>
+        ))}
       </section>
 
       <section className="grid">
-        <article className="panel panel-health">
+        <article className="panel panel-health panel-span-2">
           <p className="panel-label">API health</p>
           {healthState.phase === "loading" ? <h2>Checking local API...</h2> : null}
           {healthState.phase === "ready" ? (
@@ -90,21 +105,82 @@ export default function App() {
         </article>
 
         <article className="panel">
-          <p className="panel-label">Current testing scope</p>
-          <h2>Browser shell only</h2>
+          <p className="panel-label">Seed refresh</p>
+          <h2>{new Intl.DateTimeFormat("en-AU", { dateStyle: "medium", timeStyle: "short" }).format(new Date(dashboardData.importedAt))}</h2>
           <p>
-            The dashboard workspace is intentionally minimal: local UI shell, API reachability check, and a place to
-            grow manager-facing reporting views without waiting on the desktop app.
+            This prototype reads from the generated historical seed. Refresh it after workbook changes with <code>npm
+            run import:tim-records</code>.
           </p>
         </article>
 
         <article className="panel">
-          <p className="panel-label">Runtime model</p>
-          <h2>DDNUC-11 first</h2>
-          <p>
-            The current deployment target remains office-hosted on DDNUC-11, with the dashboard viewed from the office
-            LAN and remote workers syncing through the API only.
-          </p>
+          <p className="panel-label">Top department</p>
+          <h2>{dashboardData.departmentBreakdown[0]?.label ?? "No data"}</h2>
+          <p>{dashboardData.departmentBreakdown[0] ? `${formatHoursLabel(dashboardData.departmentBreakdown[0].hours)} across ${dashboardData.departmentBreakdown[0].dayCount} days` : "No imported records available yet."}</p>
+        </article>
+
+        <article className="panel panel-span-2">
+          <p className="panel-label">Department breakdown</p>
+          <h2>Hours by department</h2>
+          <div className="breakdown-list">
+            {dashboardData.departmentBreakdown.map((row) => (
+              <div className="breakdown-row" key={row.label}>
+                <div>
+                  <strong>{row.label}</strong>
+                  <span>{row.dayCount} days · {row.recordCount} records</span>
+                </div>
+                <strong>{formatHoursLabel(row.hours)}</strong>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel">
+          <p className="panel-label">Recent workdays</p>
+          <h2>Latest imported dates</h2>
+          <div className="day-list">
+            {dashboardData.recentDays.map((day) => (
+              <div className="day-row" key={day.workDate}>
+                <div>
+                  <strong>{day.label}</strong>
+                  <span>{day.topActivity}</span>
+                </div>
+                <div className="day-metrics">
+                  <strong>{formatHoursLabel(day.hours)}</strong>
+                  <span>{day.departmentCount} depts</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel panel-span-2">
+          <p className="panel-label">Activity breakdown</p>
+          <h2>Top imported activities</h2>
+          <div className="breakdown-list">
+            {dashboardData.activityBreakdown.map((row) => (
+              <div className="breakdown-row" key={row.label}>
+                <div>
+                  <strong>{row.label}</strong>
+                  <span>{row.dayCount} days · {row.recordCount} records</span>
+                </div>
+                <strong>{formatHoursLabel(row.hours)}</strong>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel">
+          <p className="panel-label">Monthly totals</p>
+          <h2>Imported trend</h2>
+          <div className="month-list">
+            {dashboardData.monthlyTotals.map((month) => (
+              <div className="month-row" key={month.monthKey}>
+                <span>{month.label}</span>
+                <strong>{formatHoursLabel(month.hours)}</strong>
+              </div>
+            ))}
+          </div>
         </article>
       </section>
     </main>
