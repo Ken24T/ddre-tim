@@ -324,17 +324,12 @@ export default function App() {
     <main className="shell">
       <section className="hero">
         <p className="eyebrow">Time in Motion</p>
-        <h1>{dashboardData?.scopeLabel ?? "Manager dashboard"}</h1>
+        <h1>DDRE TiM Dashboard</h1>
         <p className="lead">
-          The dashboard now reads from the API instead of importing seed data directly, giving us a real manager-facing
-          read model to shape while persistence work continues underneath. User chips now let you isolate one employee
-          or combine several people into the same reporting scope.
+          This dashboard turns day-to-day activity data into a practical view of how work is moving across the business.
+          Used thoughtfully, it can be an invaluable resource for healthier planning, clearer conversations, and steady
+          company development without losing sight of the people behind the work.
         </p>
-        <div className="hero-meta">
-          <span>{dashboardData ? `Imported from ${dashboardData.sourceFile}` : "Loading imported history"}</span>
-          <span>{dashboardData ? dashboardData.dateRangeLabel : "Preparing dashboard scope"}</span>
-          <span>{dashboardState.phase === "refreshing" ? "Refreshing view" : "API-backed read model"}</span>
-        </div>
       </section>
 
       <section className="panel control-panel">
