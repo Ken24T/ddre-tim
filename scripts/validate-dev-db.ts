@@ -46,6 +46,7 @@ async function main(): Promise<void> {
   const departmentCount = readCount(db, "select count(*) as count from departments;");
   const userCount = readCount(db, "select count(*) as count from users;");
   const activityCount = readCount(db, "select count(*) as count from activities;");
+  const activityRepositoryEntryCount = readCount(db, "select count(*) as count from activity_repository_entries;");
   const assignmentCount = readCount(db, "select count(*) as count from user_activity_assignments;");
   const historicalCount = readCount(db, "select count(*) as count from historical_tim_daily_records;");
   const settingsSnapshotCount = readCount(db, "select count(*) as count from user_settings_snapshots;");
@@ -68,6 +69,10 @@ async function main(): Promise<void> {
 
   if (assignmentCount !== generatedSeed.built.summary.assignmentCount) {
     throw new Error(`Expected ${generatedSeed.built.summary.assignmentCount} activity assignments, found ${assignmentCount}.`);
+  }
+
+  if (activityRepositoryEntryCount !== 0) {
+    throw new Error(`Expected 0 activity repository bridge entries in the generated seed, found ${activityRepositoryEntryCount}.`);
   }
 
   if (historicalCount !== generatedSeed.seed.recordCount) {

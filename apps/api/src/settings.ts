@@ -8,7 +8,11 @@ import {
 } from "@ddre/contracts";
 import { Pool } from "pg";
 import { ZodError, ZodIssueCode } from "zod";
-import { getActivityCatalog, getDepartmentCatalog } from "./data.js";
+import {
+  createActivityRepositoryStore,
+  getDepartmentCatalog,
+  type ActivityRepositoryStore
+} from "./data.js";
 
 const availableDepartments = getDepartmentCatalog();
 const preferredDefaultDepartmentId = "department-property-management";
@@ -39,6 +43,7 @@ export interface UserSettingsStore {
 export interface CreateUserSettingsStoreOptions {
   connectionString?: string;
   pool?: Queryable;
+  activityRepositoryStore?: ActivityRepositoryStore;
 }
 
 const defaultNonTimedActivity: Activity = {
@@ -109,24 +114,32 @@ function buildStoredActivities(activityDrafts: ActivityDraft[], defaultDepartmen
   ];
 }
 
-function getDefaultActivities(defaultDepartmentIdForUser: string): Activity[] {
+async function getDefaultActivities(
+  defaultDepartmentIdForUser: string,
+  activityRepositoryStore: ActivityRepositoryStore
+): Promise<Activity[]> {
+  const activityCatalog = await activityRepositoryStore.getActivityCatalog();
+
   return [
     { ...defaultNonTimedActivity },
-    ...getActivityCatalog().activities.map((activity) => ({
+    ...activityCatalog.activities.map((activity) => ({
       ...activity,
       departmentId: activity.kind === "timed" ? activity.departmentId ?? defaultDepartmentIdForUser : activity.departmentId
     }))
   ];
 }
 
-function createDefaultUserSettings(userId: string): UserSettings {
+async function createDefaultUserSettings(
+  userId: string,
+  activityRepositoryStore: ActivityRepositoryStore
+): Promise<UserSettings> {
   return {
     userId,
     displayName: "",
     isConfigured: false,
     defaultDepartmentId,
     departments: cloneDepartments(availableDepartments),
-    activities: getDefaultActivities(defaultDepartmentId),
+    activities: await getDefaultActivities(defaultDepartmentId, activityRepositoryStore),
     updatedAt: new Date().toISOString()
   };
 }
@@ -153,11 +166,13 @@ function parseStoredUserSettings(value: unknown): UserSettings {
 class InMemoryUserSettingsStore implements UserSettingsStore {
   private readonly settingsStore = new Map<string, UserSettings>();
 
+  constructor(private readonly activityRepositoryStore: ActivityRepositoryStore) {}
+
   async getUserSettings(userId: string): Promise<UserSettings> {
     const existingSettings = this.settingsStore.get(userId);
 
     if (!existingSettings) {
-      return createDefaultUserSettings(userId);
+      return createDefaultUserSettings(userId, this.activityRepositoryStore);
     }
 
     return cloneUserSettings(existingSettings);
@@ -172,7 +187,11 @@ class InMemoryUserSettingsStore implements UserSettingsStore {
 }
 
 class PostgresUserSettingsStore implements UserSettingsStore {
-  constructor(private readonly pool: Queryable) {}
+  constructor(
+    private readonly pool: Queryable,
+    private readonly activityRepositoryStore: ActivityRepositoryStore,
+    private readonly ownsActivityRepositoryStore = false
+  ) {}
 
   async getUserSettings(userId: string): Promise<UserSettings> {
     const result = await this.pool.query<StoredSettingsRow>(
@@ -181,7 +200,7 @@ class PostgresUserSettingsStore implements UserSettingsStore {
     );
 
     if (result.rows.length === 0) {
-      return createDefaultUserSettings(userId);
+      return createDefaultUserSettings(userId, this.activityRepositoryStore);
     }
 
     return cloneUserSettings(parseStoredUserSettings(result.rows[0].settings_payload));
@@ -206,19 +225,34 @@ class PostgresUserSettingsStore implements UserSettingsStore {
 
   async close(): Promise<void> {
     await this.pool.end?.();
+
+    if (this.ownsActivityRepositoryStore) {
+      await this.activityRepositoryStore.close?.();
+    }
   }
 }
 
 export function createUserSettingsStore(options: CreateUserSettingsStoreOptions = {}): UserSettingsStore {
+  const sharedActivityRepositoryStore = options.activityRepositoryStore;
+
   if (options.pool) {
-    return new PostgresUserSettingsStore(options.pool);
+    return new PostgresUserSettingsStore(
+      options.pool,
+      sharedActivityRepositoryStore ?? createActivityRepositoryStore({ pool: options.pool })
+    );
   }
 
   const connectionString = options.connectionString ?? process.env.DATABASE_URL;
 
   if (!connectionString) {
-    return new InMemoryUserSettingsStore();
+    return new InMemoryUserSettingsStore(sharedActivityRepositoryStore ?? createActivityRepositoryStore());
   }
 
-  return new PostgresUserSettingsStore(new Pool({ connectionString }));
+  const activityRepositoryStore = sharedActivityRepositoryStore ?? createActivityRepositoryStore({ connectionString });
+
+  return new PostgresUserSettingsStore(
+    new Pool({ connectionString }),
+    activityRepositoryStore,
+    sharedActivityRepositoryStore === undefined
+  );
 }

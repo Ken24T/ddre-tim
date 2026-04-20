@@ -14,16 +14,16 @@ import { ZodError, z } from "zod";
 import { getDashboardReadModel } from "./dashboard.js";
 import {
   ActivityCatalogNotFoundError,
-  createActivityCatalogEntry,
-  getActivityCatalog,
+  createActivityRepositoryStore,
   getDepartmentCatalogResponse,
-  updateActivityCatalogEntry
+  type ActivityRepositoryStore
 } from "./data.js";
 import { createUserSettingsStore, type UserSettingsStore } from "./settings.js";
 
 export interface BuildServerOptions {
   logger?: boolean;
   userSettingsStore?: UserSettingsStore;
+  activityRepositoryStore?: ActivityRepositoryStore;
 }
 
 export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
@@ -31,10 +31,12 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   const seenEventIds = new Set<string>();
   const userParamsSchema = userSettingsSchema.pick({ userId: true });
   const activityParamsSchema = z.object({ activityId: z.string().min(1) });
-  const userSettingsStore = options.userSettingsStore ?? createUserSettingsStore();
+  const activityRepositoryStore = options.activityRepositoryStore ?? createActivityRepositoryStore();
+  const userSettingsStore = options.userSettingsStore ?? createUserSettingsStore({ activityRepositoryStore });
 
   server.addHook("onClose", async () => {
     await userSettingsStore.close?.();
+    await activityRepositoryStore.close?.();
   });
 
   server.setErrorHandler((error, request, reply) => {
@@ -62,7 +64,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   }));
 
   server.get("/v1/activities", async () => {
-    return activityCatalogResponseSchema.parse(getActivityCatalog());
+    return activityCatalogResponseSchema.parse(await activityRepositoryStore.getActivityCatalog());
   });
 
   server.get("/v1/departments", async () => {
@@ -74,14 +76,14 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
 
     reply.status(201);
 
-    return activitySchema.parse(createActivityCatalogEntry(activityInput));
+    return activitySchema.parse(await activityRepositoryStore.createActivityCatalogEntry(activityInput));
   });
 
   server.put("/v1/activities/:activityId", async (request) => {
     const { activityId } = activityParamsSchema.parse(request.params);
     const activityInput = activityCatalogEntryInputSchema.parse(request.body);
 
-    return activitySchema.parse(updateActivityCatalogEntry(activityId, activityInput));
+    return activitySchema.parse(await activityRepositoryStore.updateActivityCatalogEntry(activityId, activityInput));
   });
 
   server.get("/v1/dashboard", async (request) => {
