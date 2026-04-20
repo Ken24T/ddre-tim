@@ -96,6 +96,14 @@ body {
   align-items: flex-start;
 }
 
+.hero-actions {
+  display: grid;
+  gap: 12px;
+  min-width: 220px;
+  margin-left: auto;
+  justify-items: stretch;
+}
+
 .eyebrow {
   margin: 0 0 12px;
   letter-spacing: 0.18em;
@@ -129,7 +137,7 @@ body {
 
 .api-status-flyout {
   position: relative;
-  margin-left: auto;
+  width: 100%;
 }
 
 .api-status-flyout summary {
@@ -140,20 +148,37 @@ body {
   display: none;
 }
 
-.api-status-trigger {
+.api-status-trigger,
+.activity-repository-trigger {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  min-width: 220px;
+  width: 100%;
   padding: 10px 14px;
   border: 1px solid rgba(213, 234, 244, 0.18);
   border-radius: 999px;
   background: rgba(231, 245, 252, 0.08);
   box-shadow: 0 16px 36px rgba(10, 16, 42, 0.2);
+}
+
+.api-status-trigger,
+.activity-repository-trigger {
   cursor: pointer;
 }
 
-.api-status-trigger:focus-visible {
+.activity-repository-trigger {
+  appearance: none;
+  color: var(--text-primary);
+  text-align: left;
+  font: inherit;
+}
+
+.activity-repository-trigger .api-status-copy strong {
+  color: var(--text-primary);
+}
+
+.api-status-trigger:focus-visible,
+.activity-repository-trigger:focus-visible {
   outline: 2px solid rgba(146, 208, 200, 0.5);
   outline-offset: 3px;
 }
@@ -180,6 +205,35 @@ body {
 .api-status-flyout.is-offline .api-status-indicator {
   background: #f1a9a9;
   box-shadow: 0 0 0 4px rgba(241, 169, 169, 0.16);
+}
+
+.activity-repository-indicator {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(238, 248, 252, 0.86), rgba(185, 217, 234, 0.86));
+  box-shadow: 0 0 0 4px rgba(238, 248, 252, 0.12);
+}
+
+.activity-repository-trigger.is-online .activity-repository-indicator {
+  background: linear-gradient(180deg, rgba(146, 208, 200, 0.96), rgba(110, 166, 207, 0.96));
+  box-shadow: 0 0 0 4px rgba(146, 208, 200, 0.16);
+}
+
+.activity-repository-trigger.is-checking .activity-repository-indicator {
+  background: linear-gradient(180deg, rgba(217, 234, 242, 0.96), rgba(185, 217, 234, 0.96));
+  box-shadow: 0 0 0 4px rgba(217, 234, 242, 0.16);
+}
+
+.activity-repository-trigger.is-offline .activity-repository-indicator {
+  background: linear-gradient(180deg, rgba(241, 169, 169, 0.96), rgba(234, 88, 12, 0.96));
+  box-shadow: 0 0 0 4px rgba(241, 169, 169, 0.16);
+}
+
+.activity-repository-trigger.is-active {
+  border-color: rgba(146, 208, 200, 0.26);
+  background: linear-gradient(135deg, rgba(231, 245, 252, 0.18), rgba(114, 188, 181, 0.14));
 }
 
 .api-status-copy {
@@ -225,6 +279,306 @@ body {
 .api-status-popover code {
   font-family: "Consolas", "Liberation Mono", monospace;
   font-size: 0.92em;
+}
+
+.activity-repository-panel {
+  display: grid;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.activity-repository-header {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.activity-repository-copy h2 {
+  margin-bottom: 12px;
+}
+
+.activity-repository-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.activity-repository-stat {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(238, 248, 252, 0.05);
+  border: 1px solid rgba(209, 234, 245, 0.08);
+}
+
+.activity-repository-stat span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.activity-repository-stat strong {
+  font-size: 1.18rem;
+}
+
+.activity-repository-stat small {
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.activity-repository-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 18px;
+}
+
+.activity-repository-section {
+  padding: 22px;
+  border-radius: 24px;
+  background: rgba(238, 248, 252, 0.04);
+  border: 1px solid rgba(209, 234, 245, 0.08);
+}
+
+.activity-repository-section h3 {
+  margin: 0 0 12px;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-size: 1.42rem;
+  font-weight: 600;
+}
+
+.activity-repository-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.activity-repository-section-actions {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.activity-repository-section-header small {
+  color: var(--text-muted);
+  line-height: 1.5;
+  text-align: right;
+}
+
+.activity-repository-empty-state {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.repository-activity-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.repository-activity-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(231, 245, 252, 0.05);
+  border: 1px solid rgba(213, 234, 244, 0.1);
+  transition: opacity 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.repository-activity-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(213, 234, 244, 0.22);
+}
+
+.repository-activity-card.is-inactive {
+  opacity: 0.68;
+}
+
+.repository-activity-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.repository-activity-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.repository-activity-title {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.repository-activity-title strong {
+  display: block;
+}
+
+.repository-activity-title small {
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.repository-activity-swatch {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  margin-top: 5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(238, 248, 252, 0.08);
+}
+
+.repository-activity-swatch-large {
+  width: 16px;
+  height: 16px;
+  flex-basis: 16px;
+  margin-top: 0;
+}
+
+.repository-activity-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(114, 188, 181, 0.16);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.repository-activity-edit-button {
+  min-height: 40px;
+  padding-inline: 14px;
+}
+
+.repository-editor-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.repository-editor-form label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.repository-editor-form > label span,
+.repository-editor-toggle > span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.repository-editor-form input,
+.repository-editor-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(213, 234, 244, 0.16);
+  background: rgba(231, 245, 252, 0.08);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.repository-editor-form select option {
+  color: #10214d;
+}
+
+.repository-editor-form input:focus,
+.repository-editor-form select:focus {
+  outline: 2px solid rgba(146, 208, 200, 0.5);
+  outline-offset: 2px;
+}
+
+.repository-editor-color-field,
+.repository-editor-toggle,
+.repository-editor-actions {
+  grid-column: span 2;
+}
+
+.repository-editor-color-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.repository-editor-toggle-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(213, 234, 244, 0.16);
+  background: rgba(231, 245, 252, 0.08);
+}
+
+.repository-editor-toggle-row input {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 0;
+}
+
+.repository-editor-toggle-row small {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.repository-editor-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.activity-repository-feedback {
+  margin: 14px 0 0;
+}
+
+.activity-repository-feedback.is-ready {
+  color: var(--mint-300);
+}
+
+.activity-repository-feedback.is-error {
+  color: #f1a9a9;
+}
+
+.activity-repository-guidance {
+  display: grid;
+  gap: 12px;
+}
+
+.activity-repository-guidance-item {
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(231, 245, 252, 0.05);
+  border: 1px solid rgba(213, 234, 244, 0.1);
+}
+
+.activity-repository-guidance-item strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.activity-repository-note {
+  margin-top: 14px;
+  color: var(--text-muted);
 }
 
 .panel {
@@ -960,6 +1314,8 @@ body {
 }
 
 @media (max-width: 980px) {
+  .activity-repository-header,
+  .activity-repository-grid,
   .scope-panel,
   .focus-panel,
   .control-panel,
@@ -992,12 +1348,16 @@ body {
     gap: 12px;
   }
 
-  .api-status-flyout {
-    margin-left: 0;
+  .hero-actions {
     width: 100%;
   }
 
-  .api-status-trigger {
+  .api-status-flyout {
+    width: 100%;
+  }
+
+  .api-status-trigger,
+  .activity-repository-trigger {
     width: 100%;
   }
 
@@ -1005,6 +1365,25 @@ body {
     left: 0;
     right: auto;
     width: min(100%, calc(100vw - 40px));
+  }
+
+  .activity-repository-section-header,
+  .activity-repository-section-actions,
+  .repository-editor-actions,
+  .repository-editor-color-control,
+  .repository-activity-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .repository-editor-form {
+    grid-template-columns: 1fr;
+  }
+
+  .repository-editor-color-field,
+  .repository-editor-toggle,
+  .repository-editor-actions {
+    grid-column: span 1;
   }
 
   .user-filter-header {

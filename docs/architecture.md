@@ -46,13 +46,15 @@ The desktop client will keep a local SQLite outbox per user and sync batches to 
 
 ## User Settings
 
-Each user will have a settings surface for one-time profile setup and maintenance of the activity list shown in the tray menu. The API owns the stored user name and normalized activity definitions so activity events can reference stable identifiers.
+Each user will have a settings surface for one-time profile setup and maintenance of any user-specific activity overrides shown in the tray menu. The API owns the stored user name and normalized activity definitions so activity events can reference stable identifiers.
 
-Display names are normalized to Propercase. Each user also has a default department used when creating new timed activities, while individual timed activities can be reassigned to a different department when needed. The non-timed default activity is system-managed so users can CRUD their department-appropriate timed activities without removing the default fallback state.
+Display names are normalized to Propercase. The tray should load a shared admin-managed activity repository first, then merge in any user-specific custom activities as a fallback overlay. Each user also has a default department used when creating new timed activities, while individual timed activities can still be reassigned to a different department when needed. The non-timed default activity is system-managed so users can move out of timed work without removing the default fallback state.
 
 ## Dashboard Access
 
 The browser dashboard is manager-facing and must enforce server-side scope filtering. A property manager should only see the staff assigned to their property-management scope, while broader roles such as business owner can be granted access to all departments and users.
+
+The dashboard is also the intended admin surface for the shared activity repository. That repository should remain the authoritative source for common tray activities, while user-created custom activities remain a separate fallback path until an admin chooses to promote them.
 
 The current deployment assumption is that dashboard access happens from machines on the office LAN. Remote desktop users may sync activity through the API, but the dashboard is not currently planned as a general internet-facing application.
 
@@ -67,7 +69,7 @@ The reviewed legacy workbook shape is useful as an import and reporting referenc
 This repository currently contains:
 
 - Shared contracts for activities and sync batches.
-- A starter API with a seeded activity catalog, user settings endpoints, and a sync endpoint.
+- A starter API with a seeded activity catalog, repository management routes, user settings endpoints, and a sync endpoint.
 - A Cinnamon-first desktop workspace shell that uses the real settings and sync API surfaces.
-- A minimal Vite-based web shell for local dashboard testing.
+- A Vite-based web dashboard shell with an admin-facing activity repository panel for local testing.
 - Repo docs and structure for the deeper desktop and web slices that follow.

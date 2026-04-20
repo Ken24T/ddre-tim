@@ -32,6 +32,11 @@ export const departmentSchema = z.object({
   isActive: z.boolean().default(true)
 });
 
+export const departmentCatalogResponseSchema = z.object({
+  departments: z.array(departmentSchema),
+  refreshedAt: timestampSchema
+});
+
 export const activitySchema = z.object({
   id: z.string().min(1),
   slug: z.string().min(1),
@@ -46,6 +51,13 @@ export const activitySchema = z.object({
 export const activityCatalogResponseSchema = z.object({
   activities: z.array(activitySchema),
   refreshedAt: timestampSchema
+});
+
+export const activityCatalogEntryInputSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  departmentId: z.string().min(1),
+  isActive: z.boolean().default(true)
 });
 
 export const activityDraftSchema = z.object({
@@ -302,6 +314,7 @@ export const dashboardResponseSchema = z.object({
 });
 
 export type Activity = z.infer<typeof activitySchema>;
+export type ActivityCatalogEntryInput = z.infer<typeof activityCatalogEntryInputSchema>;
 export type ActivityDraft = z.infer<typeof activityDraftSchema>;
 export type ActivityCatalogResponse = z.infer<typeof activityCatalogResponseSchema>;
 export type ActivityEvent = z.infer<typeof activityEventSchema>;
@@ -321,5 +334,6 @@ export type DashboardMonthlyUserSegment = z.infer<typeof dashboardMonthlyUserSeg
 export type DashboardMonthlyUserTotal = z.infer<typeof dashboardMonthlyUserTotalSchema>;
 export type SyncBatch = z.infer<typeof syncBatchSchema>;
 export type SyncAck = z.infer<typeof syncAckSchema>;
+export type DepartmentCatalogResponse = z.infer<typeof departmentCatalogResponseSchema>;
 export type UserSettings = z.infer<typeof userSettingsSchema>;
 export type UserSettingsUpdate = z.infer<typeof userSettingsUpdateSchema>;

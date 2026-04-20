@@ -114,7 +114,7 @@ function getDefaultActivities(defaultDepartmentIdForUser: string): Activity[] {
     { ...defaultNonTimedActivity },
     ...getActivityCatalog().activities.map((activity) => ({
       ...activity,
-      departmentId: activity.kind === "timed" ? defaultDepartmentIdForUser : activity.departmentId
+      departmentId: activity.kind === "timed" ? activity.departmentId ?? defaultDepartmentIdForUser : activity.departmentId
     }))
   ];
 }

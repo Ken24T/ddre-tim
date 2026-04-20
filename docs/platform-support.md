@@ -12,10 +12,30 @@ The current implementation slice includes a Cinnamon-first desktop shell with:
 - local SQLite queueing and retry against the current sync-batch endpoint
 - guarded Cinnamon autostart management for packaged builds
 
+## Platform Model
+
+The desktop app should stay as one product with shared timing, sync, queueing, and settings behavior across platforms.
+
+Platform differences should be handled as entry-surface capabilities rather than separate application forks.
+
+Current direction:
+
+- use a tray-first flow where the platform exposes a reliable tray menu
+- keep the tray menu authoritative for fast activity switching
+- provide a compact fallback entry surface when tray behavior is inconsistent
+- avoid depending on click-only tray semantics as the core interaction model
+
 ## Planned Targets
 
 - GNOME: planned after the Cinnamon MVP, with explicit testing on X11 and Wayland.
 - Windows 11: planned after the Cinnamon MVP, including packaging, autostart, and tray smoke tests.
+
+The GNOME compatibility spike checklist lives in `docs/gnome-tray-validation.md`.
+
+## Future Considerations
+
+- KDE Plasma is not a committed target yet, but should remain in mind as a future compatibility validation slice.
+- KDE should be assessed through the same capability-first model rather than through a separate application design.
 
 ## Constraints
 

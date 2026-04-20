@@ -1,10 +1,18 @@
 import { useEffect, useState, type CSSProperties, type FormEvent, type MouseEvent } from "react";
 import {
+  createActivityRepositoryEntry,
+  fetchActivityCatalog,
+  fetchDepartmentCatalog,
   fetchDashboardSnapshot,
   formatHoursLabel,
   formatTimestamp,
+  type ActivityCatalogResponse,
+  type ActivityRepositoryEntry,
+  type ActivityRepositoryMutation,
+  type DepartmentCatalogResponse,
   type DashboardQueryValues,
-  type DashboardResponse
+  type DashboardResponse,
+  updateActivityRepositoryEntry
 } from "./dashboardClient.js";
 
 interface HealthPayload {
@@ -29,6 +37,29 @@ type DashboardState =
   | { phase: "refreshing"; data: DashboardResponse }
   | { phase: "ready"; data: DashboardResponse }
   | { phase: "error"; message: string };
+
+type ActivityRepositoryState =
+  | { phase: "loading" }
+  | { phase: "ready"; data: ActivityCatalogResponse }
+  | { phase: "error"; message: string };
+
+type DepartmentCatalogState =
+  | { phase: "loading" }
+  | { phase: "ready"; data: DepartmentCatalogResponse }
+  | { phase: "error"; message: string };
+
+type ActivityRepositorySaveState =
+  | { phase: "idle" }
+  | { phase: "saving" }
+  | { phase: "ready"; message: string }
+  | { phase: "error"; message: string };
+
+type ActivityRepositoryDraft = {
+  name: string;
+  color: string;
+  departmentId: string;
+  isActive: boolean;
+};
 
 type DashboardFocus = "all" | "monthly" | "departments" | "activities";
 
@@ -258,6 +289,61 @@ function formatSummaryShare(share: number): string {
   return `${percentage < 10 ? percentage.toFixed(1) : Math.round(percentage)}%`;
 }
 
+function formatRepositoryDepartmentLabel(
+  departmentId: string | undefined,
+  departmentNameById?: Map<string, string>
+): string {
+  if (!departmentId) {
+    return "Shared across departments in the current API slice";
+  }
+
+  const departmentName = departmentNameById?.get(departmentId);
+
+  if (departmentName) {
+    return departmentName;
+  }
+
+  return departmentId
+    .replace(/^department-/, "")
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function sortActivityRepositoryEntries(
+  activities: ActivityCatalogResponse["activities"]
+): ActivityCatalogResponse["activities"] {
+  return [...activities].sort((left, right) => {
+    if (left.isActive !== right.isActive) {
+      return left.isActive ? -1 : 1;
+    }
+
+    if (left.isSystem !== right.isSystem) {
+      return left.isSystem ? 1 : -1;
+    }
+
+    return left.name.localeCompare(right.name, "en-AU");
+  });
+}
+
+function createEmptyActivityRepositoryDraft(defaultDepartmentId = ""): ActivityRepositoryDraft {
+  return {
+    name: "",
+    color: "#6EA6CF",
+    departmentId: defaultDepartmentId,
+    isActive: true
+  };
+}
+
+function buildActivityRepositoryMutation(draft: ActivityRepositoryDraft): ActivityRepositoryMutation {
+  return {
+    name: draft.name.trim(),
+    color: draft.color.trim() || undefined,
+    departmentId: draft.departmentId,
+    isActive: draft.isActive
+  };
+}
+
 function buildSliceSummary(slices: BreakdownPieSlice[]): string {
   const preferredSlices = slices.filter((slice) => slice.label !== "Other");
   const summarySlices = (preferredSlices.length > 0 ? preferredSlices : slices).slice(0, 3);
@@ -478,6 +564,13 @@ function BreakdownPieLayout({
 export default function App() {
   const [healthState, setHealthState] = useState<HealthState>({ phase: "loading" });
   const [dashboardState, setDashboardState] = useState<DashboardState>({ phase: "loading" });
+  const [activityRepositoryState, setActivityRepositoryState] = useState<ActivityRepositoryState>({ phase: "loading" });
+  const [departmentCatalogState, setDepartmentCatalogState] = useState<DepartmentCatalogState>({ phase: "loading" });
+  const [activityRepositoryRequestKey, setActivityRepositoryRequestKey] = useState(0);
+  const [isActivityRepositoryOpen, setIsActivityRepositoryOpen] = useState(false);
+  const [editingActivityRepositoryId, setEditingActivityRepositoryId] = useState<string | null>(null);
+  const [activityRepositoryDraft, setActivityRepositoryDraft] = useState<ActivityRepositoryDraft>(createEmptyActivityRepositoryDraft());
+  const [activityRepositorySaveState, setActivityRepositorySaveState] = useState<ActivityRepositorySaveState>({ phase: "idle" });
   const [draftFilters, setDraftFilters] = useState<FilterFormState>(createEmptyFilters());
   const [appliedFilters, setAppliedFilters] = useState<DashboardQueryValues>({});
   const [dashboardFocus, setDashboardFocus] = useState<DashboardFocus>("all");
@@ -517,6 +610,87 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setActivityRepositoryState({ phase: "loading" });
+
+    async function loadActivityRepository(): Promise<void> {
+      try {
+        const payload = await fetchActivityCatalog();
+
+        if (!cancelled) {
+          setActivityRepositoryState({ phase: "ready", data: payload });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setActivityRepositoryState({
+            phase: "error",
+            message: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+    }
+
+    void loadActivityRepository();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityRepositoryRequestKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setDepartmentCatalogState({ phase: "loading" });
+
+    async function loadDepartmentCatalog(): Promise<void> {
+      try {
+        const payload = await fetchDepartmentCatalog();
+
+        if (!cancelled) {
+          setDepartmentCatalogState({ phase: "ready", data: payload });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDepartmentCatalogState({
+            phase: "error",
+            message: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+    }
+
+    void loadDepartmentCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityRepositoryRequestKey]);
+
+  useEffect(() => {
+    if (departmentCatalogState.phase !== "ready") {
+      return;
+    }
+
+    const [firstDepartment] = departmentCatalogState.data.departments;
+
+    if (!firstDepartment) {
+      return;
+    }
+
+    setActivityRepositoryDraft((current) => {
+      if (current.departmentId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        departmentId: firstDepartment.id
+      };
+    });
+  }, [departmentCatalogState]);
 
   useEffect(() => {
     let cancelled = false;
@@ -620,7 +794,64 @@ export default function App() {
     setActiveActivityLabel((current) => (current === label ? undefined : label));
   }
 
+  function getDefaultActivityRepositoryDepartmentId(): string {
+    if (departmentCatalogState.phase !== "ready") {
+      return "";
+    }
+
+    return departmentCatalogState.data.departments[0]?.id ?? "";
+  }
+
+  function resetActivityRepositoryEditor(): void {
+    setEditingActivityRepositoryId(null);
+    setActivityRepositorySaveState({ phase: "idle" });
+    setActivityRepositoryDraft(createEmptyActivityRepositoryDraft(getDefaultActivityRepositoryDepartmentId()));
+  }
+
+  function handleEditActivityRepository(activity: ActivityRepositoryEntry): void {
+    setEditingActivityRepositoryId(activity.id);
+    setActivityRepositorySaveState({ phase: "idle" });
+    setIsActivityRepositoryOpen(true);
+    setActivityRepositoryDraft({
+      name: activity.name,
+      color: activity.color ?? "#6EA6CF",
+      departmentId: activity.departmentId ?? getDefaultActivityRepositoryDepartmentId(),
+      isActive: activity.isActive
+    });
+  }
+
+  async function handleActivityRepositorySubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+
+    setActivityRepositorySaveState({ phase: "saving" });
+
+    try {
+      const payload = buildActivityRepositoryMutation(activityRepositoryDraft);
+      const savedActivity = editingActivityRepositoryId
+        ? await updateActivityRepositoryEntry(editingActivityRepositoryId, payload)
+        : await createActivityRepositoryEntry(payload);
+
+      setActivityRepositorySaveState({
+        phase: "ready",
+        message: editingActivityRepositoryId
+          ? `${savedActivity.name} updated in the shared repository.`
+          : `${savedActivity.name} added to the shared repository.`
+      });
+      setActivityRepositoryRequestKey((current) => current + 1);
+      setEditingActivityRepositoryId(null);
+      setActivityRepositoryDraft(createEmptyActivityRepositoryDraft(payload.departmentId));
+    } catch (error) {
+      setActivityRepositorySaveState({
+        phase: "error",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
   const dashboardData = dashboardState.phase === "ready" || dashboardState.phase === "refreshing" ? dashboardState.data : null;
+  const departmentCatalogData = departmentCatalogState.phase === "ready" ? departmentCatalogState.data : null;
+  const availableRepositoryDepartments = departmentCatalogData?.departments.filter((department) => department.isActive) ?? [];
+  const repositoryDepartmentNameById = new Map((departmentCatalogData?.departments ?? []).map((department) => [department.id, department.name]));
   const allUsers = dashboardData?.filters.availableUsers ?? [];
   const selectedUsers = allUsers.filter((user) => user.isSelected);
   const normalizedUserSearch = userSearch.trim().toLowerCase();
@@ -666,6 +897,21 @@ export default function App() {
       : healthState.phase === "error"
         ? "Open for connection details"
         : "Waiting for local health check";
+  const activityRepositoryData = activityRepositoryState.phase === "ready" ? activityRepositoryState.data : null;
+  const activityRepositoryEntries = activityRepositoryData ? sortActivityRepositoryEntries(activityRepositoryData.activities) : [];
+  const editingActivityRepository = editingActivityRepositoryId
+    ? activityRepositoryEntries.find((activity) => activity.id === editingActivityRepositoryId)
+    : undefined;
+  const sharedRepositoryCount = activityRepositoryEntries.filter((activity) => !activity.isSystem).length;
+  const trayReadyRepositoryCount = activityRepositoryEntries.filter((activity) => activity.kind === "timed" && activity.isActive).length;
+  const activityRepositoryTone =
+    activityRepositoryState.phase === "ready" ? "online" : activityRepositoryState.phase === "error" ? "offline" : "checking";
+  const activityRepositoryMeta =
+    activityRepositoryState.phase === "ready"
+      ? `${sharedRepositoryCount} shared activities`
+      : activityRepositoryState.phase === "error"
+        ? "Repository unavailable"
+        : "Loading shared catalog";
   const showMonthlyCharts = dashboardFocus === "all" || dashboardFocus === "monthly";
   const showDepartmentCharts = dashboardFocus === "all" || dashboardFocus === "departments";
   const showActivityCharts = dashboardFocus === "all" || dashboardFocus === "activities";
@@ -676,53 +922,71 @@ export default function App() {
         <div className="hero-bar">
           <p className="eyebrow">Time in Motion</p>
 
-          <details className={`api-status-flyout is-${apiStatusTone}`}>
-            <summary className="api-status-trigger">
-              <span className="api-status-indicator" aria-hidden="true" />
+          <div className="hero-actions">
+            <details className={`api-status-flyout is-${apiStatusTone}`}>
+              <summary className="api-status-trigger">
+                <span className="api-status-indicator" aria-hidden="true" />
+                <span className="api-status-copy">
+                  <strong>{apiStatusLabel}</strong>
+                  <small>{apiStatusMeta}</small>
+                </span>
+              </summary>
+
+              <div className="api-status-popover">
+                <div className="api-status-section">
+                  <p className="panel-label">API connection</p>
+                  {healthState.phase === "loading" ? <p>Checking the local API connection.</p> : null}
+                  {healthState.phase === "ready" ? (
+                    <>
+                      <p>Status: {healthState.payload.status.toUpperCase()}</p>
+                      <p>Service: {healthState.payload.service}</p>
+                      <p>Checked: {formatTimestamp(healthState.payload.now)}</p>
+                    </>
+                  ) : null}
+                  {healthState.phase === "error" ? (
+                    <>
+                      <p>{healthState.message}</p>
+                      <p>Start the local API with <code>npm run dev:api</code>.</p>
+                    </>
+                  ) : null}
+                </div>
+
+                <div className="api-status-section api-status-section-secondary">
+                  <p className="panel-label">Read model</p>
+                  {dashboardData ? (
+                    <>
+                      <p>Imported: {formatTimestamp(dashboardData.importedAt)}</p>
+                      <p>Source: <code>{dashboardData.sourceFile}</code></p>
+                      <p>{dashboardData.scopeLabel} within {dashboardData.filters.selectedDepartment ?? "all departments"}.</p>
+                    </>
+                  ) : dashboardState.phase === "error" ? (
+                    <>
+                      <p>{dashboardState.message}</p>
+                      <p>The API responded, but the dashboard read model did not load successfully.</p>
+                    </>
+                  ) : (
+                    <p>Waiting for the dashboard read model to finish loading.</p>
+                  )}
+                </div>
+              </div>
+            </details>
+
+            <button
+              aria-controls="activity-repository-panel"
+              aria-expanded={isActivityRepositoryOpen}
+              className={`activity-repository-trigger is-${activityRepositoryTone}${isActivityRepositoryOpen ? " is-active" : ""}`}
+              onClick={() => {
+                setIsActivityRepositoryOpen((current) => !current);
+              }}
+              type="button"
+            >
+              <span className="activity-repository-indicator" aria-hidden="true" />
               <span className="api-status-copy">
-                <strong>{apiStatusLabel}</strong>
-                <small>{apiStatusMeta}</small>
+                <strong>Activity Repository</strong>
+                <small>{activityRepositoryMeta}</small>
               </span>
-            </summary>
-
-            <div className="api-status-popover">
-              <div className="api-status-section">
-                <p className="panel-label">API connection</p>
-                {healthState.phase === "loading" ? <p>Checking the local API connection.</p> : null}
-                {healthState.phase === "ready" ? (
-                  <>
-                    <p>Status: {healthState.payload.status.toUpperCase()}</p>
-                    <p>Service: {healthState.payload.service}</p>
-                    <p>Checked: {formatTimestamp(healthState.payload.now)}</p>
-                  </>
-                ) : null}
-                {healthState.phase === "error" ? (
-                  <>
-                    <p>{healthState.message}</p>
-                    <p>Start the local API with <code>npm run dev:api</code>.</p>
-                  </>
-                ) : null}
-              </div>
-
-              <div className="api-status-section api-status-section-secondary">
-                <p className="panel-label">Read model</p>
-                {dashboardData ? (
-                  <>
-                    <p>Imported: {formatTimestamp(dashboardData.importedAt)}</p>
-                    <p>Source: <code>{dashboardData.sourceFile}</code></p>
-                    <p>{dashboardData.scopeLabel} within {dashboardData.filters.selectedDepartment ?? "all departments"}.</p>
-                  </>
-                ) : dashboardState.phase === "error" ? (
-                  <>
-                    <p>{dashboardState.message}</p>
-                    <p>The API responded, but the dashboard read model did not load successfully.</p>
-                  </>
-                ) : (
-                  <p>Waiting for the dashboard read model to finish loading.</p>
-                )}
-              </div>
-            </div>
-          </details>
+            </button>
+          </div>
         </div>
 
         <h1>DDRE TiM Dashboard</h1>
@@ -731,6 +995,291 @@ export default function App() {
           Used thoughtfully, it can be an invaluable resource for healthier planning, clearer conversations, and steady
           company development without losing sight of the people behind the work.
         </p>
+
+        {isActivityRepositoryOpen ? (
+          <div className="panel activity-repository-panel" id="activity-repository-panel">
+            <div className="activity-repository-header">
+              <div className="activity-repository-copy">
+                <p className="panel-label">Admin catalog</p>
+                <h2>Shared activities for the tray</h2>
+                <p>
+                  This is the dashboard entry point for the shared activity catalog the tray should read first. Users
+                  should only add a custom activity when the shared list does not fit, and admins can later promote
+                  repeated custom work back into the repository.
+                </p>
+              </div>
+
+              <div className="activity-repository-summary">
+                <div className="activity-repository-stat">
+                  <span>Shared catalog</span>
+                  <strong>{activityRepositoryState.phase === "ready" ? `${sharedRepositoryCount}` : "..."}</strong>
+                  <small>Repository activities currently exposed by the API.</small>
+                </div>
+
+                <div className="activity-repository-stat">
+                  <span>Tray-ready</span>
+                  <strong>{activityRepositoryState.phase === "ready" ? `${trayReadyRepositoryCount}` : "..."}</strong>
+                  <small>Active timed activities that can flow straight into the tray menu.</small>
+                </div>
+
+                <div className="activity-repository-stat">
+                  <span>Custom fallback</span>
+                  <strong>Planned</strong>
+                  <small>User-specific activities should stay local until an admin promotes them.</small>
+                </div>
+              </div>
+            </div>
+
+            <div className="activity-repository-grid">
+              <article className="activity-repository-section">
+                <div className="activity-repository-section-header">
+                  <div>
+                    <p className="panel-label">Current API catalog</p>
+                    <h3>Shared repository entries</h3>
+                  </div>
+                  <div className="activity-repository-section-actions">
+                    {activityRepositoryData ? <small>Refreshed {formatTimestamp(activityRepositoryData.refreshedAt)}</small> : null}
+                    <button className="button" onClick={resetActivityRepositoryEditor} type="button">
+                      New activity
+                    </button>
+                  </div>
+                </div>
+
+                {activityRepositoryState.phase === "loading" ? <p>Loading the shared activity repository from the API.</p> : null}
+
+                {activityRepositoryState.phase === "error" ? (
+                  <div className="activity-repository-empty-state">
+                    <p>{activityRepositoryState.message}</p>
+                    <button
+                      className="button button-primary"
+                      onClick={() => {
+                        setActivityRepositoryRequestKey((current) => current + 1);
+                      }}
+                      type="button"
+                    >
+                      Retry repository load
+                    </button>
+                  </div>
+                ) : null}
+
+                {activityRepositoryState.phase === "ready" ? (
+                  activityRepositoryEntries.length > 0 ? (
+                    <div className="repository-activity-list">
+                      {activityRepositoryEntries.map((activity) => (
+                        <div className={`repository-activity-card${!activity.isActive ? " is-inactive" : ""}`} key={activity.id}>
+                          <div className="repository-activity-header">
+                            <div className="repository-activity-title">
+                              <span className="repository-activity-swatch" style={{ background: activity.color ?? "#D9EAF2" }} />
+                              <div>
+                                <strong>{activity.name}</strong>
+                                <small>{formatRepositoryDepartmentLabel(activity.departmentId, repositoryDepartmentNameById)}</small>
+                              </div>
+                            </div>
+                            <span className="repository-activity-chip">{activity.isSystem ? "System" : activity.isActive ? "Active" : "Inactive"}</span>
+                          </div>
+                          <p>
+                            {activity.kind === "timed"
+                              ? "Shared timed activity ready for tray selection."
+                              : "System-managed activity reserved by the platform."}
+                          </p>
+                          <div className="repository-activity-actions">
+                            <button
+                              className="button repository-activity-edit-button"
+                              disabled={activity.isSystem}
+                              onClick={() => {
+                                handleEditActivityRepository(activity);
+                              }}
+                              type="button"
+                            >
+                              Edit entry
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>No shared activities are available from the API yet.</p>
+                  )
+                ) : null}
+              </article>
+
+              <article className="activity-repository-section">
+                <div className="activity-repository-section-header">
+                  <div>
+                    <p className="panel-label">Repository editor</p>
+                    <h3>{editingActivityRepository ? `Edit ${editingActivityRepository.name}` : "Add shared activity"}</h3>
+                  </div>
+                  {editingActivityRepository ? (
+                    <button className="button" onClick={resetActivityRepositoryEditor} type="button">
+                      Create new
+                    </button>
+                  ) : null}
+                </div>
+
+                <p>
+                  Admins manage the shared catalog here so the tray can stay menu-first and lightweight. When this list is missing
+                  something, users can add a custom activity later without taking ownership of the shared repository.
+                </p>
+
+                {departmentCatalogState.phase === "loading" ? <p>Loading department options for the repository editor.</p> : null}
+
+                {departmentCatalogState.phase === "error" ? (
+                  <div className="activity-repository-empty-state">
+                    <p>{departmentCatalogState.message}</p>
+                    <button
+                      className="button button-primary"
+                      onClick={() => {
+                        setActivityRepositoryRequestKey((current) => current + 1);
+                      }}
+                      type="button"
+                    >
+                      Retry department load
+                    </button>
+                  </div>
+                ) : null}
+
+                {departmentCatalogState.phase === "ready" ? (
+                  <form className="repository-editor-form" onSubmit={handleActivityRepositorySubmit}>
+                    <label>
+                      <span>Activity name</span>
+                      <input
+                        maxLength={100}
+                        onChange={(event) => {
+                          setActivityRepositoryDraft((current) => ({
+                            ...current,
+                            name: event.target.value
+                          }));
+                        }}
+                        placeholder="Enter a shared tray activity"
+                        type="text"
+                        value={activityRepositoryDraft.name}
+                      />
+                    </label>
+
+                    <label>
+                      <span>Department</span>
+                      <select
+                        onChange={(event) => {
+                          setActivityRepositoryDraft((current) => ({
+                            ...current,
+                            departmentId: event.target.value
+                          }));
+                        }}
+                        value={activityRepositoryDraft.departmentId}
+                      >
+                        <option value="" disabled>
+                          Select department
+                        </option>
+                        {availableRepositoryDepartments.map((department) => (
+                          <option key={department.id} value={department.id}>
+                            {department.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="repository-editor-color-field">
+                      <span>Colour</span>
+                      <div className="repository-editor-color-control">
+                        <span className="repository-activity-swatch repository-activity-swatch-large" style={{ background: activityRepositoryDraft.color || "#D9EAF2" }} />
+                        <input
+                          maxLength={7}
+                          onChange={(event) => {
+                            setActivityRepositoryDraft((current) => ({
+                              ...current,
+                              color: event.target.value.toUpperCase()
+                            }));
+                          }}
+                          pattern="^#[0-9A-Fa-f]{6}$"
+                          placeholder="#6EA6CF"
+                          type="text"
+                          value={activityRepositoryDraft.color}
+                        />
+                      </div>
+                    </label>
+
+                    <label className="repository-editor-toggle">
+                      <span>Status</span>
+                      <div className="repository-editor-toggle-row">
+                        <input
+                          checked={activityRepositoryDraft.isActive}
+                          onChange={(event) => {
+                            setActivityRepositoryDraft((current) => ({
+                              ...current,
+                              isActive: event.target.checked
+                            }));
+                          }}
+                          type="checkbox"
+                        />
+                        <small>
+                          {activityRepositoryDraft.isActive
+                            ? "Active in new tray selections"
+                            : "Inactive for new tray selections but kept for history and review"}
+                        </small>
+                      </div>
+                    </label>
+
+                    <div className="repository-editor-actions">
+                      <button
+                        className="button button-primary"
+                        disabled={
+                          activityRepositorySaveState.phase === "saving" ||
+                          activityRepositoryDraft.name.trim().length === 0 ||
+                          activityRepositoryDraft.departmentId.length === 0
+                        }
+                        type="submit"
+                      >
+                        {activityRepositorySaveState.phase === "saving"
+                          ? editingActivityRepository
+                            ? "Saving changes..."
+                            : "Adding activity..."
+                          : editingActivityRepository
+                            ? "Save changes"
+                            : "Add to repository"}
+                      </button>
+
+                      {editingActivityRepository ? (
+                        <button className="button" onClick={resetActivityRepositoryEditor} type="button">
+                          Cancel editing
+                        </button>
+                      ) : null}
+                    </div>
+                  </form>
+                ) : null}
+
+                {activityRepositorySaveState.phase === "ready" ? (
+                  <p className="activity-repository-feedback is-ready">{activityRepositorySaveState.message}</p>
+                ) : null}
+
+                {activityRepositorySaveState.phase === "error" ? (
+                  <p className="activity-repository-feedback is-error">{activityRepositorySaveState.message}</p>
+                ) : null}
+
+                <div className="activity-repository-guidance">
+                  <div className="activity-repository-guidance-item">
+                    <strong>Shared repository</strong>
+                    <p>Admins maintain the common activity library here so tray users can start recording work without building a taxonomy from scratch.</p>
+                  </div>
+
+                  <div className="activity-repository-guidance-item">
+                    <strong>User custom activity</strong>
+                    <p>If the shared list misses something, the tray should let the user add a custom activity without editing the admin repository directly.</p>
+                  </div>
+
+                  <div className="activity-repository-guidance-item">
+                    <strong>Promotion path</strong>
+                    <p>Frequently reused custom activities can be reviewed here and promoted into the shared catalog for future tray sessions.</p>
+                  </div>
+
+                  <div className="activity-repository-guidance-item">
+                    <strong>Tray result</strong>
+                    <p>The tray menu should merge the shared repository, any user custom activities, and the system-managed Not Timed state into one menu-first capture flow.</p>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="panel control-panel">

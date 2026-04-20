@@ -118,6 +118,69 @@ export interface DashboardResponse {
   monthlyUserTotals: DashboardMonthlyUserTotal[];
 }
 
+export interface ActivityRepositoryEntry {
+  id: string;
+  slug: string;
+  name: string;
+  color?: string;
+  departmentId?: string;
+  kind: "timed" | "non-timed";
+  isSystem: boolean;
+  isActive: boolean;
+}
+
+export interface ActivityCatalogResponse {
+  activities: ActivityRepositoryEntry[];
+  refreshedAt: string;
+}
+
+export interface DepartmentRepositoryEntry {
+  id: string;
+  slug: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface DepartmentCatalogResponse {
+  departments: DepartmentRepositoryEntry[];
+  refreshedAt: string;
+}
+
+export interface ActivityRepositoryMutation {
+  name: string;
+  color?: string;
+  departmentId: string;
+  isActive: boolean;
+}
+
+async function readErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
+  const responseText = await response.text();
+
+  if (!responseText) {
+    return fallbackMessage;
+  }
+
+  try {
+    const payload = JSON.parse(responseText) as {
+      message?: unknown;
+      issues?: Array<{ message?: unknown }>;
+    };
+    const issueMessage = payload.issues?.find((issue) => typeof issue.message === "string")?.message;
+
+    if (typeof issueMessage === "string") {
+      return issueMessage;
+    }
+
+    if (typeof payload.message === "string") {
+      return payload.message;
+    }
+  } catch {
+    return responseText;
+  }
+
+  return fallbackMessage;
+}
+
 function buildDashboardUrl(query: DashboardQueryValues): string {
   const params = new URLSearchParams();
 
@@ -172,4 +235,61 @@ export async function fetchDashboardSnapshot(query: DashboardQueryValues): Promi
   }
 
   return (await response.json()) as DashboardResponse;
+}
+
+export async function fetchActivityCatalog(): Promise<ActivityCatalogResponse> {
+  const response = await fetch("/v1/activities");
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, `Activity repository request failed with status ${response.status}`));
+  }
+
+  return (await response.json()) as ActivityCatalogResponse;
+}
+
+export async function fetchDepartmentCatalog(): Promise<DepartmentCatalogResponse> {
+  const response = await fetch("/v1/departments");
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, `Department catalog request failed with status ${response.status}`));
+  }
+
+  return (await response.json()) as DepartmentCatalogResponse;
+}
+
+export async function createActivityRepositoryEntry(
+  payload: ActivityRepositoryMutation
+): Promise<ActivityRepositoryEntry> {
+  const response = await fetch("/v1/activities", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, `Activity repository create failed with status ${response.status}`));
+  }
+
+  return (await response.json()) as ActivityRepositoryEntry;
+}
+
+export async function updateActivityRepositoryEntry(
+  activityId: string,
+  payload: ActivityRepositoryMutation
+): Promise<ActivityRepositoryEntry> {
+  const response = await fetch(`/v1/activities/${encodeURIComponent(activityId)}`, {
+    method: "PUT",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, `Activity repository update failed with status ${response.status}`));
+  }
+
+  return (await response.json()) as ActivityRepositoryEntry;
 }

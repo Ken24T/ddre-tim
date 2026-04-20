@@ -1,15 +1,24 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import {
+  activityCatalogEntryInputSchema,
   activityCatalogResponseSchema,
+  activitySchema,
   dashboardResponseSchema,
+  departmentCatalogResponseSchema,
   syncAckSchema,
   syncBatchSchema,
   userSettingsSchema,
   userSettingsUpdateSchema
 } from "@ddre/contracts";
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import { getDashboardReadModel } from "./dashboard.js";
-import { getActivityCatalog } from "./data.js";
+import {
+  ActivityCatalogNotFoundError,
+  createActivityCatalogEntry,
+  getActivityCatalog,
+  getDepartmentCatalogResponse,
+  updateActivityCatalogEntry
+} from "./data.js";
 import { createUserSettingsStore, type UserSettingsStore } from "./settings.js";
 
 export interface BuildServerOptions {
@@ -21,6 +30,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   const server = Fastify({ logger: options.logger ?? true });
   const seenEventIds = new Set<string>();
   const userParamsSchema = userSettingsSchema.pick({ userId: true });
+  const activityParamsSchema = z.object({ activityId: z.string().min(1) });
   const userSettingsStore = options.userSettingsStore ?? createUserSettingsStore();
 
   server.addHook("onClose", async () => {
@@ -36,6 +46,11 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       return;
     }
 
+    if (error instanceof ActivityCatalogNotFoundError) {
+      reply.status(404).send({ message: error.message });
+      return;
+    }
+
     request.log.error(error);
     reply.status(500).send({ message: "Internal server error" });
   });
@@ -48,6 +63,25 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
 
   server.get("/v1/activities", async () => {
     return activityCatalogResponseSchema.parse(getActivityCatalog());
+  });
+
+  server.get("/v1/departments", async () => {
+    return departmentCatalogResponseSchema.parse(getDepartmentCatalogResponse());
+  });
+
+  server.post("/v1/activities", async (request, reply) => {
+    const activityInput = activityCatalogEntryInputSchema.parse(request.body);
+
+    reply.status(201);
+
+    return activitySchema.parse(createActivityCatalogEntry(activityInput));
+  });
+
+  server.put("/v1/activities/:activityId", async (request) => {
+    const { activityId } = activityParamsSchema.parse(request.params);
+    const activityInput = activityCatalogEntryInputSchema.parse(request.body);
+
+    return activitySchema.parse(updateActivityCatalogEntry(activityId, activityInput));
   });
 
   server.get("/v1/dashboard", async (request) => {
