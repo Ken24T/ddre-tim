@@ -124,6 +124,7 @@ export interface ActivityRepositoryEntry {
   name: string;
   color?: string;
   departmentId?: string;
+  departmentIds?: string[];
   kind: "timed" | "non-timed";
   isSystem: boolean;
   isActive: boolean;
@@ -149,7 +150,7 @@ export interface DepartmentCatalogResponse {
 export interface ActivityRepositoryMutation {
   name: string;
   color?: string;
-  departmentId: string;
+  departmentIds: string[];
   isActive: boolean;
 }
 

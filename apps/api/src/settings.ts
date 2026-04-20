@@ -60,7 +60,10 @@ function cloneUserSettings(settings: UserSettings): UserSettings {
   return {
     ...settings,
     departments: cloneDepartments(settings.departments),
-    activities: settings.activities.map((activity) => ({ ...activity }))
+    activities: settings.activities.map((activity) => ({
+      ...activity,
+      departmentIds: activity.departmentIds ? [...activity.departmentIds] : undefined
+    }))
   };
 }
 
@@ -106,6 +109,7 @@ function buildStoredActivities(activityDrafts: ActivityDraft[], defaultDepartmen
         name: normalizedName,
         color: activityDraft.color,
         departmentId,
+        departmentIds: [departmentId],
         kind: "timed" as const,
         isSystem: false,
         isActive: activityDraft.isActive ?? true
@@ -122,10 +126,23 @@ async function getDefaultActivities(
 
   return [
     { ...defaultNonTimedActivity },
-    ...activityCatalog.activities.map((activity) => ({
-      ...activity,
-      departmentId: activity.kind === "timed" ? activity.departmentId ?? defaultDepartmentIdForUser : activity.departmentId
-    }))
+    ...activityCatalog.activities.map((activity) => {
+      const activityDepartmentIds = activity.departmentIds && activity.departmentIds.length > 0
+        ? [...activity.departmentIds]
+        : activity.departmentId
+          ? [activity.departmentId]
+          : [];
+      const primaryDepartmentId =
+        activity.kind === "timed"
+          ? activity.departmentId ?? activityDepartmentIds[0] ?? defaultDepartmentIdForUser
+          : activity.departmentId;
+
+      return {
+        ...activity,
+        departmentId: primaryDepartmentId,
+        departmentIds: activityDepartmentIds.length > 0 ? activityDepartmentIds : undefined
+      };
+    })
   ];
 }
 

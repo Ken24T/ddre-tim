@@ -34,6 +34,7 @@ interface ActivityRepositoryRow extends QueryResultRow {
   name: string;
   color: string | null;
   department_id: string | null;
+  department_ids: unknown;
   kind: string;
   is_system: boolean;
   is_active: boolean;
@@ -117,6 +118,7 @@ const initialKnownActivities: Activity[] = [
     name: "Design",
     color: "#0D9488",
     departmentId: "department-business-development",
+    departmentIds: ["department-business-development"],
     kind: "timed",
     isSystem: false,
     isActive: true
@@ -127,6 +129,7 @@ const initialKnownActivities: Activity[] = [
     name: "Development",
     color: "#1D4ED8",
     departmentId: "department-business-development",
+    departmentIds: ["department-business-development"],
     kind: "timed",
     isSystem: false,
     isActive: true
@@ -137,6 +140,7 @@ const initialKnownActivities: Activity[] = [
     name: "Review",
     color: "#9333EA",
     departmentId: "department-property-management",
+    departmentIds: ["department-property-management"],
     kind: "timed",
     isSystem: false,
     isActive: true
@@ -147,6 +151,7 @@ const initialKnownActivities: Activity[] = [
     name: "Admin",
     color: "#EA580C",
     departmentId: "department-administration",
+    departmentIds: ["department-administration"],
     kind: "timed",
     isSystem: false,
     isActive: true
@@ -154,7 +159,10 @@ const initialKnownActivities: Activity[] = [
 ];
 
 function cloneActivity(activity: Activity): Activity {
-  return { ...activity };
+  return {
+    ...activity,
+    departmentIds: activity.departmentIds ? [...activity.departmentIds] : undefined
+  };
 }
 
 function cloneDepartment(department: Department): Department {
@@ -184,6 +192,44 @@ function assertKnownDepartmentId(departmentId: string, path: Array<string | numb
       path
     }
   ]);
+}
+
+function assertKnownDepartmentIds(departmentIds: string[], path: Array<string | number>): void {
+  departmentIds.forEach((departmentId, index) => {
+    assertKnownDepartmentId(departmentId, [...path, index]);
+  });
+}
+
+function normalizeDepartmentIds(departmentIds: string[]): string[] {
+  return Array.from(new Set(departmentIds.map((departmentId) => departmentId.trim()).filter((departmentId) => departmentId.length > 0)));
+}
+
+function getActivityDepartmentIds(activity: Pick<Activity, "departmentId" | "departmentIds">): string[] {
+  if (activity.departmentIds && activity.departmentIds.length > 0) {
+    return normalizeDepartmentIds(activity.departmentIds);
+  }
+
+  return activity.departmentId ? [activity.departmentId] : [];
+}
+
+function parseActivityRepositoryDepartmentIds(rawValue: unknown, fallbackDepartmentId?: string | null): string[] {
+  if (Array.isArray(rawValue)) {
+    return normalizeDepartmentIds(rawValue.filter((value): value is string => typeof value === "string"));
+  }
+
+  if (typeof rawValue === "string") {
+    try {
+      const parsed = JSON.parse(rawValue) as unknown;
+
+      if (Array.isArray(parsed)) {
+        return normalizeDepartmentIds(parsed.filter((value): value is string => typeof value === "string"));
+      }
+    } catch {
+      return fallbackDepartmentId ? [fallbackDepartmentId] : [];
+    }
+  }
+
+  return fallbackDepartmentId ? [fallbackDepartmentId] : [];
 }
 
 function assertUniqueActivitySlug(
@@ -227,8 +273,10 @@ function buildActivityCatalogEntry(
   const parsed = activityCatalogEntryInputSchema.parse(input);
   const normalizedName = normalizeWhitespace(parsed.name);
   const slug = slugify(normalizedName);
+  const departmentIds = normalizeDepartmentIds(parsed.departmentIds);
+  const primaryDepartmentId = departmentIds[0];
 
-  assertKnownDepartmentId(parsed.departmentId, ["departmentId"]);
+  assertKnownDepartmentIds(departmentIds, ["departmentIds"]);
   assertUniqueActivitySlug(existingActivities, slug, ["name"], existingId);
 
   return activitySchema.parse({
@@ -236,7 +284,8 @@ function buildActivityCatalogEntry(
     slug,
     name: normalizedName,
     color: parsed.color,
-    departmentId: parsed.departmentId,
+    departmentId: primaryDepartmentId,
+    departmentIds,
     kind: "timed",
     isSystem: false,
     isActive: parsed.isActive
@@ -304,12 +353,15 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
   constructor(private readonly pool: Queryable) {}
 
   private mapRow(row: ActivityRepositoryRow): Activity {
+    const departmentIds = parseActivityRepositoryDepartmentIds(row.department_ids, row.department_id);
+
     return activitySchema.parse({
       id: row.id,
       slug: row.slug,
       name: row.name,
       color: row.color ?? undefined,
-      departmentId: row.department_id ?? undefined,
+      departmentId: departmentIds[0] ?? row.department_id ?? undefined,
+      departmentIds: departmentIds.length > 0 ? departmentIds : undefined,
       kind: row.kind === "non-timed" ? "non-timed" : "timed",
       isSystem: row.is_system,
       isActive: row.is_active
@@ -321,6 +373,24 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
       return;
     }
 
+    await this.pool.query(
+      [
+        "alter table if exists activity_repository_entries",
+        "add column if not exists department_ids jsonb not null default '[]'::jsonb"
+      ].join("\n")
+    );
+
+    await this.pool.query(
+      [
+        "update activity_repository_entries",
+        "set department_ids = case",
+        "  when department_id is null then '[]'::jsonb",
+        "  else to_jsonb(array[department_id])",
+        "end",
+        "where department_id is not null and department_ids = '[]'::jsonb"
+      ].join("\n")
+    );
+
     const result = await this.pool.query<CountRow>("select count(*) as count from activity_repository_entries");
     const rowCount = Number(result.rows[0]?.count ?? 0);
 
@@ -330,8 +400,8 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
       for (const activity of initialKnownActivities) {
         await this.pool.query(
           [
-            "insert into activity_repository_entries (id, slug, name, color, department_id, kind, is_system, is_active, created_at, updated_at)",
-            "values ($1, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz, $10::timestamptz)"
+            "insert into activity_repository_entries (id, slug, name, color, department_id, department_ids, kind, is_system, is_active, created_at, updated_at)",
+            "values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10::timestamptz, $11::timestamptz)"
           ].join("\n"),
           [
             activity.id,
@@ -339,6 +409,7 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
             activity.name,
             activity.color ?? null,
             activity.departmentId ?? null,
+            JSON.stringify(getActivityDepartmentIds(activity)),
             activity.kind,
             activity.isSystem,
             activity.isActive,
@@ -357,7 +428,7 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
 
     const result = await this.pool.query<ActivityRepositoryRow>(
       [
-        "select id, slug, name, color, department_id, kind, is_system, is_active, created_at, updated_at",
+        "select id, slug, name, color, department_id, department_ids, kind, is_system, is_active, created_at, updated_at",
         "from activity_repository_entries",
         "order by is_active desc, is_system asc, name asc"
       ].join("\n")
@@ -384,12 +455,13 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
   async createActivityCatalogEntry(input: ActivityCatalogEntryInput): Promise<Activity> {
     const { activities } = await this.readActivities();
     const activity = buildActivityCatalogEntry(input, activities);
+    const activityDepartmentIds = getActivityDepartmentIds(activity);
     const now = new Date().toISOString();
 
     await this.pool.query(
       [
-        "insert into activity_repository_entries (id, slug, name, color, department_id, kind, is_system, is_active, created_at, updated_at)",
-        "values ($1, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz, $10::timestamptz)"
+        "insert into activity_repository_entries (id, slug, name, color, department_id, department_ids, kind, is_system, is_active, created_at, updated_at)",
+        "values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10::timestamptz, $11::timestamptz)"
       ].join("\n"),
       [
         activity.id,
@@ -397,6 +469,7 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
         activity.name,
         activity.color ?? null,
         activity.departmentId ?? null,
+        JSON.stringify(activityDepartmentIds),
         activity.kind,
         activity.isSystem,
         activity.isActive,
@@ -417,6 +490,7 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
     }
 
     const nextActivity = buildActivityCatalogEntry(input, activities, existingActivity.id);
+    const nextActivityDepartmentIds = getActivityDepartmentIds(nextActivity);
     const now = new Date().toISOString();
 
     await this.pool.query(
@@ -426,8 +500,9 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
         "    name = $3,",
         "    color = $4,",
         "    department_id = $5,",
-        "    is_active = $6,",
-        "    updated_at = $7::timestamptz",
+        "    department_ids = $6::jsonb,",
+        "    is_active = $7,",
+        "    updated_at = $8::timestamptz",
         "where id = $1"
       ].join("\n"),
       [
@@ -436,6 +511,7 @@ class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
         nextActivity.name,
         nextActivity.color ?? null,
         nextActivity.departmentId ?? null,
+        JSON.stringify(nextActivityDepartmentIds),
         nextActivity.isActive,
         now
       ]

@@ -37,12 +37,15 @@ export const departmentCatalogResponseSchema = z.object({
   refreshedAt: timestampSchema
 });
 
+const departmentIdListSchema = z.array(z.string().min(1)).min(1).transform((value) => Array.from(new Set(value)));
+
 export const activitySchema = z.object({
   id: z.string().min(1),
   slug: z.string().min(1),
   name: z.string().min(1),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   departmentId: z.string().min(1).optional(),
+  departmentIds: departmentIdListSchema.optional(),
   kind: activityKindSchema.default("timed"),
   isSystem: z.boolean().default(false),
   isActive: z.boolean().default(true)
@@ -56,7 +59,7 @@ export const activityCatalogResponseSchema = z.object({
 export const activityCatalogEntryInputSchema = z.object({
   name: z.string().trim().min(1).max(100),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  departmentId: z.string().min(1),
+  departmentIds: departmentIdListSchema,
   isActive: z.boolean().default(true)
 });
 

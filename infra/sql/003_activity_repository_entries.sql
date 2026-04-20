@@ -4,6 +4,7 @@ create table if not exists activity_repository_entries (
   name text not null,
   color text,
   department_id text,
+  department_ids jsonb not null default '[]'::jsonb,
   kind text not null default 'timed',
   is_system boolean not null default false,
   is_active boolean not null default true,
