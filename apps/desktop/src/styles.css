@@ -313,7 +313,8 @@ textarea {
 }
 
 .selector-header small,
-.settings-header small {
+.settings-header small,
+.settings-activities-header small {
   color: var(--text-muted);
   text-align: right;
 }
@@ -346,6 +347,80 @@ textarea {
 .settings-activities,
 .settings-actions {
   grid-column: span 2;
+}
+
+.settings-activity-overview {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-activity-copy {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.settings-activity-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-activity-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(188, 223, 214, 0.1);
+  background: rgba(233, 244, 241, 0.06);
+}
+
+.settings-activity-card.is-inactive {
+  opacity: 0.72;
+}
+
+.settings-activity-card-main {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.settings-activity-card-main strong {
+  display: block;
+}
+
+.settings-activity-card-main small {
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.settings-activity-swatch {
+  --activity-accent: var(--accent);
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--activity-accent);
+  box-shadow: 0 0 0 4px rgba(233, 244, 241, 0.08);
+}
+
+.settings-activity-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(138, 216, 200, 0.14);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.settings-activity-badge.is-inactive {
+  background: rgba(233, 244, 241, 0.08);
+  color: var(--text-muted);
 }
 
 .draft-activity-row {
@@ -436,6 +511,11 @@ textarea {
   .button,
   .settings-actions {
     width: 100%;
+  }
+
+  .settings-activity-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .meta-card-actions {

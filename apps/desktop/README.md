@@ -9,6 +9,7 @@ Current slice:
 - a mutable native tray menu that mirrors the configured activity list
 - a menu-driven activity picker backed by `GET /v1/users/:userId/settings`
 - first-run settings backed by `PUT /v1/users/:userId/settings`
+- desktop settings currently manage the user profile and default department, while shared tray activities stay admin-managed from the dashboard repository
 - sync and note events queued through a local SQLite outbox before `POST /v1/sync-batches`
 - Cinnamon autostart management for packaged builds
 - a quick-selector panel for longer activity lists and notes

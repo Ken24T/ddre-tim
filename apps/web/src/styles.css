@@ -14,6 +14,7 @@
   --panel-bg: rgba(20, 35, 83, 0.56);
   --panel-strong: rgba(26, 45, 103, 0.72);
   --panel-border: rgba(187, 220, 235, 0.16);
+  --card-strong-gradient: linear-gradient(180deg, rgba(41, 66, 138, 0.88), rgba(22, 35, 83, 0.82));
   color: var(--text-primary);
   background:
     radial-gradient(circle at 50% 9%, rgba(237, 247, 252, 0.12), transparent 10%),
@@ -410,6 +411,10 @@ body {
   gap: 12px;
   align-items: stretch;
   padding: 14px 16px;
+}
+
+.repository-department-section.is-department .repository-department-header {
+  background: var(--card-strong-gradient);
 }
 
 .repository-department-summary {
@@ -1209,7 +1214,7 @@ body {
 }
 
 .stat-card {
-  background: linear-gradient(180deg, rgba(41, 66, 138, 0.88), rgba(22, 35, 83, 0.82));
+  background: var(--card-strong-gradient);
 }
 
 .stat-card h2 {

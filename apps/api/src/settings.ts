@@ -93,17 +93,29 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function buildStoredActivities(activityDrafts: ActivityDraft[], defaultDepartmentIdForUser: string): Activity[] {
-  return [
-    { ...defaultNonTimedActivity },
-    ...activityDrafts.map((activityDraft, index) => {
-      const normalizedName = activityDraft.name.trim();
-      const slug = slugify(normalizedName);
-      const departmentId = activityDraft.departmentId ?? defaultDepartmentIdForUser;
+function getSharedActivitySlugs(activities: Activity[]): Set<string> {
+  return new Set(activities.filter((activity) => !activity.isSystem && activity.kind === "timed").map((activity) => activity.slug));
+}
 
-      assertKnownDepartmentId(departmentId, ["activities", index, "departmentId"]);
+function buildStoredCustomActivities(
+  activityDrafts: ActivityDraft[],
+  defaultDepartmentIdForUser: string,
+  sharedActivitySlugs: ReadonlySet<string>
+): Activity[] {
+  return activityDrafts.flatMap((activityDraft, index) => {
+    const normalizedName = activityDraft.name.trim();
+    const slug = slugify(normalizedName);
 
-      return {
+    if (slug === defaultNonTimedActivity.slug || sharedActivitySlugs.has(slug)) {
+      return [];
+    }
+
+    const departmentId = activityDraft.departmentId ?? defaultDepartmentIdForUser;
+
+    assertKnownDepartmentId(departmentId, ["activities", index, "departmentId"]);
+
+    return [
+      {
         id: `activity-${slug}`,
         slug,
         name: normalizedName,
@@ -113,9 +125,31 @@ function buildStoredActivities(activityDrafts: ActivityDraft[], defaultDepartmen
         kind: "timed" as const,
         isSystem: false,
         isActive: activityDraft.isActive ?? true
-      };
-    })
-  ];
+      }
+    ];
+  });
+}
+
+function normalizeStoredCustomActivity(
+  activity: Activity,
+  defaultDepartmentIdForUser: string,
+  sharedActivitySlugs: ReadonlySet<string>
+): Activity | null {
+  if (activity.isSystem || activity.slug === defaultNonTimedActivity.slug || sharedActivitySlugs.has(activity.slug)) {
+    return null;
+  }
+
+  const departmentId = activity.departmentId ?? activity.departmentIds?.[0] ?? defaultDepartmentIdForUser;
+
+  assertKnownDepartmentId(departmentId, ["activities", activity.id, "departmentId"]);
+
+  return {
+    ...activity,
+    departmentId,
+    departmentIds: [departmentId],
+    kind: "timed",
+    isSystem: false
+  };
 }
 
 async function getDefaultActivities(
@@ -161,8 +195,42 @@ async function createDefaultUserSettings(
   };
 }
 
-function createStoredUserSettings(userId: string, settingsUpdate: UserSettingsUpdate): UserSettings {
+async function hydrateUserSettings(
+  settings: UserSettings,
+  activityRepositoryStore: ActivityRepositoryStore
+): Promise<UserSettings> {
+  const sharedActivities = await getDefaultActivities(settings.defaultDepartmentId, activityRepositoryStore);
+  const sharedActivitySlugs = getSharedActivitySlugs(sharedActivities);
+  const seenCustomSlugs = new Set<string>();
+  const customActivities: Activity[] = [];
+
+  for (const activity of settings.activities) {
+    const normalizedActivity = normalizeStoredCustomActivity(activity, settings.defaultDepartmentId, sharedActivitySlugs);
+
+    if (!normalizedActivity || seenCustomSlugs.has(normalizedActivity.slug)) {
+      continue;
+    }
+
+    seenCustomSlugs.add(normalizedActivity.slug);
+    customActivities.push(normalizedActivity);
+  }
+
+  return {
+    ...settings,
+    departments: cloneDepartments(availableDepartments),
+    activities: [...sharedActivities, ...customActivities]
+  };
+}
+
+async function createStoredUserSettings(
+  userId: string,
+  settingsUpdate: UserSettingsUpdate,
+  activityRepositoryStore: ActivityRepositoryStore
+): Promise<UserSettings> {
   assertKnownDepartmentId(settingsUpdate.defaultDepartmentId, ["defaultDepartmentId"]);
+
+  const sharedActivities = await getDefaultActivities(settingsUpdate.defaultDepartmentId, activityRepositoryStore);
+  const sharedActivitySlugs = getSharedActivitySlugs(sharedActivities);
 
   return {
     userId,
@@ -170,7 +238,11 @@ function createStoredUserSettings(userId: string, settingsUpdate: UserSettingsUp
     isConfigured: true,
     defaultDepartmentId: settingsUpdate.defaultDepartmentId,
     departments: cloneDepartments(availableDepartments),
-    activities: buildStoredActivities(settingsUpdate.activities, settingsUpdate.defaultDepartmentId),
+    activities: buildStoredCustomActivities(
+      settingsUpdate.activities,
+      settingsUpdate.defaultDepartmentId,
+      sharedActivitySlugs
+    ),
     updatedAt: new Date().toISOString()
   };
 }
@@ -192,14 +264,14 @@ class InMemoryUserSettingsStore implements UserSettingsStore {
       return createDefaultUserSettings(userId, this.activityRepositoryStore);
     }
 
-    return cloneUserSettings(existingSettings);
+    return hydrateUserSettings(existingSettings, this.activityRepositoryStore);
   }
 
   async upsertUserSettings(userId: string, settingsUpdate: UserSettingsUpdate): Promise<UserSettings> {
-    const storedSettings = createStoredUserSettings(userId, settingsUpdate);
+    const storedSettings = await createStoredUserSettings(userId, settingsUpdate, this.activityRepositoryStore);
     this.settingsStore.set(userId, storedSettings);
 
-    return cloneUserSettings(storedSettings);
+    return hydrateUserSettings(storedSettings, this.activityRepositoryStore);
   }
 }
 
@@ -220,11 +292,11 @@ class PostgresUserSettingsStore implements UserSettingsStore {
       return createDefaultUserSettings(userId, this.activityRepositoryStore);
     }
 
-    return cloneUserSettings(parseStoredUserSettings(result.rows[0].settings_payload));
+    return hydrateUserSettings(parseStoredUserSettings(result.rows[0].settings_payload), this.activityRepositoryStore);
   }
 
   async upsertUserSettings(userId: string, settingsUpdate: UserSettingsUpdate): Promise<UserSettings> {
-    const storedSettings = createStoredUserSettings(userId, settingsUpdate);
+    const storedSettings = await createStoredUserSettings(userId, settingsUpdate, this.activityRepositoryStore);
 
     await this.pool.query(
       [
@@ -237,7 +309,7 @@ class PostgresUserSettingsStore implements UserSettingsStore {
       [userId, JSON.stringify(storedSettings), storedSettings.updatedAt]
     );
 
-    return cloneUserSettings(storedSettings);
+    return hydrateUserSettings(storedSettings, this.activityRepositoryStore);
   }
 
   async close(): Promise<void> {

@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
-import type { Activity, ActivityEvent, UserSettings, UserSettingsUpdate } from "@ddre/contracts";
+import type { Activity, ActivityEvent, Department, UserSettings, UserSettingsUpdate } from "@ddre/contracts";
 import { fetchHealth, fetchUserSettings, getApiBaseUrl, saveUserSettings, sendSyncBatch, type HealthPayload } from "./desktopClient.js";
 import {
   flushDesktopOutbox,
@@ -35,14 +35,6 @@ type SyncState =
   | { phase: "ready"; message: string; at: string }
   | { phase: "error"; message: string };
 
-type DraftActivity = {
-  id: string;
-  name: string;
-  color: string;
-  departmentId: string;
-  isActive: boolean;
-};
-
 type RecentItem = {
   id: string;
   title: string;
@@ -73,32 +65,11 @@ function getStoredValue(key: string, fallback: string): string {
   return window.localStorage.getItem(key) ?? fallback;
 }
 
-function createDraftActivities(settings: UserSettings): DraftActivity[] {
-  return settings.activities
-    .filter((activity) => !activity.isSystem)
-    .map((activity) => ({
-      id: activity.id,
-      name: activity.name,
-      color: activity.color ?? "#88CFC2",
-      departmentId: activity.departmentId ?? settings.defaultDepartmentId,
-      isActive: activity.isActive
-    }));
-}
-
-function buildSettingsUpdate(
-  displayName: string,
-  defaultDepartmentId: string,
-  draftActivities: DraftActivity[]
-): UserSettingsUpdate {
+function buildSettingsUpdate(displayName: string, defaultDepartmentId: string): UserSettingsUpdate {
   return {
     displayName,
     defaultDepartmentId,
-    activities: draftActivities.map((activity) => ({
-      name: activity.name,
-      color: activity.color || undefined,
-      departmentId: activity.departmentId,
-      isActive: activity.isActive
-    }))
+    activities: []
   };
 }
 
@@ -135,6 +106,37 @@ function formatPendingCount(value: number): string {
   return `${value} event${value === 1 ? "" : "s"}`;
 }
 
+function getActivityDepartmentNames(
+  activity: Activity,
+  departments: Department[],
+  defaultDepartmentId: string | undefined
+): string[] {
+  const departmentIds = activity.departmentIds && activity.departmentIds.length > 0
+    ? activity.departmentIds
+    : activity.departmentId
+      ? [activity.departmentId]
+      : defaultDepartmentId
+        ? [defaultDepartmentId]
+        : [];
+  const names = departmentIds.map(
+    (departmentId) => departments.find((department) => department.id === departmentId)?.name ?? "Default department"
+  );
+
+  return Array.from(new Set(names));
+}
+
+function formatActivityDepartmentSummary(names: string[]): string {
+  if (names.length === 0) {
+    return "Default department";
+  }
+
+  if (names.length <= 2) {
+    return names.join(" / ");
+  }
+
+  return `${names[0]} +${names.length - 1} more`;
+}
+
 export default function App() {
   const [userId, setUserId] = useState(() => getStoredValue(userIdStorageKey, defaultUserId));
   const [healthState, setHealthState] = useState<HealthState>({ phase: "loading" });
@@ -142,7 +144,6 @@ export default function App() {
   const [syncState, setSyncState] = useState<SyncState>({ phase: "idle", message: "No tray actions have been synced yet." });
   const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [defaultDepartmentIdDraft, setDefaultDepartmentIdDraft] = useState("");
-  const [draftActivities, setDraftActivities] = useState<DraftActivity[]>([]);
   const [activitySearch, setActivitySearch] = useState("");
   const [noteDraft, setNoteDraft] = useState(() => getStoredValue(noteStorageKey, ""));
   const [currentActivityId, setCurrentActivityId] = useState<string | null>(null);
@@ -217,7 +218,6 @@ export default function App() {
           setSettingsState({ phase: "ready", data: payload });
           setDisplayNameDraft(payload.displayName);
           setDefaultDepartmentIdDraft(payload.defaultDepartmentId);
-          setDraftActivities(createDraftActivities(payload));
           setCurrentActivityId((current) => current ?? payload.activities.find((activity) => activity.kind === "non-timed")?.id ?? null);
         }
       } catch (error) {
@@ -326,6 +326,7 @@ export default function App() {
   const departments = settings?.departments ?? [];
   const allActivities = settings?.activities ?? [];
   const activeActivities = allActivities.filter((activity) => activity.isActive);
+  const timedActivityCatalog = allActivities.filter((activity) => activity.kind === "timed");
   const menuActivities = activeActivities.filter((activity) => activity.kind === "timed");
   const nonTimedActivity = activeActivities.find((activity) => activity.kind === "non-timed") ?? allActivities.find((activity) => activity.kind === "non-timed");
   const currentActivity = activeActivities.find((activity) => activity.id === currentActivityId) ?? allActivities.find((activity) => activity.id === currentActivityId);
@@ -364,12 +365,13 @@ export default function App() {
   const desktopHostDetail = desktopContext
     ? "Native tray events, the local outbox, and Cinnamon autostart are available."
     : "Use the browser shell while Linux WebKit and libsoup headers are still being installed.";
+  const activityDepartmentFallbackId = settings?.defaultDepartmentId || defaultDepartmentIdDraft || departments[0]?.id;
   const currentDepartment = departments.find((department) => department.id === (currentActivity?.departmentId ?? settings?.defaultDepartmentId));
   const onboardingCopy = settings?.isConfigured
     ? desktopContext
       ? "Cinnamon tray capture is ready. Native tray actions queue locally, flush through the API, and keep timed selection menu-first."
       : "Cinnamon tray capture preview is ready. Timed activities stay menu-first, with a quick selector available for long lists or notes."
-    : "First run routes into settings before timed capture begins. Configure the user name, department, and timed activities below.";
+    : "First run routes into settings before timed capture begins. Configure the user name and default department below while shared tray activities remain dashboard-managed.";
 
   const platformCards = useMemo(() => trayPlatforms, []);
 
@@ -394,7 +396,9 @@ export default function App() {
       ...menuActivities.map((activity) => ({
         id: activity.id,
         label: activity.name,
-        helper: departments.find((department) => department.id === activity.departmentId)?.name ?? "Default department",
+        helper: formatActivityDepartmentSummary(
+          getActivityDepartmentNames(activity, departments, activityDepartmentFallbackId)
+        ),
         active: currentActivityId === activity.id
       }))
     ];
@@ -575,7 +579,9 @@ export default function App() {
     }
 
     const occurredAt = new Date().toISOString();
-    const selectedDepartmentName = departments.find((department) => department.id === activity.departmentId)?.name ?? "Default department";
+    const selectedDepartmentName = formatActivityDepartmentSummary(
+      getActivityDepartmentNames(activity, departments, activityDepartmentFallbackId)
+    );
     const nextCurrentActivityId = activity.id;
     const nextEvent: ActivityEvent = activity.kind === "non-timed"
       ? {
@@ -667,11 +673,10 @@ export default function App() {
     try {
       const payload = await saveUserSettings(
         userId,
-        buildSettingsUpdate(displayNameDraft, defaultDepartmentIdDraft, draftActivities)
+        buildSettingsUpdate(displayNameDraft, defaultDepartmentIdDraft)
       );
 
       setSettingsState({ phase: "ready", data: payload });
-      setDraftActivities(createDraftActivities(payload));
       setDisplayNameDraft(payload.displayName);
       setDefaultDepartmentIdDraft(payload.defaultDepartmentId);
       setSaveMessage("Settings saved. Cinnamon tray capture is ready to use.");
@@ -681,27 +686,6 @@ export default function App() {
         message: error instanceof Error ? error.message : String(error)
       });
     }
-  }
-
-  function addDraftActivity(): void {
-    setDraftActivities((current) => [
-      ...current,
-      {
-        id: createIdentifier("draft-activity"),
-        name: "",
-        color: "#88CFC2",
-        departmentId: defaultDepartmentIdDraft || departments[0]?.id || "",
-        isActive: true
-      }
-    ]);
-  }
-
-  function updateDraftActivity(id: string, patch: Partial<DraftActivity>): void {
-    setDraftActivities((current) => current.map((activity) => (activity.id === id ? { ...activity, ...patch } : activity)));
-  }
-
-  function removeDraftActivity(id: string): void {
-    setDraftActivities((current) => current.filter((activity) => activity.id !== id));
   }
 
   return (
@@ -966,68 +950,42 @@ export default function App() {
           <div className="settings-activities">
             <div className="settings-activities-header">
               <div>
-                <p className="panel-label">Timed activity list</p>
-                <strong>The system-managed Not Timed activity stays pinned automatically.</strong>
+                <p className="panel-label">Shared activity catalog</p>
+                <strong>The dashboard manages shared tray activities. Desktop settings only control the user profile and default department.</strong>
               </div>
-              <button className="button" onClick={addDraftActivity} type="button">Add activity</button>
+              <small>{timedActivityCatalog.length} repository entries</small>
             </div>
 
-            <div className="draft-activity-list">
-              {draftActivities.map((activity) => (
-                <div className="draft-activity-row" key={activity.id}>
-                  <label className="field">
-                    <span>Name</span>
-                    <input
-                      onChange={(event) => {
-                        updateDraftActivity(activity.id, { name: event.target.value });
-                      }}
-                      placeholder="Property inspections"
-                      type="text"
-                      value={activity.name}
-                    />
-                  </label>
+            <div className="settings-activity-overview">
+              <p className="settings-activity-copy">
+                Shared repository activities are read-only here. Inactive items stay out of new tray selections, and the
+                system-managed Not Timed state stays pinned automatically.
+              </p>
 
-                  <label className="field">
-                    <span>Department</span>
-                    <select
-                      onChange={(event) => {
-                        updateDraftActivity(activity.id, { departmentId: event.target.value });
-                      }}
-                      value={activity.departmentId}
-                    >
-                      {departments.map((department) => (
-                        <option key={department.id} value={department.id}>{department.name}</option>
-                      ))}
-                    </select>
-                  </label>
+              <div className="settings-activity-list">
+                {timedActivityCatalog.length > 0 ? timedActivityCatalog.map((activity) => {
+                  const departmentNames = getActivityDepartmentNames(activity, departments, activityDepartmentFallbackId);
 
-                  <label className="field color-field">
-                    <span>Colour</span>
-                    <input
-                      onChange={(event) => {
-                        updateDraftActivity(activity.id, { color: event.target.value });
-                      }}
-                      type="color"
-                      value={activity.color}
-                    />
-                  </label>
+                  return (
+                    <div className={`settings-activity-card${activity.isActive ? "" : " is-inactive"}`} key={activity.id}>
+                      <div className="settings-activity-card-main">
+                        <span
+                          className="settings-activity-swatch"
+                          style={{ "--activity-accent": activity.color ?? "#88CFC2" } as CSSProperties}
+                        />
+                        <div>
+                          <strong>{activity.name}</strong>
+                          <small>{departmentNames.length > 0 ? departmentNames.join(" / ") : "Default department"}</small>
+                        </div>
+                      </div>
 
-                  <label className="toggle-field">
-                    <input
-                      checked={activity.isActive}
-                      onChange={(event) => {
-                        updateDraftActivity(activity.id, { isActive: event.target.checked });
-                      }}
-                      type="checkbox"
-                    />
-                    <span>Shown in tray</span>
-                  </label>
-
-                  <button className="button button-danger" onClick={() => {
-                    removeDraftActivity(activity.id);
-                  }} type="button">Remove</button>
-                </div>
-              ))}
+                      <span className={`settings-activity-badge${activity.isActive ? "" : " is-inactive"}`}>
+                        {activity.isActive ? "Active in tray" : "Inactive"}
+                      </span>
+                    </div>
+                  );
+                }) : <p className="empty-copy">No timed activities are currently available from the shared repository.</p>}
+              </div>
             </div>
           </div>
 
