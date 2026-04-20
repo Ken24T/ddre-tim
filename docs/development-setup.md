@@ -28,7 +28,8 @@ The desktop workspace now has two local execution modes:
 Verification is also split deliberately:
 
 - `npm run typecheck` validates the shared contracts, API, desktop React shell, and web TypeScript without requiring the native Tauri Linux headers.
-- `npm run build` and `npm run tauri:check --workspace @ddre/desktop` still validate the native desktop host and require the WebKit/libsoup development packages listed above.
+- `npm run build` validates the shared packages, API, desktop web shell, and web dashboard without requiring the native Tauri Linux headers.
+- `npm run build:native --workspace @ddre/desktop` and `npm run tauri:check --workspace @ddre/desktop` still validate the native desktop host and require the WebKit/libsoup development packages listed above.
 
 Current Cinnamon-native behavior:
 
