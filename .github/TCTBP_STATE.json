@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "workflow": "TCTBP",
   "branch": "slice/tray-icon-foundation",
-  "commit": "8e9e8f5f4eff29fe1e42534cb5ed06014af18929",
+  "commit": "460606ef1fedb7631d6abd03cf694ba0ecfe9961",
   "version": "0.2.0",
   "tag": "v0.2.0",
-  "updatedAt": "2026-04-16T06:50:07Z"
+  "updatedAt": "2026-04-20T19:48:35Z"
 }
