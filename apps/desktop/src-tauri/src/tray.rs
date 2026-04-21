@@ -5,7 +5,7 @@ use tauri::{
     image::Image,
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::{TrayIcon, TrayIconBuilder},
-    AppHandle, Emitter, Manager,
+    AppHandle, Emitter, Manager, Runtime, Wry,
 };
 
 pub const TRAY_EVENT_CHANNEL: &str = "desktop://tray-menu";
@@ -21,14 +21,14 @@ const TRIGGER_SYNC_ID: &str = "trigger-sync";
 const TOGGLE_AUTOSTART_ID: &str = "toggle-autostart";
 const QUIT_ID: &str = "quit";
 
-pub struct DesktopTrayState {
+pub struct DesktopTrayState<R: Runtime = Wry> {
     #[allow(dead_code)]
-    tray_icon: TrayIcon,
-    status_item: MenuItem,
-    detail_item: MenuItem,
-    activities_menu: Submenu,
-    activity_items: Mutex<Vec<MenuItem>>,
-    autostart_item: CheckMenuItem,
+    tray_icon: TrayIcon<R>,
+    status_item: MenuItem<R>,
+    detail_item: MenuItem<R>,
+    activities_menu: Submenu<R>,
+    activity_items: Mutex<Vec<MenuItem<R>>>,
+    autostart_item: CheckMenuItem<R>,
 }
 
 #[derive(Clone, Deserialize)]
@@ -51,14 +51,17 @@ pub struct TraySyncPayload {
     pub autostart_available: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct TrayEventPayload {
     action: String,
     activity_id: Option<String>,
 }
 
-pub fn build_tray(app: &AppHandle, autostart_enabled: bool) -> tauri::Result<DesktopTrayState> {
+pub fn build_tray<R: Runtime>(
+    app: &AppHandle<R>,
+    autostart_enabled: bool,
+) -> tauri::Result<DesktopTrayState<R>> {
     let status_item = MenuItem::with_id(app, STATUS_ID, "Current: Not Timed", false, None::<&str>)?;
     let detail_item = MenuItem::with_id(
         app,
@@ -159,31 +162,31 @@ pub fn build_tray(app: &AppHandle, autostart_enabled: bool) -> tauri::Result<Des
     })
 }
 
-pub fn sync_tray_state(
-    app: &AppHandle,
-    tray_state: &DesktopTrayState,
+pub fn sync_tray_state<R: Runtime>(
+    app: &AppHandle<R>,
+    tray_state: &DesktopTrayState<R>,
     payload: TraySyncPayload,
 ) -> Result<(), String> {
     tray_state
         .status_item
         .set_text(format!("Current: {}", payload.current_activity_label))
-        .map_err(|error| error.to_string())?;
+        .map_err(|error: tauri::Error| error.to_string())?;
     tray_state
         .detail_item
         .set_text(payload.secondary_label)
-        .map_err(|error| error.to_string())?;
+        .map_err(|error: tauri::Error| error.to_string())?;
     tray_state
         .autostart_item
         .set_checked(payload.autostart_enabled)
-        .map_err(|error| error.to_string())?;
+        .map_err(|error: tauri::Error| error.to_string())?;
     tray_state
         .autostart_item
         .set_enabled(payload.autostart_available)
-        .map_err(|error| error.to_string())?;
+        .map_err(|error: tauri::Error| error.to_string())?;
     tray_state
         .activities_menu
         .set_enabled(payload.configured)
-        .map_err(|error| error.to_string())?;
+        .map_err(|error: tauri::Error| error.to_string())?;
 
     let mut items = tray_state
         .activity_items
@@ -194,7 +197,7 @@ pub fn sync_tray_state(
         tray_state
             .activities_menu
             .remove(&item)
-            .map_err(|error| error.to_string())?;
+            .map_err(|error: tauri::Error| error.to_string())?;
     }
 
     if payload.activities.is_empty() {
@@ -205,11 +208,11 @@ pub fn sync_tray_state(
         };
         let placeholder =
             MenuItem::with_id(app, EMPTY_ACTIVITY_ID, empty_label, false, None::<&str>)
-                .map_err(|error| error.to_string())?;
+                .map_err(|error: tauri::Error| error.to_string())?;
         tray_state
             .activities_menu
             .append(&placeholder)
-            .map_err(|error| error.to_string())?;
+            .map_err(|error: tauri::Error| error.to_string())?;
         items.push(placeholder);
         return Ok(());
     }
@@ -229,18 +232,18 @@ pub fn sync_tray_state(
             payload.configured,
             None::<&str>,
         )
-        .map_err(|error| error.to_string())?;
+        .map_err(|error: tauri::Error| error.to_string())?;
         tray_state
             .activities_menu
             .append(&item)
-            .map_err(|error| error.to_string())?;
+            .map_err(|error: tauri::Error| error.to_string())?;
         items.push(item);
     }
 
     Ok(())
 }
 
-fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
+fn show_main_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     if let Some(window) = app.get_webview_window("main") {
         window.show()?;
         let _ = window.unminimize();
@@ -250,8 +253,8 @@ fn show_main_window(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-fn emit_tray_event(
-    app: &AppHandle,
+fn emit_tray_event<R: Runtime>(
+    app: &AppHandle<R>,
     action: &str,
     activity_id: Option<String>,
 ) -> tauri::Result<()> {

@@ -1,7 +1,7 @@
 use std::{
     collections::BTreeMap,
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -57,8 +57,6 @@ struct SyncAckPayload {
 
 #[derive(Clone)]
 struct PendingEvent {
-    event_id: String,
-    user_id: String,
     device_id: String,
     payload: ActivityEventPayload,
 }
@@ -68,13 +66,22 @@ pub fn queue_event(
     user_id: &str,
     event: ActivityEventPayload,
 ) -> Result<OutboxStatus, String> {
+    let data_dir = app_local_data_dir(app)?;
+    queue_event_in_data_dir(&data_dir, user_id, event)
+}
+
+fn queue_event_in_data_dir(
+    data_dir: &Path,
+    user_id: &str,
+    event: ActivityEventPayload,
+) -> Result<OutboxStatus, String> {
     if event.user_id != user_id {
         return Err(String::from(
             "Queued event userId did not match the selected desktop user.",
         ));
     }
 
-    let connection = open_connection(app, user_id)?;
+    let connection = open_connection_in_data_dir(data_dir, user_id)?;
     initialize_schema(&connection)?;
     connection
         .execute(
@@ -103,7 +110,12 @@ pub fn queue_event(
 }
 
 pub fn get_status(app: &AppHandle, user_id: &str) -> Result<OutboxStatus, String> {
-    let connection = open_connection(app, user_id)?;
+    let data_dir = app_local_data_dir(app)?;
+    get_status_in_data_dir(&data_dir, user_id)
+}
+
+fn get_status_in_data_dir(data_dir: &Path, user_id: &str) -> Result<OutboxStatus, String> {
+    let connection = open_connection_in_data_dir(data_dir, user_id)?;
     initialize_schema(&connection)?;
     read_status(&connection, user_id)
 }
@@ -113,14 +125,23 @@ pub async fn flush_outbox(
     api_base_url: &str,
     user_id: &str,
 ) -> Result<OutboxStatus, String> {
+    let data_dir = app_local_data_dir(app)?;
+    flush_outbox_in_data_dir(&data_dir, api_base_url, user_id).await
+}
+
+async fn flush_outbox_in_data_dir(
+    data_dir: &Path,
+    api_base_url: &str,
+    user_id: &str,
+) -> Result<OutboxStatus, String> {
     let pending_events = {
-        let connection = open_connection(app, user_id)?;
+        let connection = open_connection_in_data_dir(data_dir, user_id)?;
         initialize_schema(&connection)?;
         load_pending_events(&connection, user_id)?
     };
 
     if pending_events.is_empty() {
-        return get_status(app, user_id);
+        return get_status_in_data_dir(data_dir, user_id);
     }
 
     let client = Client::new();
@@ -141,16 +162,17 @@ pub async fn flush_outbox(
             .send()
             .await
             .map_err(|error| error.to_string())?;
+        let response_status = response.status();
 
-        if !response.status().is_success() {
+        if !response_status.is_success() {
             let body = response.text().await.unwrap_or_default();
             let reason = if body.trim().is_empty() {
-                format!("Sync failed with status {}.", response.status())
+                format!("Sync failed with status {}.", response_status)
             } else {
                 body
             };
 
-            let connection = open_connection(app, user_id)?;
+            let connection = open_connection_in_data_dir(data_dir, user_id)?;
             initialize_schema(&connection)?;
             set_pending_error(&connection, user_id, &reason)?;
             return read_status(&connection, user_id);
@@ -163,12 +185,12 @@ pub async fn flush_outbox(
         let mut acknowledged_ids = acknowledgment.accepted_event_ids;
         acknowledged_ids.extend(acknowledgment.duplicate_event_ids);
 
-        let connection = open_connection(app, user_id)?;
+        let connection = open_connection_in_data_dir(data_dir, user_id)?;
         initialize_schema(&connection)?;
         mark_events_synced(&connection, &acknowledgment.received_at, &acknowledged_ids)?;
     }
 
-    get_status(app, user_id)
+    get_status_in_data_dir(data_dir, user_id)
 }
 
 fn group_events_by_device(events: Vec<PendingEvent>) -> BTreeMap<String, Vec<PendingEvent>> {
@@ -184,17 +206,26 @@ fn group_events_by_device(events: Vec<PendingEvent>) -> BTreeMap<String, Vec<Pen
     grouped
 }
 
-fn open_connection(app: &AppHandle, user_id: &str) -> Result<Connection, String> {
-    let database_path = database_path(app, user_id)?;
+fn open_connection_in_data_dir(data_dir: &Path, user_id: &str) -> Result<Connection, String> {
+    let database_path = database_path_in_data_dir(data_dir, user_id)?;
     Connection::open(database_path).map_err(|error| error.to_string())
 }
 
-fn database_path(app: &AppHandle, user_id: &str) -> Result<PathBuf, String> {
-    let directory = app
+fn app_local_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    app
         .path()
         .app_local_data_dir()
         .map_err(|error| error.to_string())?
-        .join("outbox");
+        .canonicalize()
+        .or_else(|_| {
+            app.path()
+                .app_local_data_dir()
+                .map_err(|error| error.to_string())
+        })
+}
+
+fn database_path_in_data_dir(data_dir: &Path, user_id: &str) -> Result<PathBuf, String> {
+    let directory = data_dir.join("outbox");
 
     fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
 
@@ -246,13 +277,11 @@ fn load_pending_events(
                         Box::new(error),
                     )
                 })?;
+            let _event_id: String = row.get(0)?;
+            let _user_id: String = row.get(1)?;
+            let device_id: String = row.get(2)?;
 
-            Ok(PendingEvent {
-                event_id: row.get(0)?,
-                user_id: row.get(1)?,
-                device_id: row.get(2)?,
-                payload,
-            })
+            Ok(PendingEvent { device_id, payload })
         })
         .map_err(|error| error.to_string())?;
 
@@ -370,4 +399,200 @@ fn timestamp_now_string() -> Result<String, String> {
     OffsetDateTime::now_utc()
         .format(&time::format_description::well_known::Rfc3339)
         .map_err(|error| error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::Value;
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        sync::mpsc,
+        sync::mpsc::Receiver,
+        thread,
+        time::{Duration, SystemTime, UNIX_EPOCH},
+    };
+
+    #[test]
+    fn queue_event_persists_pending_status() {
+        let data_dir = make_test_data_dir("queue");
+        let user_id = "cinnamon-local-user";
+        let event = sample_activity_event(user_id, "event-queued");
+
+        let status = queue_event_in_data_dir(&data_dir, user_id, event).expect("queue should succeed");
+
+        assert_eq!(status.pending_count, 1);
+        assert_eq!(status.last_synced_at, None);
+        assert_eq!(status.last_error, None);
+
+        let database_path = database_path_in_data_dir(&data_dir, user_id).expect("database path should resolve");
+        assert!(database_path.exists(), "outbox database should exist after queueing an event");
+    }
+
+    #[test]
+    fn flush_outbox_marks_events_synced_after_api_accepts_batch() {
+        let data_dir = make_test_data_dir("flush-success");
+        let user_id = "cinnamon-local-user";
+        let event = sample_activity_event(user_id, "event-success");
+        queue_event_in_data_dir(&data_dir, user_id, event).expect("queue should succeed");
+
+        let (api_base_url, request_body_rx, server_thread) = spawn_mock_sync_server(
+            "202 Accepted",
+            r#"{"batchId":"native-batch-test","acceptedEventIds":["event-success"],"duplicateEventIds":[],"receivedAt":"2026-04-21T12:00:00Z"}"#,
+        );
+
+        let status = tauri::async_runtime::block_on(flush_outbox_in_data_dir(&data_dir, &api_base_url, user_id))
+            .expect("flush should succeed");
+
+        let request_body = request_body_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("server should receive the sync batch payload");
+        let posted_batch: Value = serde_json::from_str(&request_body).expect("request body should be valid JSON");
+
+        assert_eq!(posted_batch["user_id"], Value::Null);
+        assert_eq!(posted_batch["userId"], Value::String(user_id.to_string()));
+        assert_eq!(posted_batch["events"].as_array().map(Vec::len), Some(1));
+        assert_eq!(posted_batch["events"][0]["eventId"], Value::String("event-success".to_string()));
+
+        assert_eq!(status.pending_count, 0);
+        assert_eq!(status.last_synced_at.as_deref(), Some("2026-04-21T12:00:00Z"));
+        assert_eq!(status.last_error, None);
+
+        server_thread.join().expect("mock server should shut down cleanly");
+    }
+
+    #[test]
+    fn flush_outbox_records_last_error_when_api_rejects_batch() {
+        let data_dir = make_test_data_dir("flush-error");
+        let user_id = "cinnamon-local-user";
+        let event = sample_activity_event(user_id, "event-error");
+        queue_event_in_data_dir(&data_dir, user_id, event).expect("queue should succeed");
+
+        let (api_base_url, request_body_rx, server_thread) =
+            spawn_mock_sync_server("500 Internal Server Error", "sync failed upstream");
+
+        let status = tauri::async_runtime::block_on(flush_outbox_in_data_dir(&data_dir, &api_base_url, user_id))
+            .expect("flush should return status even when the API fails");
+
+        request_body_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("server should receive the failed sync batch payload");
+
+        assert_eq!(status.pending_count, 1);
+        assert_eq!(status.last_synced_at, None);
+        assert_eq!(status.last_error.as_deref(), Some("sync failed upstream"));
+
+        server_thread.join().expect("mock server should shut down cleanly");
+    }
+
+    fn make_test_data_dir(label: &str) -> PathBuf {
+        let unique_suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("ddre-outbox-test-{label}-{unique_suffix}"));
+        fs::create_dir_all(&path).expect("test data directory should be created");
+        path
+    }
+
+    fn sample_activity_event(user_id: &str, event_id: &str) -> ActivityEventPayload {
+        ActivityEventPayload {
+            event_id: event_id.to_string(),
+            user_id: user_id.to_string(),
+            device_id: String::from("cinnamon-local-tray"),
+            occurred_at: String::from("2026-04-21T11:00:00Z"),
+            recorded_at: String::from("2026-04-21T11:00:00Z"),
+            event_type: String::from("activity-selected"),
+            activity_id: Some(String::from("activity-design")),
+            department_id: Some(String::from("department-business-development")),
+            note: None,
+            idempotency_key: format!("idempotency-{event_id}"),
+            metadata: BTreeMap::from([(String::from("platform"), String::from("cinnamon"))]),
+        }
+    }
+
+    fn spawn_mock_sync_server(
+        status_line: &str,
+        response_body: &str,
+    ) -> (String, Receiver<String>, thread::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("mock server should bind a local port");
+        let address = listener.local_addr().expect("mock server should expose its address");
+        let status_line = status_line.to_string();
+        let response_body = response_body.to_string();
+        let (request_body_tx, request_body_rx) = mpsc::channel();
+
+        let thread = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("mock server should accept one request");
+            let request = read_http_request(&mut stream);
+            let request_body = request
+                .split("\r\n\r\n")
+                .nth(1)
+                .unwrap_or_default()
+                .to_string();
+            let _ = request_body_tx.send(request_body);
+
+            let response = format!(
+                "HTTP/1.1 {status_line}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                response_body.len(),
+                response_body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .expect("mock server should write its response");
+            stream.flush().expect("mock server should flush its response");
+        });
+
+        (format!("http://{address}"), request_body_rx, thread)
+    }
+
+    fn read_http_request(stream: &mut std::net::TcpStream) -> String {
+        stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .expect("mock server should set a read timeout");
+
+        let mut buffer = Vec::new();
+        let mut expected_body_length: Option<usize> = None;
+        let mut headers_end = None;
+
+        loop {
+            let mut chunk = [0u8; 1024];
+            let bytes_read = stream.read(&mut chunk).expect("mock server should read request data");
+            if bytes_read == 0 {
+                break;
+            }
+
+            buffer.extend_from_slice(&chunk[..bytes_read]);
+
+            if headers_end.is_none() {
+                headers_end = buffer
+                    .windows(4)
+                    .position(|window| window == b"\r\n\r\n")
+                    .map(|index| index + 4);
+
+                if let Some(end) = headers_end {
+                    let headers = String::from_utf8_lossy(&buffer[..end]);
+                    expected_body_length = headers
+                        .lines()
+                        .find_map(|line| {
+                            let (name, value) = line.split_once(':')?;
+                            if name.eq_ignore_ascii_case("content-length") {
+                                value.trim().parse::<usize>().ok()
+                            } else {
+                                None
+                            }
+                        })
+                        .or(Some(0));
+                }
+            }
+
+            if let (Some(end), Some(body_length)) = (headers_end, expected_body_length) {
+                if buffer.len() >= end + body_length {
+                    break;
+                }
+            }
+        }
+
+        String::from_utf8(buffer).expect("HTTP request should be valid UTF-8")
+    }
 }

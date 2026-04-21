@@ -4,16 +4,38 @@ use tauri::{AppHandle, Manager, State};
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DesktopContext {
-    platform: &'static str,
+    platform: String,
     tray_channel: &'static str,
 }
 
 #[tauri::command]
 pub fn get_desktop_context() -> DesktopContext {
     DesktopContext {
-        platform: "cinnamon",
+        platform: detect_desktop_platform(),
         tray_channel: crate::tray::TRAY_EVENT_CHANNEL,
     }
+}
+
+fn detect_desktop_platform() -> String {
+    if cfg!(target_os = "windows") {
+        return String::from("windows");
+    }
+
+    for key in ["XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP", "DESKTOP_SESSION"] {
+        if let Ok(value) = std::env::var(key) {
+            let normalized = value.to_ascii_lowercase();
+
+            if normalized.contains("cinnamon") {
+                return String::from("cinnamon");
+            }
+
+            if normalized.contains("gnome") {
+                return String::from("gnome");
+            }
+        }
+    }
+
+    String::from("cinnamon")
 }
 
 #[tauri::command]

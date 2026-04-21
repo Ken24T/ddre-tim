@@ -25,6 +25,8 @@ The desktop workspace now has two local execution modes:
 - `npm run dev:desktop` starts the native Tauri host and the desktop frontend together.
 - `npm run dev:web --workspace @ddre/desktop` builds or previews the browser fallback shell without launching the native host.
 
+If you launch the repo from the VS Code Snap on Ubuntu, the desktop workspace scripts now clear Snap-injected GTK/GIO environment variables before starting Tauri so the native host uses the system desktop libraries instead of the Snap runtime.
+
 Verification is also split deliberately:
 
 - `npm run typecheck` validates the shared contracts, API, desktop React shell, and web TypeScript without requiring the native Tauri Linux headers.

@@ -11,6 +11,7 @@ The current implementation slice includes a Cinnamon-first desktop shell with:
 - a first-run settings flow backed by the API user-settings endpoint
 - local SQLite queueing and retry against the current sync-batch endpoint
 - guarded Cinnamon autostart management for packaged builds
+- native desktop-session detection so GNOME validation does not masquerade as Cinnamon in tray status copy or queued event device IDs
 
 ## Platform Model
 

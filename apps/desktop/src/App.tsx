@@ -15,7 +15,7 @@ import {
   type OutboxStatus,
   type TrayMenuEvent
 } from "./nativeDesktop.js";
-import { activeTrayPlatform, trayPlatforms } from "./trayPlatforms.js";
+import { activeTrayPlatform, trayPlatforms, type DesktopPlatformId } from "./trayPlatforms.js";
 
 type HealthState =
   | { phase: "loading" }
@@ -135,6 +135,10 @@ function formatActivityDepartmentSummary(names: string[]): string {
   }
 
   return `${names[0]} +${names.length - 1} more`;
+}
+
+function isKnownTrayPlatform(value: string): value is DesktopPlatformId {
+  return trayPlatforms.some((platform) => platform.id === value);
 }
 
 export default function App() {
@@ -361,17 +365,26 @@ export default function App() {
   const outboxDetail = desktopContext
     ? outboxStatus.lastError ?? (outboxStatus.lastSyncedAt ? `Last native flush ${formatTimestamp(outboxStatus.lastSyncedAt)}` : "Native queue is ready for tray actions.")
     : "The preview shell sends directly to the API until the Tauri host is running.";
+  const runtimeTrayPlatform = desktopContext && isKnownTrayPlatform(desktopContext.platform)
+    ? trayPlatforms.find((platform) => platform.id === desktopContext.platform) ?? activeTrayPlatform
+    : activeTrayPlatform;
+  const runningCompatibilitySlice = Boolean(desktopContext && runtimeTrayPlatform.id !== "cinnamon");
   const desktopHostLabel = desktopContext ? "Native Tauri host" : "Browser shell preview";
   const desktopHostDetail = desktopContext
-    ? "Native tray events, the local outbox, and Cinnamon autostart are available."
+    ? runningCompatibilitySlice
+      ? `${runtimeTrayPlatform.label} session detected. Native tray events and the local outbox are available for compatibility validation, while Cinnamon remains the first-class target.`
+      : "Native tray events, the local outbox, and Cinnamon autostart are available."
     : "Use the browser shell while Linux WebKit and libsoup headers are still being installed.";
   const activityDepartmentFallbackId = settings?.defaultDepartmentId || defaultDepartmentIdDraft || departments[0]?.id;
   const currentDepartment = departments.find((department) => department.id === (currentActivity?.departmentId ?? settings?.defaultDepartmentId));
   const onboardingCopy = settings?.isConfigured
     ? desktopContext
-      ? "Cinnamon tray capture is ready. Native tray actions queue locally, flush through the API, and keep timed selection menu-first."
+      ? runningCompatibilitySlice
+        ? `${runtimeTrayPlatform.label} compatibility validation is ready. Native tray actions queue locally, flush through the API, and keep timed selection menu-first while Cinnamon remains the product target.`
+        : "Cinnamon tray capture is ready. Native tray actions queue locally, flush through the API, and keep timed selection menu-first."
       : "Cinnamon tray capture preview is ready. Timed activities stay menu-first, with a quick selector available for long lists or notes."
     : "First run routes into settings before timed capture begins. Configure the user name and default department below while shared tray activities remain dashboard-managed.";
+  const trayPanelLabel = runtimeTrayPlatform.id === "cinnamon" ? "Cinnamon tray" : `${runtimeTrayPlatform.label} tray`;
 
   const platformCards = useMemo(() => trayPlatforms, []);
 
@@ -549,7 +562,7 @@ export default function App() {
       const ack = await sendSyncBatch({
         batchId: createIdentifier("batch"),
         userId,
-        deviceId: activeTrayPlatform.id,
+        deviceId: runtimeTrayPlatform.id,
         sentAt: new Date().toISOString(),
         events: [event]
       });
@@ -587,20 +600,20 @@ export default function App() {
       ? {
           eventId: createIdentifier("event"),
           userId,
-          deviceId: activeTrayPlatform.id,
+          deviceId: runtimeTrayPlatform.id,
           occurredAt,
           recordedAt: occurredAt,
           type: "activity-cleared",
           idempotencyKey: createIdentifier("idempotency"),
           metadata: {
             target: activity.name,
-            platform: activeTrayPlatform.id
+            platform: runtimeTrayPlatform.id
           }
         }
       : {
           eventId: createIdentifier("event"),
           userId,
-          deviceId: activeTrayPlatform.id,
+          deviceId: runtimeTrayPlatform.id,
           occurredAt,
           recordedAt: occurredAt,
           type: "activity-selected",
@@ -609,7 +622,7 @@ export default function App() {
           idempotencyKey: createIdentifier("idempotency"),
           metadata: {
             activityName: activity.name,
-            platform: activeTrayPlatform.id
+            platform: runtimeTrayPlatform.id
           }
         };
 
@@ -636,14 +649,14 @@ export default function App() {
     const noteEvent: ActivityEvent = {
       eventId: createIdentifier("event"),
       userId,
-      deviceId: activeTrayPlatform.id,
+      deviceId: runtimeTrayPlatform.id,
       occurredAt,
       recordedAt: occurredAt,
       type: "note-added",
       note: noteDraft.trim(),
       idempotencyKey: createIdentifier("idempotency"),
       metadata: {
-        platform: activeTrayPlatform.id,
+        platform: runtimeTrayPlatform.id,
         currentActivityId: currentActivityId ?? "none"
       }
     };
@@ -679,7 +692,7 @@ export default function App() {
       setSettingsState({ phase: "ready", data: payload });
       setDisplayNameDraft(payload.displayName);
       setDefaultDepartmentIdDraft(payload.defaultDepartmentId);
-      setSaveMessage("Settings saved. Cinnamon tray capture is ready to use.");
+      setSaveMessage(`Settings saved. ${runtimeTrayPlatform.label} tray capture is ready to use.`);
     } catch (error) {
       setSettingsState({
         phase: "error",
@@ -693,7 +706,7 @@ export default function App() {
       <section className="hero panel">
         <div className="hero-copy">
           <p className="eyebrow">Desktop capture</p>
-          <h1>Cinnamon Tray Shell</h1>
+          <h1>{runningCompatibilitySlice ? `${runtimeTrayPlatform.label} Compatibility Shell` : "Cinnamon Tray Shell"}</h1>
           <p className="lead">{onboardingCopy}</p>
         </div>
 
@@ -706,8 +719,8 @@ export default function App() {
 
           <div className="meta-card">
             <span>Tray platform</span>
-            <strong>{activeTrayPlatform.label}</strong>
-            <small>{activeTrayPlatform.helper}</small>
+            <strong>{runtimeTrayPlatform.label}</strong>
+            <small>{runningCompatibilitySlice ? "Detected from the native desktop session" : runtimeTrayPlatform.helper}</small>
           </div>
 
           <div className={`meta-card is-${syncTone}`}>
@@ -770,11 +783,11 @@ export default function App() {
 
       <section className="platform-grid">
         {platformCards.map((platform) => (
-          <article className={`platform-card panel${platform.id === activeTrayPlatform.id ? " is-active" : ""}`} key={platform.id}>
+          <article className={`platform-card panel${platform.id === runtimeTrayPlatform.id ? " is-active" : ""}`} key={platform.id}>
             <div className="platform-card-header">
               <img alt={`${platform.label} tray icon`} className="platform-icon" src={platform.iconAsset} />
               <div>
-                <p className="panel-label">{platform.status === "current" ? "Current slice" : "Queued platform"}</p>
+                <p className="panel-label">{platform.id === runtimeTrayPlatform.id && desktopContext ? "Active session" : platform.status === "current" ? "Current slice" : "Queued platform"}</p>
                 <h2>{platform.label}</h2>
               </div>
             </div>
@@ -788,9 +801,9 @@ export default function App() {
         <article className="panel tray-panel" ref={trayPanelRef}>
           <div className="tray-panel-header">
             <div className="tray-panel-title">
-              <img alt="Cinnamon tray icon" className="tray-icon" src={activeTrayPlatform.iconAsset} />
+              <img alt={`${runtimeTrayPlatform.label} tray icon`} className="tray-icon" src={runtimeTrayPlatform.iconAsset} />
               <div>
-                <p className="panel-label">Cinnamon tray</p>
+                <p className="panel-label">{trayPanelLabel}</p>
                 <h2>{currentActivity?.name ?? "Not Timed"}</h2>
               </div>
             </div>
