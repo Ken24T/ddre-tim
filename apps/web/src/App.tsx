@@ -1,10 +1,18 @@
 import { useEffect, useState, type CSSProperties, type FormEvent, type MouseEvent } from "react";
 import {
+  createActivityRepositoryEntry,
+  fetchActivityCatalog,
+  fetchDepartmentCatalog,
   fetchDashboardSnapshot,
   formatHoursLabel,
   formatTimestamp,
+  type ActivityCatalogResponse,
+  type ActivityRepositoryEntry,
+  type ActivityRepositoryMutation,
+  type DepartmentCatalogResponse,
   type DashboardQueryValues,
-  type DashboardResponse
+  type DashboardResponse,
+  updateActivityRepositoryEntry
 } from "./dashboardClient.js";
 
 interface HealthPayload {
@@ -29,6 +37,38 @@ type DashboardState =
   | { phase: "refreshing"; data: DashboardResponse }
   | { phase: "ready"; data: DashboardResponse }
   | { phase: "error"; message: string };
+
+type ActivityRepositoryState =
+  | { phase: "loading" }
+  | { phase: "ready"; data: ActivityCatalogResponse }
+  | { phase: "error"; message: string };
+
+type DepartmentCatalogState =
+  | { phase: "loading" }
+  | { phase: "ready"; data: DepartmentCatalogResponse }
+  | { phase: "error"; message: string };
+
+type ActivityRepositorySaveState =
+  | { phase: "idle" }
+  | { phase: "saving" }
+  | { phase: "ready"; message: string }
+  | { phase: "error"; message: string };
+
+type ActivityRepositoryDraft = {
+  name: string;
+  color: string;
+  departmentIds: string[];
+  isActive: boolean;
+};
+
+type ActivityRepositoryDepartmentSection = {
+  id: string;
+  label: string;
+  kind: "department" | "shared" | "system";
+  activities: ActivityRepositoryEntry[];
+  activeCount: number;
+  inactiveCount: number;
+};
 
 type DashboardFocus = "all" | "monthly" | "departments" | "activities";
 
@@ -258,6 +298,203 @@ function formatSummaryShare(share: number): string {
   return `${percentage < 10 ? percentage.toFixed(1) : Math.round(percentage)}%`;
 }
 
+function formatRepositoryDepartmentLabel(
+  departmentId: string | undefined,
+  departmentNameById?: Map<string, string>
+): string {
+  if (!departmentId) {
+    return "Shared across departments in the current API slice";
+  }
+
+  const departmentName = departmentNameById?.get(departmentId);
+
+  if (departmentName) {
+    return departmentName;
+  }
+
+  return departmentId
+    .replace(/^department-/, "")
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getActivityRepositoryDepartmentIds(activity: { departmentId?: string; departmentIds?: string[] }): string[] {
+  const candidateDepartmentIds = activity.departmentIds && activity.departmentIds.length > 0
+    ? activity.departmentIds
+    : activity.departmentId
+      ? [activity.departmentId]
+      : [];
+
+  return Array.from(new Set(candidateDepartmentIds.filter((departmentId) => departmentId.length > 0)));
+}
+
+function formatActivityRepositoryDepartmentSelection(
+  departmentIds: string[],
+  departmentNameById?: Map<string, string>
+): string {
+  if (departmentIds.length === 0) {
+    return "Select departments";
+  }
+
+  if (departmentIds.length <= 2) {
+    return departmentIds.map((departmentId) => formatRepositoryDepartmentLabel(departmentId, departmentNameById)).join(", ");
+  }
+
+  return `${departmentIds.length} departments selected`;
+}
+
+function sortActivityRepositoryEntries(
+  activities: ActivityCatalogResponse["activities"]
+): ActivityCatalogResponse["activities"] {
+  return [...activities].sort((left, right) => {
+    if (left.isActive !== right.isActive) {
+      return left.isActive ? -1 : 1;
+    }
+
+    if (left.isSystem !== right.isSystem) {
+      return left.isSystem ? 1 : -1;
+    }
+
+    return left.name.localeCompare(right.name, "en-AU");
+  });
+}
+
+function groupActivityRepositoryEntries(
+  activities: ActivityCatalogResponse["activities"],
+  departmentNameById?: Map<string, string>
+): ActivityRepositoryDepartmentSection[] {
+  const sections = new Map<string, ActivityRepositoryDepartmentSection>();
+
+  for (const activity of activities) {
+    if (activity.isSystem) {
+      const existingSection = sections.get("system-managed");
+
+      if (existingSection) {
+        existingSection.activities.push(activity);
+        existingSection.activeCount += activity.isActive ? 1 : 0;
+        existingSection.inactiveCount += activity.isActive ? 0 : 1;
+      } else {
+        sections.set("system-managed", {
+          id: "system-managed",
+          label: "System Managed",
+          kind: "system",
+          activities: [activity],
+          activeCount: activity.isActive ? 1 : 0,
+          inactiveCount: activity.isActive ? 0 : 1
+        });
+      }
+
+      continue;
+    }
+
+    const activityDepartmentIds = getActivityRepositoryDepartmentIds(activity);
+
+    if (activityDepartmentIds.length === 0) {
+      const existingSection = sections.get("shared-across-departments");
+
+      if (existingSection) {
+        existingSection.activities.push(activity);
+        existingSection.activeCount += activity.isActive ? 1 : 0;
+        existingSection.inactiveCount += activity.isActive ? 0 : 1;
+      } else {
+        sections.set("shared-across-departments", {
+          id: "shared-across-departments",
+          label: "Shared Across Departments",
+          kind: "shared",
+          activities: [activity],
+          activeCount: activity.isActive ? 1 : 0,
+          inactiveCount: activity.isActive ? 0 : 1
+        });
+      }
+
+      continue;
+    }
+
+    activityDepartmentIds.forEach((departmentId) => {
+      const existingSection = sections.get(departmentId);
+
+      if (existingSection) {
+        existingSection.activities.push(activity);
+        existingSection.activeCount += activity.isActive ? 1 : 0;
+        existingSection.inactiveCount += activity.isActive ? 0 : 1;
+        return;
+      }
+
+      sections.set(departmentId, {
+        id: departmentId,
+        label: formatRepositoryDepartmentLabel(departmentId, departmentNameById),
+        kind: "department",
+        activities: [activity],
+        activeCount: activity.isActive ? 1 : 0,
+        inactiveCount: activity.isActive ? 0 : 1
+      });
+    });
+  }
+
+  const sectionRank: Record<ActivityRepositoryDepartmentSection["kind"], number> = {
+    department: 0,
+    shared: 1,
+    system: 2
+  };
+
+  return [...sections.values()]
+    .map((section) => ({
+      ...section,
+      activities: sortActivityRepositoryEntries(section.activities)
+    }))
+    .sort((left, right) => {
+      if (sectionRank[left.kind] !== sectionRank[right.kind]) {
+        return sectionRank[left.kind] - sectionRank[right.kind];
+      }
+
+      return left.label.localeCompare(right.label, "en-AU");
+    });
+}
+
+function formatActivityRepositorySectionSummary(section: ActivityRepositoryDepartmentSection): string {
+  const baseLabel =
+    section.kind === "system"
+      ? `${section.activities.length} system ${section.activities.length === 1 ? "entry" : "entries"}`
+      : `${section.activities.length} shared ${section.activities.length === 1 ? "activity" : "activities"}`;
+
+  if (section.inactiveCount === 0) {
+    return baseLabel;
+  }
+
+  return `${baseLabel}, ${section.inactiveCount} inactive`;
+}
+
+function formatActivityRepositorySectionKindLabel(kind: ActivityRepositoryDepartmentSection["kind"]): string {
+  if (kind === "system") {
+    return "System";
+  }
+
+  if (kind === "shared") {
+    return "Shared";
+  }
+
+  return "Department";
+}
+
+function createEmptyActivityRepositoryDraft(defaultDepartmentIds: string[] = []): ActivityRepositoryDraft {
+  return {
+    name: "",
+    color: "#6EA6CF",
+    departmentIds: [...defaultDepartmentIds],
+    isActive: true
+  };
+}
+
+function buildActivityRepositoryMutation(draft: ActivityRepositoryDraft): ActivityRepositoryMutation {
+  return {
+    name: draft.name.trim(),
+    color: draft.color.trim() || undefined,
+    departmentIds: getActivityRepositoryDepartmentIds(draft),
+    isActive: draft.isActive
+  };
+}
+
 function buildSliceSummary(slices: BreakdownPieSlice[]): string {
   const preferredSlices = slices.filter((slice) => slice.label !== "Other");
   const summarySlices = (preferredSlices.length > 0 ? preferredSlices : slices).slice(0, 3);
@@ -478,12 +715,26 @@ function BreakdownPieLayout({
 export default function App() {
   const [healthState, setHealthState] = useState<HealthState>({ phase: "loading" });
   const [dashboardState, setDashboardState] = useState<DashboardState>({ phase: "loading" });
+  const [activityRepositoryState, setActivityRepositoryState] = useState<ActivityRepositoryState>({ phase: "loading" });
+  const [departmentCatalogState, setDepartmentCatalogState] = useState<DepartmentCatalogState>({ phase: "loading" });
+  const [activityRepositoryRequestKey, setActivityRepositoryRequestKey] = useState(0);
+  const [isActivityRepositoryOpen, setIsActivityRepositoryOpen] = useState(false);
+  const [editingActivityRepositoryId, setEditingActivityRepositoryId] = useState<string | null>(null);
+  const [activityRepositoryDraft, setActivityRepositoryDraft] = useState<ActivityRepositoryDraft>(createEmptyActivityRepositoryDraft());
+  const [activityRepositorySaveState, setActivityRepositorySaveState] = useState<ActivityRepositorySaveState>({ phase: "idle" });
+  const [openActivityRepositorySections, setOpenActivityRepositorySections] = useState<Record<string, boolean>>({});
   const [draftFilters, setDraftFilters] = useState<FilterFormState>(createEmptyFilters());
   const [appliedFilters, setAppliedFilters] = useState<DashboardQueryValues>({});
   const [dashboardFocus, setDashboardFocus] = useState<DashboardFocus>("all");
   const [userSearch, setUserSearch] = useState("");
   const [activeDepartmentLabel, setActiveDepartmentLabel] = useState<string | undefined>(undefined);
   const [activeActivityLabel, setActiveActivityLabel] = useState<string | undefined>(undefined);
+  const activityRepositoryData = activityRepositoryState.phase === "ready" ? activityRepositoryState.data : null;
+  const activityRepositoryEntries = activityRepositoryData ? sortActivityRepositoryEntries(activityRepositoryData.activities) : [];
+  const departmentCatalogData = departmentCatalogState.phase === "ready" ? departmentCatalogState.data : null;
+  const availableRepositoryDepartments = departmentCatalogData?.departments.filter((department) => department.isActive) ?? [];
+  const repositoryDepartmentNameById = new Map((departmentCatalogData?.departments ?? []).map((department) => [department.id, department.name]));
+  const activityRepositorySections = groupActivityRepositoryEntries(activityRepositoryEntries, repositoryDepartmentNameById);
 
   useEffect(() => {
     let cancelled = false;
@@ -517,6 +768,116 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setActivityRepositoryState({ phase: "loading" });
+
+    async function loadActivityRepository(): Promise<void> {
+      try {
+        const payload = await fetchActivityCatalog();
+
+        if (!cancelled) {
+          setActivityRepositoryState({ phase: "ready", data: payload });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setActivityRepositoryState({
+            phase: "error",
+            message: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+    }
+
+    void loadActivityRepository();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityRepositoryRequestKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setDepartmentCatalogState({ phase: "loading" });
+
+    async function loadDepartmentCatalog(): Promise<void> {
+      try {
+        const payload = await fetchDepartmentCatalog();
+
+        if (!cancelled) {
+          setDepartmentCatalogState({ phase: "ready", data: payload });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDepartmentCatalogState({
+            phase: "error",
+            message: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+    }
+
+    void loadDepartmentCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityRepositoryRequestKey]);
+
+  useEffect(() => {
+    if (departmentCatalogState.phase !== "ready") {
+      return;
+    }
+
+    const [firstDepartment] = departmentCatalogState.data.departments;
+
+    if (!firstDepartment) {
+      return;
+    }
+
+    setActivityRepositoryDraft((current) => {
+      if (current.departmentIds.length > 0) {
+        return current;
+      }
+
+      return {
+        ...current,
+        departmentIds: [firstDepartment.id]
+      };
+    });
+  }, [departmentCatalogState]);
+
+  useEffect(() => {
+    setOpenActivityRepositorySections((current) => {
+      const sectionIds = activityRepositorySections.map((section) => section.id);
+
+      if (sectionIds.length === 0) {
+        return Object.keys(current).length === 0 ? current : {};
+      }
+
+      let changed = false;
+      const next: Record<string, boolean> = {};
+
+      for (const sectionId of sectionIds) {
+        if (sectionId in current) {
+          next[sectionId] = current[sectionId] ?? false;
+        } else {
+          next[sectionId] = false;
+          changed = true;
+        }
+      }
+
+      if (!changed) {
+        const currentIds = Object.keys(current);
+        changed = currentIds.length !== sectionIds.length || currentIds.some((sectionId) => !(sectionId in next));
+      }
+
+      return changed ? next : current;
+    });
+  }, [activityRepositorySections]);
 
   useEffect(() => {
     let cancelled = false;
@@ -620,6 +981,111 @@ export default function App() {
     setActiveActivityLabel((current) => (current === label ? undefined : label));
   }
 
+  function getDefaultActivityRepositoryDepartmentIds(): string[] {
+    if (departmentCatalogState.phase !== "ready") {
+      return [];
+    }
+
+    const firstDepartmentId = departmentCatalogState.data.departments[0]?.id;
+
+    return firstDepartmentId ? [firstDepartmentId] : [];
+  }
+
+  function resetActivityRepositoryEditor(): void {
+    setEditingActivityRepositoryId(null);
+    setActivityRepositorySaveState({ phase: "idle" });
+    setActivityRepositoryDraft(createEmptyActivityRepositoryDraft(getDefaultActivityRepositoryDepartmentIds()));
+  }
+
+  function startNewActivityRepositoryDraft(departmentId?: string): void {
+    const nextDepartmentIds = departmentId && departmentId.length > 0 ? [departmentId] : getDefaultActivityRepositoryDepartmentIds();
+
+    setEditingActivityRepositoryId(null);
+    setActivityRepositorySaveState({ phase: "idle" });
+    setActivityRepositoryDraft(createEmptyActivityRepositoryDraft(nextDepartmentIds));
+  }
+
+  function handleEditActivityRepository(activity: ActivityRepositoryEntry): void {
+    setEditingActivityRepositoryId(activity.id);
+    setActivityRepositorySaveState({ phase: "idle" });
+    setIsActivityRepositoryOpen(true);
+    setActivityRepositoryDraft({
+      name: activity.name,
+      color: activity.color ?? "#6EA6CF",
+      departmentIds: getActivityRepositoryDepartmentIds(activity).length > 0
+        ? getActivityRepositoryDepartmentIds(activity)
+        : getDefaultActivityRepositoryDepartmentIds(),
+      isActive: activity.isActive
+    });
+  }
+
+  async function handleActivityRepositorySubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+
+    setActivityRepositorySaveState({ phase: "saving" });
+
+    try {
+      const payload = buildActivityRepositoryMutation(activityRepositoryDraft);
+      const savedActivity = editingActivityRepositoryId
+        ? await updateActivityRepositoryEntry(editingActivityRepositoryId, payload)
+        : await createActivityRepositoryEntry(payload);
+
+      setActivityRepositorySaveState({
+        phase: "ready",
+        message: editingActivityRepositoryId
+          ? `${savedActivity.name} updated in the shared repository.`
+          : `${savedActivity.name} added to the shared repository.`
+      });
+      setActivityRepositoryRequestKey((current) => current + 1);
+      setEditingActivityRepositoryId(null);
+      setActivityRepositoryDraft(createEmptyActivityRepositoryDraft(payload.departmentIds));
+    } catch (error) {
+      setActivityRepositorySaveState({
+        phase: "error",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  async function handleToggleActivityRepositoryAvailability(activity: ActivityRepositoryEntry): Promise<void> {
+    const activityDepartmentIds = getActivityRepositoryDepartmentIds(activity);
+
+    if (activity.isSystem || activityDepartmentIds.length === 0) {
+      return;
+    }
+
+    setActivityRepositorySaveState({ phase: "saving" });
+
+    try {
+      const savedActivity = await updateActivityRepositoryEntry(activity.id, {
+        name: activity.name,
+        color: activity.color,
+        departmentIds: activityDepartmentIds,
+        isActive: !activity.isActive
+      });
+
+      if (editingActivityRepositoryId === activity.id) {
+        setActivityRepositoryDraft((current) => ({
+          ...current,
+          isActive: savedActivity.isActive
+        }));
+      }
+
+      setActivityRepositorySaveState({
+        phase: "ready",
+        message: savedActivity.isActive
+          ? `${savedActivity.name} is active for new tray selections.`
+          : `${savedActivity.name} is now inactive for new tray selections.`
+      });
+      setActivityRepositoryRequestKey((current) => current + 1);
+    } catch (error) {
+      setActivityRepositorySaveState({
+        phase: "error",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
   const dashboardData = dashboardState.phase === "ready" || dashboardState.phase === "refreshing" ? dashboardState.data : null;
   const allUsers = dashboardData?.filters.availableUsers ?? [];
   const selectedUsers = allUsers.filter((user) => user.isSelected);
@@ -666,6 +1132,19 @@ export default function App() {
       : healthState.phase === "error"
         ? "Open for connection details"
         : "Waiting for local health check";
+  const editingActivityRepository = editingActivityRepositoryId
+    ? activityRepositoryEntries.find((activity) => activity.id === editingActivityRepositoryId)
+    : undefined;
+  const sharedRepositoryCount = activityRepositoryEntries.filter((activity) => !activity.isSystem).length;
+  const trayReadyRepositoryCount = activityRepositoryEntries.filter((activity) => activity.kind === "timed" && activity.isActive).length;
+  const activityRepositoryTone =
+    activityRepositoryState.phase === "ready" ? "online" : activityRepositoryState.phase === "error" ? "offline" : "checking";
+  const activityRepositoryMeta =
+    activityRepositoryState.phase === "ready"
+      ? `${sharedRepositoryCount} shared activities`
+      : activityRepositoryState.phase === "error"
+        ? "Repository unavailable"
+        : "Loading shared catalog";
   const showMonthlyCharts = dashboardFocus === "all" || dashboardFocus === "monthly";
   const showDepartmentCharts = dashboardFocus === "all" || dashboardFocus === "departments";
   const showActivityCharts = dashboardFocus === "all" || dashboardFocus === "activities";
@@ -676,53 +1155,71 @@ export default function App() {
         <div className="hero-bar">
           <p className="eyebrow">Time in Motion</p>
 
-          <details className={`api-status-flyout is-${apiStatusTone}`}>
-            <summary className="api-status-trigger">
-              <span className="api-status-indicator" aria-hidden="true" />
+          <div className="hero-actions">
+            <details className={`api-status-flyout is-${apiStatusTone}`}>
+              <summary className="api-status-trigger">
+                <span className="api-status-indicator" aria-hidden="true" />
+                <span className="api-status-copy">
+                  <strong>{apiStatusLabel}</strong>
+                  <small>{apiStatusMeta}</small>
+                </span>
+              </summary>
+
+              <div className="api-status-popover">
+                <div className="api-status-section">
+                  <p className="panel-label">API connection</p>
+                  {healthState.phase === "loading" ? <p>Checking the local API connection.</p> : null}
+                  {healthState.phase === "ready" ? (
+                    <>
+                      <p>Status: {healthState.payload.status.toUpperCase()}</p>
+                      <p>Service: {healthState.payload.service}</p>
+                      <p>Checked: {formatTimestamp(healthState.payload.now)}</p>
+                    </>
+                  ) : null}
+                  {healthState.phase === "error" ? (
+                    <>
+                      <p>{healthState.message}</p>
+                      <p>Start the local API with <code>npm run dev:api</code>.</p>
+                    </>
+                  ) : null}
+                </div>
+
+                <div className="api-status-section api-status-section-secondary">
+                  <p className="panel-label">Read model</p>
+                  {dashboardData ? (
+                    <>
+                      <p>Imported: {formatTimestamp(dashboardData.importedAt)}</p>
+                      <p>Source: <code>{dashboardData.sourceFile}</code></p>
+                      <p>{dashboardData.scopeLabel} within {dashboardData.filters.selectedDepartment ?? "all departments"}.</p>
+                    </>
+                  ) : dashboardState.phase === "error" ? (
+                    <>
+                      <p>{dashboardState.message}</p>
+                      <p>The API responded, but the dashboard read model did not load successfully.</p>
+                    </>
+                  ) : (
+                    <p>Waiting for the dashboard read model to finish loading.</p>
+                  )}
+                </div>
+              </div>
+            </details>
+
+            <button
+              aria-controls="activity-repository-panel"
+              aria-expanded={isActivityRepositoryOpen}
+              className={`activity-repository-trigger is-${activityRepositoryTone}${isActivityRepositoryOpen ? " is-active" : ""}`}
+              onClick={() => {
+                setIsActivityRepositoryOpen((current) => !current);
+              }}
+              type="button"
+            >
+              <span className="activity-repository-indicator" aria-hidden="true" />
               <span className="api-status-copy">
-                <strong>{apiStatusLabel}</strong>
-                <small>{apiStatusMeta}</small>
+                <strong>Activity Repository</strong>
+                <small>{activityRepositoryMeta}</small>
               </span>
-            </summary>
-
-            <div className="api-status-popover">
-              <div className="api-status-section">
-                <p className="panel-label">API connection</p>
-                {healthState.phase === "loading" ? <p>Checking the local API connection.</p> : null}
-                {healthState.phase === "ready" ? (
-                  <>
-                    <p>Status: {healthState.payload.status.toUpperCase()}</p>
-                    <p>Service: {healthState.payload.service}</p>
-                    <p>Checked: {formatTimestamp(healthState.payload.now)}</p>
-                  </>
-                ) : null}
-                {healthState.phase === "error" ? (
-                  <>
-                    <p>{healthState.message}</p>
-                    <p>Start the local API with <code>npm run dev:api</code>.</p>
-                  </>
-                ) : null}
-              </div>
-
-              <div className="api-status-section api-status-section-secondary">
-                <p className="panel-label">Read model</p>
-                {dashboardData ? (
-                  <>
-                    <p>Imported: {formatTimestamp(dashboardData.importedAt)}</p>
-                    <p>Source: <code>{dashboardData.sourceFile}</code></p>
-                    <p>{dashboardData.scopeLabel} within {dashboardData.filters.selectedDepartment ?? "all departments"}.</p>
-                  </>
-                ) : dashboardState.phase === "error" ? (
-                  <>
-                    <p>{dashboardState.message}</p>
-                    <p>The API responded, but the dashboard read model did not load successfully.</p>
-                  </>
-                ) : (
-                  <p>Waiting for the dashboard read model to finish loading.</p>
-                )}
-              </div>
-            </div>
-          </details>
+            </button>
+          </div>
         </div>
 
         <h1>DDRE TiM Dashboard</h1>
@@ -731,6 +1228,344 @@ export default function App() {
           Used thoughtfully, it can be an invaluable resource for healthier planning, clearer conversations, and steady
           company development without losing sight of the people behind the work.
         </p>
+
+        {isActivityRepositoryOpen ? (
+          <div className="panel activity-repository-panel" id="activity-repository-panel">
+            <div className="activity-repository-header">
+              <div className="activity-repository-copy">
+                <p className="panel-label">Admin catalog</p>
+                <h2>Shared activities for the tray</h2>
+                <p>
+                  This is the dashboard entry point for the shared activity catalog the tray should read first. Users
+                  should only add a custom activity when the shared list does not fit, and admins can later promote
+                  repeated custom work back into the repository.
+                </p>
+              </div>
+
+              <div className="activity-repository-summary">
+                <div className="activity-repository-stat">
+                  <span>Shared catalog</span>
+                  <strong>{activityRepositoryState.phase === "ready" ? `${sharedRepositoryCount}` : "..."}</strong>
+                  <small>Repository activities currently exposed by the API.</small>
+                </div>
+
+                <div className="activity-repository-stat">
+                  <span>Tray-ready</span>
+                  <strong>{activityRepositoryState.phase === "ready" ? `${trayReadyRepositoryCount}` : "..."}</strong>
+                  <small>Active timed activities that can flow straight into the tray menu.</small>
+                </div>
+              </div>
+            </div>
+
+            <div className="activity-repository-grid">
+              <article className="activity-repository-section">
+                <div className="activity-repository-section-header">
+                  <div>
+                    <p className="panel-label">Current API catalog</p>
+                    <h3>Shared repository entries</h3>
+                  </div>
+                  <div className="activity-repository-section-actions">
+                    {activityRepositoryData ? <small>Refreshed {formatTimestamp(activityRepositoryData.refreshedAt)}</small> : null}
+                  </div>
+                </div>
+
+                {activityRepositoryState.phase === "loading" ? <p>Loading the shared activity repository from the API.</p> : null}
+
+                {activityRepositoryState.phase === "error" ? (
+                  <div className="activity-repository-empty-state">
+                    <p>{activityRepositoryState.message}</p>
+                    <button
+                      className="button button-primary"
+                      onClick={() => {
+                        setActivityRepositoryRequestKey((current) => current + 1);
+                      }}
+                      type="button"
+                    >
+                      Retry repository load
+                    </button>
+                  </div>
+                ) : null}
+
+                {activityRepositoryState.phase === "ready" ? (
+                  activityRepositoryEntries.length > 0 ? (
+                    <div className="repository-department-list">
+                      {activityRepositorySections.map((section) => {
+                        const isSectionOpen = openActivityRepositorySections[section.id] ?? false;
+
+                        return (
+                          <section
+                            className={`repository-department-section is-${section.kind}${isSectionOpen ? " is-open" : ""}`}
+                            key={section.id}
+                          >
+                            <div className="repository-department-header">
+                              <button
+                                aria-controls={`repository-department-${section.id}`}
+                                aria-expanded={isSectionOpen}
+                                className="repository-department-summary"
+                                onClick={() => {
+                                  setOpenActivityRepositorySections((current) => ({
+                                    ...current,
+                                    [section.id]: !isSectionOpen
+                                  }));
+                                }}
+                                type="button"
+                              >
+                                <span className="repository-department-summary-copy">
+                                  <span className={`repository-department-summary-kind is-${section.kind}`}>
+                                    {formatActivityRepositorySectionKindLabel(section.kind)}
+                                  </span>
+                                  <span className="repository-department-summary-heading">
+                                    <span className={`repository-department-summary-marker is-${section.kind}`} aria-hidden="true" />
+                                    <strong>{section.label}</strong>
+                                  </span>
+                                  <small>{formatActivityRepositorySectionSummary(section)}</small>
+                                </span>
+
+                                <span className="repository-department-summary-meta">
+                                  <span className="repository-department-summary-count">{section.activeCount} active</span>
+                                  {section.inactiveCount > 0 ? (
+                                    <span className="repository-department-summary-count is-muted">{section.inactiveCount} inactive</span>
+                                  ) : null}
+                                </span>
+                              </button>
+
+                              {section.kind === "department" ? (
+                                <button
+                                  className="button repository-department-new-button"
+                                  onClick={() => {
+                                    startNewActivityRepositoryDraft(section.id);
+                                  }}
+                                  type="button"
+                                >
+                                  New activity
+                                </button>
+                              ) : null}
+                            </div>
+
+                            {isSectionOpen ? (
+                              <div className="repository-department-activities" id={`repository-department-${section.id}`}>
+                                {section.activities.map((activity) => (
+                                  <div className={`repository-activity-row${!activity.isActive ? " is-inactive" : ""}`} key={activity.id}>
+                                    <div className="repository-activity-row-main">
+                                      <div className="repository-activity-title">
+                                        <span className="repository-activity-swatch" style={{ background: activity.color ?? "#D9EAF2" }} />
+                                        <div>
+                                          <strong>{activity.name}</strong>
+                                          <small>
+                                            {activity.kind === "timed"
+                                              ? "Shared timed activity ready for tray selection."
+                                              : "System-managed activity reserved by the platform."}
+                                          </small>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="repository-activity-row-actions">
+                                      {activity.isSystem ? (
+                                        <span className="repository-activity-chip">System</span>
+                                      ) : (
+                                        <button
+                                          className={`repository-activity-chip repository-activity-chip-button${activity.isActive ? " is-active" : " is-inactive"}`}
+                                          disabled={activityRepositorySaveState.phase === "saving"}
+                                          onClick={() => {
+                                            void handleToggleActivityRepositoryAvailability(activity);
+                                          }}
+                                          type="button"
+                                        >
+                                          {activity.isActive ? "Active" : "Inactive"}
+                                        </button>
+                                      )}
+                                      <button
+                                        className="button repository-activity-edit-button"
+                                        disabled={activity.isSystem || activityRepositorySaveState.phase === "saving"}
+                                        onClick={() => {
+                                          handleEditActivityRepository(activity);
+                                        }}
+                                        type="button"
+                                      >
+                                        Edit entry
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                          </section>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p>No shared activities are available from the API yet.</p>
+                  )
+                ) : null}
+              </article>
+
+              <article className="activity-repository-section">
+                <div className="activity-repository-section-header">
+                  <div>
+                    <p className="panel-label">Repository editor</p>
+                    <h3>{editingActivityRepository ? `Edit ${editingActivityRepository.name}` : "Add shared activity"}</h3>
+                  </div>
+                  {editingActivityRepository ? (
+                    <button className="button" onClick={resetActivityRepositoryEditor} type="button">
+                      Create new
+                    </button>
+                  ) : null}
+                </div>
+
+                {departmentCatalogState.phase === "loading" ? <p>Loading department options for the repository editor.</p> : null}
+
+                {departmentCatalogState.phase === "error" ? (
+                  <div className="activity-repository-empty-state">
+                    <p>{departmentCatalogState.message}</p>
+                    <button
+                      className="button button-primary"
+                      onClick={() => {
+                        setActivityRepositoryRequestKey((current) => current + 1);
+                      }}
+                      type="button"
+                    >
+                      Retry department load
+                    </button>
+                  </div>
+                ) : null}
+
+                {departmentCatalogState.phase === "ready" ? (
+                  <form className="repository-editor-form" onSubmit={handleActivityRepositorySubmit}>
+                    <label className="repository-editor-full-width-field">
+                      <span>Activity name</span>
+                      <input
+                        maxLength={100}
+                        onChange={(event) => {
+                          setActivityRepositoryDraft((current) => ({
+                            ...current,
+                            name: event.target.value
+                          }));
+                        }}
+                        placeholder="Enter a shared tray activity"
+                        type="text"
+                        value={activityRepositoryDraft.name}
+                      />
+                    </label>
+
+                    <div className="repository-editor-multiselect-field repository-editor-full-width-field">
+                      <span>Departments</span>
+                      <details className="repository-editor-multiselect">
+                        <summary className="repository-editor-multiselect-summary">
+                          <span>{formatActivityRepositoryDepartmentSelection(activityRepositoryDraft.departmentIds, repositoryDepartmentNameById)}</span>
+                          <small>
+                            {activityRepositoryDraft.departmentIds.length === 0
+                              ? "No departments selected"
+                              : `${activityRepositoryDraft.departmentIds.length} selected`}
+                          </small>
+                        </summary>
+
+                        <div className="repository-editor-multiselect-options">
+                          {availableRepositoryDepartments.map((department) => {
+                            const isSelected = activityRepositoryDraft.departmentIds.includes(department.id);
+
+                            return (
+                              <label
+                                className={`repository-editor-multiselect-option${isSelected ? " is-selected" : ""}`}
+                                key={department.id}
+                              >
+                                <input
+                                  checked={isSelected}
+                                  onChange={(event) => {
+                                    setActivityRepositoryDraft((current) => ({
+                                      ...current,
+                                      departmentIds: event.target.checked
+                                        ? current.departmentIds.includes(department.id)
+                                          ? current.departmentIds
+                                          : [...current.departmentIds, department.id]
+                                        : current.departmentIds.filter((departmentId) => departmentId !== department.id)
+                                    }));
+                                  }}
+                                  type="checkbox"
+                                />
+                                <span>{department.name}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </details>
+                    </div>
+
+                    <label className="repository-editor-color-field">
+                      <span>Colour</span>
+                      <div className="repository-editor-color-control">
+                        <span className="repository-activity-swatch repository-activity-swatch-large" style={{ background: activityRepositoryDraft.color || "#D9EAF2" }} />
+                        <input
+                          aria-label="Activity colour"
+                          className="repository-editor-color-picker"
+                          onChange={(event) => {
+                            setActivityRepositoryDraft((current) => ({
+                              ...current,
+                              color: event.target.value.toUpperCase()
+                            }));
+                          }}
+                          type="color"
+                          value={activityRepositoryDraft.color}
+                        />
+                      </div>
+                    </label>
+
+                    <label className="repository-editor-toggle">
+                      <span>Status</span>
+                      <div className="repository-editor-toggle-row">
+                        <input
+                          checked={activityRepositoryDraft.isActive}
+                          onChange={(event) => {
+                            setActivityRepositoryDraft((current) => ({
+                              ...current,
+                              isActive: event.target.checked
+                            }));
+                          }}
+                          type="checkbox"
+                        />
+                        <small>Available for new tray selections</small>
+                      </div>
+                    </label>
+
+                    <div className="repository-editor-actions">
+                      <button
+                        className="button button-primary"
+                        disabled={
+                          activityRepositorySaveState.phase === "saving" ||
+                          activityRepositoryDraft.name.trim().length === 0 ||
+                          activityRepositoryDraft.departmentIds.length === 0
+                        }
+                        type="submit"
+                      >
+                        {activityRepositorySaveState.phase === "saving"
+                          ? editingActivityRepository
+                            ? "Saving changes..."
+                            : "Adding activity..."
+                          : editingActivityRepository
+                            ? "Save changes"
+                            : "Add to repository"}
+                      </button>
+
+                      {editingActivityRepository ? (
+                        <button className="button" onClick={resetActivityRepositoryEditor} type="button">
+                          Cancel editing
+                        </button>
+                      ) : null}
+                    </div>
+                  </form>
+                ) : null}
+
+                {activityRepositorySaveState.phase === "ready" ? (
+                  <p className="activity-repository-feedback is-ready">{activityRepositorySaveState.message}</p>
+                ) : null}
+
+                {activityRepositorySaveState.phase === "error" ? (
+                  <p className="activity-repository-feedback is-error">{activityRepositorySaveState.message}</p>
+                ) : null}
+              </article>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="panel control-panel">

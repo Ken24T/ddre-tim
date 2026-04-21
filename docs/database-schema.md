@@ -254,13 +254,19 @@ Import rules:
 
 The repository now contains an initial SQL implementation of the recommended tables in `infra/sql/001_initial_schema.sql` and a generated historical seed load in `infra/sql/010_seed_ken_boyle_historical.sql`.
 
-The current API persistence slice also adds `infra/sql/002_user_settings_snapshots.sql`.
+The current API persistence slice also adds `infra/sql/002_user_settings_snapshots.sql` and `infra/sql/003_activity_repository_entries.sql`.
 
 Purpose of `user_settings_snapshots`:
 
 - persist the current API user-settings contract without forcing a premature rewrite of the normalized activity model
 - keep the active API behavior stable while the broader persistence and event-ingest slices are still being built
 - provide a bridge table for `GET` and `PUT /v1/users/:userId/settings`
+
+Purpose of `activity_repository_entries`:
+
+- persist the admin-managed shared activity repository used by the dashboard and future tray defaults
+- keep the current API contract stable, including text-based activity ids, colour metadata, and department references
+- avoid prematurely coupling dashboard repository editing to the normalized `activities` table while the broader live-write path is still evolving
 
 Current behavior of the generated seed:
 

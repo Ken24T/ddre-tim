@@ -1,0 +1,37 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run web Vite server",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev:web"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "Run desktop Vite server",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev:web",
+				"--workspace",
+				"@ddre/desktop"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "Run API server",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev:api"
+			],
+			"isBackground": true
+		}
+	]
+}

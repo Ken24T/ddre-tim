@@ -1,0 +1,32 @@
+{
+  "name": "@ddre/desktop",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:web": "npm run build --workspace @ddre/contracts && tsc -p tsconfig.json --noEmit && vite build",
+    "dev": "npm run tauri:dev",
+    "dev:web": "vite",
+    "build": "npm run build:web",
+    "build:native": "npm run build:web && npm run tauri:check",
+    "preview": "vite preview",
+    "tauri:build": "env -u GTK_PATH -u GTK_EXE_PREFIX -u GIO_MODULE_DIR -u LOCPATH -u GDK_PIXBUF_MODULEDIR -u GDK_PIXBUF_MODULE_FILE -u GI_TYPELIB_PATH -u GTK_IM_MODULE_FILE tauri build",
+    "tauri:check": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "tauri:dev": "env -u GTK_PATH -u GTK_EXE_PREFIX -u GIO_MODULE_DIR -u LOCPATH -u GDK_PIXBUF_MODULEDIR -u GDK_PIXBUF_MODULE_FILE -u GI_TYPELIB_PATH -u GTK_IM_MODULE_FILE WEBKIT_DISABLE_DMABUF_RENDERER=1 tauri dev",
+    "typecheck": "npm run build --workspace @ddre/contracts && tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@ddre/contracts": "file:../../packages/contracts",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "typescript": "^5.0.0",
+    "vite": "^6.3.0"
+  }
+}
