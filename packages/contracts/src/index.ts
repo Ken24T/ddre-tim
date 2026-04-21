@@ -121,6 +121,8 @@ export const activityEventTypeSchema = z.enum([
   "activity-selected",
   "activity-cleared",
   "note-added",
+  "note-corrected",
+  "note-deleted",
   "activity-corrected",
   "activity-deleted"
 ]);
@@ -149,10 +151,24 @@ export const activityEventSchema = z
       });
     }
 
-    if ((event.type === "activity-corrected" || event.type === "activity-deleted") && !event.relatedEventId) {
+    if ((event.type === "note-added" || event.type === "note-corrected") && !event.note) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "relatedEventId is required for activity-corrected and activity-deleted events",
+        message: "note is required for note-added and note-corrected events",
+        path: ["note"]
+      });
+    }
+
+    if (
+      (event.type === "activity-corrected"
+        || event.type === "activity-deleted"
+        || event.type === "note-corrected"
+        || event.type === "note-deleted")
+      && !event.relatedEventId
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "relatedEventId is required for correction and deletion events",
         path: ["relatedEventId"]
       });
     }
@@ -298,6 +314,18 @@ export const dashboardRecentDaySchema = z.object({
   topActivity: z.string().min(1)
 });
 
+export const dashboardNoteSchema = z.object({
+  eventId: z.string().min(1),
+  userId: z.string().min(1),
+  employeeName: z.string().min(1),
+  workDate: calendarDateSchema,
+  occurredAt: timestampSchema,
+  note: z.string().trim().min(1),
+  activityName: z.string().min(1),
+  departmentName: z.string().min(1),
+  deviceId: z.string().min(1)
+});
+
 export const dashboardMonthlyTotalSchema = z.object({
   monthKey: yearMonthSchema,
   label: z.string().min(1),
@@ -332,6 +360,7 @@ export const dashboardResponseSchema = z.object({
   departmentUserBreakdown: z.array(dashboardDepartmentUserRowSchema),
   activityBreakdown: z.array(dashboardBreakdownRowSchema),
   activityUserBreakdown: z.array(dashboardActivityUserRowSchema),
+  notes: z.array(dashboardNoteSchema),
   recentDays: z.array(dashboardRecentDaySchema),
   monthlyTotals: z.array(dashboardMonthlyTotalSchema),
   monthlyUserTotals: z.array(dashboardMonthlyUserTotalSchema)
@@ -348,6 +377,7 @@ export type DashboardActivityUserRow = z.infer<typeof dashboardActivityUserRowSc
 export type DashboardDepartmentUserRow = z.infer<typeof dashboardDepartmentUserRowSchema>;
 export type DashboardFilters = z.infer<typeof dashboardFiltersSchema>;
 export type DashboardMonthlyTotal = z.infer<typeof dashboardMonthlyTotalSchema>;
+export type DashboardNote = z.infer<typeof dashboardNoteSchema>;
 export type DashboardQuery = z.infer<typeof dashboardQuerySchema>;
 export type DashboardRecentDay = z.infer<typeof dashboardRecentDaySchema>;
 export type DashboardResponse = z.infer<typeof dashboardResponseSchema>;

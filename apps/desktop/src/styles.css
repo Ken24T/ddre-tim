@@ -310,6 +310,7 @@ textarea {
 
 .workspace-grid {
   grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+  align-items: start;
 }
 
 .platform-card,
@@ -447,6 +448,7 @@ textarea {
 
 .menu-list,
 .recent-rollup-list,
+.today-note-list,
 .recent-list,
 .draft-activity-list {
   display: grid;
@@ -582,6 +584,34 @@ textarea {
   background: rgba(241, 169, 169, 0.12);
 }
 
+.recent-item-badge-note {
+  border-color: rgba(110, 166, 207, 0.28);
+  background: rgba(110, 166, 207, 0.14);
+}
+
+.recent-item-note {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.today-note-item {
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(213, 234, 244, 0.1);
+  background: rgba(231, 245, 252, 0.06);
+}
+
+.today-note-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.today-note-copy span,
+.today-note-copy small {
+  color: var(--text-secondary);
+}
+
 .recent-item-history {
   display: grid;
   gap: 2px;
@@ -631,6 +661,11 @@ textarea {
   gap: 14px;
 }
 
+.selector-panel {
+  align-self: start;
+  align-content: start;
+}
+
 .settings-error-row {
   display: flex;
   justify-content: space-between;
@@ -648,6 +683,68 @@ textarea {
   text-align: right;
 }
 
+.selector-intro {
+  margin: 0;
+}
+
+.selector-section {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(231, 245, 252, 0.05);
+  border: 1px solid rgba(213, 234, 244, 0.1);
+}
+
+.selector-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.selector-section-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.selector-section-copy strong {
+  font-size: 0.96rem;
+}
+
+.selector-section-header small {
+  color: var(--text-muted);
+  text-align: right;
+  line-height: 1.4;
+}
+
+.quick-start-action-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.quick-start-action-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(213, 234, 244, 0.16);
+  background: rgba(231, 245, 252, 0.08);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.quick-start-action.is-active .quick-start-action-state {
+  border-color: rgba(146, 208, 200, 0.26);
+  background: rgba(146, 208, 200, 0.14);
+  color: var(--text-primary);
+}
+
 .field-help {
   margin: 0;
   color: var(--text-muted);
@@ -663,6 +760,12 @@ textarea {
 .settings-form {
   display: grid;
   gap: 14px;
+}
+
+.note-form .button {
+  width: auto;
+  min-width: 168px;
+  justify-self: start;
 }
 
 .settings-form {
@@ -771,6 +874,7 @@ textarea {
   .platform-card-header,
   .diagnostics-summary,
   .recent-item-header,
+  .selector-section-header,
   .tray-panel-header,
   .selector-header,
   .settings-header,

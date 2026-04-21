@@ -108,6 +108,11 @@ function buildSummaryCards(data: DashboardResponse): Array<{ label: string; valu
       label: "Departments",
       value: String(data.stats.departmentCount),
       helper: `${data.stats.activityCount} activities in scope`
+    },
+    {
+      label: "Notes in scope",
+      value: String(data.notes.length),
+      helper: data.notes.length > 0 ? `Latest ${formatTimestamp(data.notes[0]?.occurredAt ?? data.importedAt)}` : "No synced notes in this window"
     }
   ];
 }
@@ -1115,6 +1120,9 @@ export default function App() {
   });
   const activityPieTotal = activityPieSlices.reduce((total, slice) => total + slice.hours, 0);
   const activityUserPieCards = buildUserBreakdownPieCards(dashboardData?.activityUserBreakdown ?? [], userRows, activityColorByLabel);
+  const dashboardNotes = dashboardData?.notes ?? [];
+  const visibleDashboardNotes = dashboardNotes.slice(0, 12);
+  const hiddenDashboardNoteCount = Math.max(0, dashboardNotes.length - visibleDashboardNotes.length);
   const activeDepartmentHighlight =
     activeDepartmentLabel && departmentBreakdownRows.some((row) => row.label === activeDepartmentLabel) ? activeDepartmentLabel : undefined;
   const activeActivityHighlight =
@@ -1976,6 +1984,37 @@ export default function App() {
                 )}
               </article>
             ) : null}
+
+            <article className="panel panel-span-2 note-audit-panel">
+              <p className="panel-label">Notes and audit context</p>
+              <h2>Timestamped notes in the current reporting scope</h2>
+              <p className="note-audit-intro">
+                Notes are shown with their recorded activity and department context so managers can review narrative events alongside the time data.
+              </p>
+              {visibleDashboardNotes.length > 0 ? (
+                <>
+                  <div className="dashboard-note-list">
+                    {visibleDashboardNotes.map((note) => (
+                      <article className="dashboard-note-item" key={note.eventId}>
+                        <div className="dashboard-note-header">
+                          <div>
+                            <strong>{note.employeeName}</strong>
+                            <small>{note.activityName} · {note.departmentName}</small>
+                          </div>
+                          <span className="dashboard-note-meta">{formatTimestamp(note.occurredAt)}</span>
+                        </div>
+                        <p className="dashboard-note-body">{note.note}</p>
+                      </article>
+                    ))}
+                  </div>
+                  {hiddenDashboardNoteCount > 0 ? (
+                    <p className="note-audit-overflow">Showing the latest 12 notes in scope. {hiddenDashboardNoteCount} older note{hiddenDashboardNoteCount === 1 ? " remains" : "s remain"} in the current filter window.</p>
+                  ) : null}
+                </>
+              ) : (
+                <p>No synced notes fall within the current user, department, and date filters.</p>
+              )}
+            </article>
           </>
         ) : null}
 

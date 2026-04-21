@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   type ActivityEvent,
   type DashboardActivityDepartmentBreakdownRow,
+  type DashboardNote,
   dashboardQuerySchema,
   dashboardResponseSchema,
   type DashboardBreakdownRow,
@@ -468,12 +469,27 @@ function appendSessionRecords(
 type LiveUserIdentity = {
   canonicalUserId: string;
   displayName: string;
+  defaultDepartmentName: string;
+  activityContextById: Map<string, {
+    activityName: string;
+    departmentName: string;
+  }>;
 };
 
 type LiveRecordsProjection = {
   records: HistoricalRecord[];
+  notes: DashboardNote[];
   canonicalUserIdsByRawUserId: Map<string, string>;
 };
+
+function resolveActivityDepartmentName(
+  activity: { departmentId?: string; departmentIds?: string[] },
+  defaultDepartmentName: string
+): string {
+  const departmentId = activity.departmentId ?? activity.departmentIds?.[0];
+
+  return departmentNameById.get(departmentId ?? "") ?? defaultDepartmentName;
+}
 
 async function buildLiveUserIdentities(
   events: ActivityEvent[],
@@ -485,21 +501,60 @@ async function buildLiveUserIdentities(
       try {
         const settings = await userSettingsStore.getUserSettings(userId);
         const displayName = normalizeWhitespace(settings.displayName) || userId;
+        const defaultDepartmentName = departmentNameById.get(settings.defaultDepartmentId) ?? "Default department";
 
         return [userId, {
           canonicalUserId: displayName === userId ? userId : buildFallbackUserId(displayName),
-          displayName
+          displayName,
+          defaultDepartmentName,
+          activityContextById: new Map(settings.activities.map((activity) => [
+            activity.id,
+            {
+              activityName: activity.name,
+              departmentName: resolveActivityDepartmentName(activity, defaultDepartmentName)
+            }
+          ]))
         }] as const;
       } catch {
         return [userId, {
           canonicalUserId: userId,
-          displayName: userId
+          displayName: userId,
+          defaultDepartmentName: "Default department",
+          activityContextById: new Map()
         }] as const;
       }
     })
   );
 
   return new Map(identities);
+}
+
+function resolveNoteContext(
+  event: ActivityEvent,
+  activeSession: ActiveTimedSession | null,
+  userIdentity: LiveUserIdentity | undefined
+): { activityName: string; departmentName: string } {
+  if (activeSession) {
+    return {
+      activityName: activeSession.activityName,
+      departmentName: activeSession.departmentName
+    };
+  }
+
+  const currentActivityId = typeof event.metadata.currentActivityId === "string" ? event.metadata.currentActivityId : undefined;
+
+  if (currentActivityId && currentActivityId !== "none") {
+    const activityContext = userIdentity?.activityContextById.get(currentActivityId);
+
+    if (activityContext) {
+      return activityContext;
+    }
+  }
+
+  return {
+    activityName: "Not Timed",
+    departmentName: userIdentity?.defaultDepartmentName ?? "Default department"
+  };
 }
 
 async function buildLiveRecords(
@@ -512,6 +567,7 @@ async function buildLiveRecords(
   if (events.length === 0) {
     return {
       records: [],
+      notes: [],
       canonicalUserIdsByRawUserId: new Map()
     };
   }
@@ -527,20 +583,31 @@ async function buildLiveRecords(
   }
 
   const records: HistoricalRecord[] = [];
+  const notes: DashboardNote[] = [];
   let sourceRowNumber = nextSourceRowNumber;
   const projectionCutoff = new Date().toISOString();
 
   for (const streamEvents of streams.values()) {
-    const correctionByTarget = new Map<string, ActivityEvent>();
-    const deletedEventIds = new Set<string>();
+    const activityCorrectionByTarget = new Map<string, ActivityEvent>();
+    const noteCorrectionByTarget = new Map<string, ActivityEvent>();
+    const deletedActivityEventIds = new Set<string>();
+    const deletedNoteEventIds = new Set<string>();
 
     for (const event of streamEvents) {
       if (event.type === "activity-corrected" && event.relatedEventId) {
-        correctionByTarget.set(event.relatedEventId, event);
+        activityCorrectionByTarget.set(event.relatedEventId, event);
+      }
+
+      if (event.type === "note-corrected" && event.relatedEventId) {
+        noteCorrectionByTarget.set(event.relatedEventId, event);
       }
 
       if (event.type === "activity-deleted" && event.relatedEventId) {
-        deletedEventIds.add(event.relatedEventId);
+        deletedActivityEventIds.add(event.relatedEventId);
+      }
+
+      if (event.type === "note-deleted" && event.relatedEventId) {
+        deletedNoteEventIds.add(event.relatedEventId);
       }
     }
 
@@ -548,7 +615,7 @@ async function buildLiveRecords(
 
     for (const event of streamEvents) {
       if (event.type === "activity-selected") {
-        if (deletedEventIds.has(event.eventId)) {
+        if (deletedActivityEventIds.has(event.eventId)) {
           continue;
         }
 
@@ -556,7 +623,7 @@ async function buildLiveRecords(
           sourceRowNumber = appendSessionRecords(records, activeSession, event.occurredAt, sourceRowNumber);
         }
 
-        const effectiveSelection = correctionByTarget.get(event.eventId) ?? event;
+        const effectiveSelection = activityCorrectionByTarget.get(event.eventId) ?? event;
         const userIdentity = identityByUserId.get(event.userId);
 
         activeSession = {
@@ -571,8 +638,37 @@ async function buildLiveRecords(
         continue;
       }
 
+      if (event.type === "note-added") {
+        if (deletedNoteEventIds.has(event.eventId)) {
+          continue;
+        }
+
+        const effectiveNote = noteCorrectionByTarget.get(event.eventId) ?? event;
+        const noteText = effectiveNote.note?.trim();
+
+        if (!noteText) {
+          continue;
+        }
+
+        const userIdentity = identityByUserId.get(event.userId);
+        const noteContext = resolveNoteContext(effectiveNote, activeSession, userIdentity);
+
+        notes.push({
+          eventId: event.eventId,
+          userId: userIdentity?.canonicalUserId ?? event.userId,
+          employeeName: userIdentity?.displayName ?? event.userId,
+          workDate: event.occurredAt.slice(0, 10),
+          occurredAt: event.occurredAt,
+          note: noteText,
+          activityName: noteContext.activityName,
+          departmentName: noteContext.departmentName,
+          deviceId: event.deviceId
+        });
+        continue;
+      }
+
       if (event.type === "activity-cleared" && activeSession) {
-        if (deletedEventIds.has(event.eventId)) {
+        if (deletedActivityEventIds.has(event.eventId)) {
           continue;
         }
 
@@ -588,18 +684,42 @@ async function buildLiveRecords(
 
   return {
     records,
+    notes,
     canonicalUserIdsByRawUserId: new Map(
       Array.from(identityByUserId.entries()).map(([rawUserId, identity]) => [rawUserId, identity.canonicalUserId])
     )
   };
 }
 
-function mergeUsers(users: HistoricalUser[], liveRecords: HistoricalRecord[]): HistoricalUser[] {
+function mergeUsers(users: HistoricalUser[], liveRecords: HistoricalRecord[], liveNotes: DashboardNote[]): HistoricalUser[] {
   const mergedUsers = new Map(users.map((user) => [user.id, user]));
 
   for (const record of liveRecords) {
     const userId = getRecordUserId(record);
     const displayName = normalizeWhitespace(record.employeeName) || userId;
+    const existingUser = mergedUsers.get(userId);
+
+    if (!existingUser) {
+      mergedUsers.set(userId, {
+        id: userId,
+        displayName,
+        isSynthetic: false
+      });
+      continue;
+    }
+
+    if (existingUser.displayName !== displayName && displayName.length > 0) {
+      mergedUsers.set(userId, {
+        ...existingUser,
+        displayName,
+        isSynthetic: false
+      });
+    }
+  }
+
+  for (const note of liveNotes) {
+    const userId = note.userId;
+    const displayName = normalizeWhitespace(note.employeeName) || userId;
     const existingUser = mergedUsers.get(userId);
 
     if (!existingUser) {
@@ -635,20 +755,25 @@ export async function getDashboardReadModel(
 ): Promise<DashboardResponse> {
   const query = dashboardQuerySchema.parse(rawQuery) as DashboardQuery;
   const seed = await readHistoricalSeed();
-  const { records: liveRecords, canonicalUserIdsByRawUserId } = await buildLiveRecords(
+  const { records: liveRecords, notes: liveNotes, canonicalUserIdsByRawUserId } = await buildLiveRecords(
     options.activityEventStore,
     options.userSettingsStore,
     Math.max(...seed.records.map((record) => record.sourceRowNumber), 0) + 1
   );
-  const users = mergeUsers(buildUsers(seed), liveRecords);
+  const users = mergeUsers(buildUsers(seed), liveRecords, liveNotes);
   const userById = new Map(users.map((user) => [user.id, user]));
   const userColorById = buildUserColorMap(users);
   const allRecords = mergeDailyActivityRecords(
     [...seed.records, ...liveRecords].sort((left, right) => left.workDate.localeCompare(right.workDate))
   );
-  const minDate = allRecords[0]?.workDate ?? seed.importedAt.slice(0, 10);
-  const maxDate = allRecords[allRecords.length - 1]?.workDate ?? seed.importedAt.slice(0, 10);
-  const availableDepartments = [...new Set(allRecords.map((record) => record.departmentName))].sort((left, right) => {
+  const allNotes = [...liveNotes].sort((left, right) => right.occurredAt.localeCompare(left.occurredAt) || right.eventId.localeCompare(left.eventId));
+  const allDates = [...allRecords.map((record) => record.workDate), ...allNotes.map((note) => note.workDate)];
+  const minDate = allDates.reduce((minimum, value) => value < minimum ? value : minimum, seed.importedAt.slice(0, 10));
+  const maxDate = allDates.reduce((maximum, value) => value > maximum ? value : maximum, seed.importedAt.slice(0, 10));
+  const availableDepartments = [...new Set([
+    ...allRecords.map((record) => record.departmentName),
+    ...allNotes.map((note) => note.departmentName)
+  ])].sort((left, right) => {
     return left.localeCompare(right, "en-AU");
   });
   const selectedDepartment = query.department && availableDepartments.includes(query.department) ? query.department : null;
@@ -665,7 +790,21 @@ export async function getDashboardReadModel(
 
     return true;
   });
-  const availableUsers = users.filter((user) => scopedRecords.some((record) => getRecordUserId(record) === user.id));
+  const scopedNotes = allNotes.filter((note) => {
+    if (note.workDate < selectedFrom || note.workDate > selectedTo) {
+      return false;
+    }
+
+    if (selectedDepartment && note.departmentName !== selectedDepartment) {
+      return false;
+    }
+
+    return true;
+  });
+  const availableUsers = users.filter((user) => {
+    return scopedRecords.some((record) => getRecordUserId(record) === user.id)
+      || scopedNotes.some((note) => note.userId === user.id);
+  });
   const queryUserIds = Array.from(new Set(query.userIds.flatMap((userId) => {
     const canonicalUserId = canonicalUserIdsByRawUserId.get(userId);
 
@@ -678,6 +817,7 @@ export async function getDashboardReadModel(
   const selectedUserIds = queryUserIds.filter((userId) => availableUsers.some((user) => user.id === userId));
   const effectiveSelectedUserIds = selectedUserIds.length > 0 ? selectedUserIds : availableUsers.map((user) => user.id);
   const filteredRecords = scopedRecords.filter((record) => effectiveSelectedUserIds.includes(getRecordUserId(record)));
+  const filteredNotes = scopedNotes.filter((note) => effectiveSelectedUserIds.includes(note.userId));
   const selectedUsers = availableUsers.filter((user) => effectiveSelectedUserIds.includes(user.id));
   const userRecords = new Map<string, HistoricalRecord[]>();
   const departmentRecords = new Map<string, HistoricalRecord[]>();
@@ -744,6 +884,7 @@ export async function getDashboardReadModel(
     departmentUserBreakdown,
     activityBreakdown,
     activityUserBreakdown,
+    notes: filteredNotes,
     recentDays: buildRecentDays(filteredRecords),
     monthlyTotals: buildMonthlyTotals(filteredRecords),
     monthlyUserTotals: buildMonthlyUserTotals(filteredRecords, userById, userColorById)

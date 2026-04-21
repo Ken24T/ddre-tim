@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
-import type { Activity, ActivityDraft, ActivityEvent, DashboardActivityDepartmentBreakdownRow, Department, UserSettings, UserSettingsUpdate } from "@ddre/contracts";
+import type { Activity, ActivityDraft, ActivityEvent, DashboardActivityDepartmentBreakdownRow, DashboardNote, Department, UserSettings, UserSettingsUpdate } from "@ddre/contracts";
 import { fetchActivityCatalog, fetchDashboardSnapshot, fetchHealth, fetchUserSettings, getApiBaseUrl, saveUserSettings, sendSyncBatch, type HealthPayload } from "./desktopClient.js";
 import {
   flushDesktopOutbox,
@@ -42,9 +42,10 @@ type RecentItem = {
   subtitle: string;
   timestamp: string;
   status: "queued" | "sent" | "failed";
-  eventType: "activity-selected" | "activity-cleared";
+  eventType: "activity-selected" | "activity-cleared" | "note-added";
   activityId?: string;
   activityName?: string;
+  note?: string;
   history: RecentItemHistoryEntry[];
 };
 
@@ -53,6 +54,8 @@ type RecentItemHistoryEntry = {
   at: string;
   previousActivityName?: string;
   nextActivityName?: string;
+  previousNoteText?: string;
+  nextNoteText?: string;
 };
 
 type TimedActivitySection = {
@@ -64,8 +67,8 @@ type TimedActivitySection = {
 
 type RecentActivityRollupState =
   | { phase: "loading" }
-  | { phase: "refreshing"; rows: DashboardActivityDepartmentBreakdownRow[] }
-  | { phase: "ready"; rows: DashboardActivityDepartmentBreakdownRow[] }
+  | { phase: "refreshing"; rows: DashboardActivityDepartmentBreakdownRow[]; notes: DashboardNote[] }
+  | { phase: "ready"; rows: DashboardActivityDepartmentBreakdownRow[]; notes: DashboardNote[] }
   | { phase: "error"; message: string };
 
 const defaultUserId = "cinnamon-local-user";
@@ -127,6 +130,8 @@ function getStoredRecentItems(userId: string): RecentItem[] {
           ? "activity-cleared"
           : item.title?.startsWith("Selected ")
             ? "activity-selected"
+            : item.title === "Note added"
+              ? "note-added"
             : null;
       const inferredActivityName = typeof item.activityName === "string"
         ? item.activityName
@@ -142,7 +147,7 @@ function getStoredRecentItems(userId: string): RecentItem[] {
         || typeof item.subtitle !== "string"
         || typeof item.timestamp !== "string"
         || (status !== "queued" && status !== "sent" && status !== "failed")
-        || (inferredEventType !== "activity-selected" && inferredEventType !== "activity-cleared")
+        || (inferredEventType !== "activity-selected" && inferredEventType !== "activity-cleared" && inferredEventType !== "note-added")
       ) {
         return [];
       }
@@ -166,7 +171,9 @@ function getStoredRecentItems(userId: string): RecentItem[] {
             kind: typedEntry.kind,
             at: typedEntry.at,
             previousActivityName: typeof typedEntry.previousActivityName === "string" ? typedEntry.previousActivityName : undefined,
-            nextActivityName: typeof typedEntry.nextActivityName === "string" ? typedEntry.nextActivityName : undefined
+            nextActivityName: typeof typedEntry.nextActivityName === "string" ? typedEntry.nextActivityName : undefined,
+            previousNoteText: typeof typedEntry.previousNoteText === "string" ? typedEntry.previousNoteText : undefined,
+            nextNoteText: typeof typedEntry.nextNoteText === "string" ? typedEntry.nextNoteText : undefined
           }];
         })
         : [];
@@ -181,6 +188,7 @@ function getStoredRecentItems(userId: string): RecentItem[] {
         eventType: inferredEventType,
         activityId: typeof item.activityId === "string" ? item.activityId : undefined,
         activityName: inferredActivityName,
+        note: typeof item.note === "string" ? item.note : undefined,
         history
       }];
     }).slice(0, 6);
@@ -197,7 +205,23 @@ function hasRecentItemCorrections(item: RecentItem): boolean {
   return item.history.some((entry) => entry.kind === "corrected");
 }
 
+function formatHistorySnippet(value: string | undefined): string {
+  if (!value) {
+    return "note";
+  }
+
+  return value.length > 48 ? `${value.slice(0, 48).trimEnd()}...` : value;
+}
+
 function formatRecentItemHistoryEntry(entry: RecentItemHistoryEntry): string {
+  if (entry.previousNoteText || entry.nextNoteText) {
+    if (entry.kind === "deleted") {
+      return `Deleted note "${formatHistorySnippet(entry.previousNoteText)}" at ${formatTimestamp(entry.at)}.`;
+    }
+
+    return `Corrected note from "${formatHistorySnippet(entry.previousNoteText)}" to "${formatHistorySnippet(entry.nextNoteText)}" at ${formatTimestamp(entry.at)}.`;
+  }
+
   if (entry.kind === "deleted") {
     return `Deleted from live history at ${formatTimestamp(entry.at)}.`;
   }
@@ -241,6 +265,36 @@ function buildRecentActivityItem(
     eventType: "activity-selected",
     activityId: activity.id,
     activityName: activity.name,
+    history
+  };
+}
+
+function buildRecentNoteItem(
+  note: string,
+  occurredAt: string,
+  activity: Activity | undefined,
+  departments: Department[],
+  defaultDepartmentId: string | undefined,
+  status: RecentItem["status"],
+  sourceEventId: string,
+  history: RecentItemHistoryEntry[] = []
+): RecentItem {
+  const activityName = activity?.name ?? "Not Timed";
+  const departmentSummary = activity
+    ? formatActivityDepartmentSummary(getActivityDepartmentNames(activity, departments, defaultDepartmentId))
+    : "Default department";
+
+  return {
+    id: sourceEventId,
+    sourceEventId,
+    title: "Note added",
+    subtitle: `For ${activityName} · ${departmentSummary}`,
+    timestamp: occurredAt,
+    status,
+    eventType: "note-added",
+    activityId: activity?.id,
+    activityName,
+    note,
     history
   };
 }
@@ -592,6 +646,7 @@ export default function App() {
   const [recentActivityRollupState, setRecentActivityRollupState] = useState<RecentActivityRollupState>({ phase: "loading" });
   const [editingRecentItemId, setEditingRecentItemId] = useState<string | null>(null);
   const [editingRecentActivityId, setEditingRecentActivityId] = useState("");
+  const [editingRecentNoteText, setEditingRecentNoteText] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [desktopContext, setDesktopContext] = useState<DesktopContext | null>(null);
   const [outboxStatus, setOutboxStatus] = useState<OutboxStatus>(defaultOutboxStatus);
@@ -620,6 +675,7 @@ export default function App() {
     setRecentItems(getStoredRecentItems(userId));
     setEditingRecentItemId(null);
     setEditingRecentActivityId("");
+    setEditingRecentNoteText("");
   }, [userId]);
 
   useEffect(() => {
@@ -663,7 +719,7 @@ export default function App() {
 
     setRecentActivityRollupState((current) => {
       if (current.phase === "ready" || current.phase === "refreshing") {
-        return { phase: "refreshing", rows: current.rows };
+        return { phase: "refreshing", rows: current.rows, notes: current.notes };
       }
 
       return { phase: "loading" };
@@ -680,7 +736,8 @@ export default function App() {
         if (!cancelled) {
           setRecentActivityRollupState({
             phase: "ready",
-            rows: payload.activityDepartmentBreakdown
+            rows: payload.activityDepartmentBreakdown,
+            notes: payload.notes
           });
         }
       } catch (error) {
@@ -860,8 +917,11 @@ export default function App() {
     [departments, filteredActivities]
   );
   const timedActivitiesLocked = !settings || !settings.isConfigured;
-  const healthLabel =
-    healthState.phase === "ready" ? `${healthState.payload.service} ready` : healthState.phase === "error" ? "API unavailable" : "Checking API";
+  const selectorStatusLabel = healthState.phase === "error"
+    ? "API unavailable"
+    : timedActivitiesLocked
+      ? "Finish setup to unlock timed capture"
+      : "Select a result to start timing";
   const syncTone = syncState.phase === "error" ? "error" : outboxStatus.pendingCount > 0 || syncState.phase === "sending" ? "sending" : syncState.phase === "ready" ? "ready" : "idle";
   const syncHeading = outboxStatus.pendingCount > 0
     ? "Queued locally"
@@ -954,8 +1014,41 @@ export default function App() {
     () => allActivities.filter((activity) => activity.kind === "timed" && activity.isActive),
     [allActivities]
   );
+  const quickActionActivities = useMemo(() => {
+    if (searchTerm) {
+      return filteredActivities.slice(0, 6);
+    }
+
+    const preferredDepartmentName = currentDepartment?.name
+      ?? departments.find((department) => department.id === activityDepartmentFallbackId)?.name
+      ?? "Default department";
+
+    return [...menuActivities]
+      .sort((left, right) => {
+        const leftDepartmentNames = getActivityDepartmentNames(left, departments, activityDepartmentFallbackId);
+        const rightDepartmentNames = getActivityDepartmentNames(right, departments, activityDepartmentFallbackId);
+        const leftScore = (left.id === currentActivityId ? 4 : 0) + (leftDepartmentNames.includes(preferredDepartmentName) ? 2 : 0);
+        const rightScore = (right.id === currentActivityId ? 4 : 0) + (rightDepartmentNames.includes(preferredDepartmentName) ? 2 : 0);
+
+        if (rightScore !== leftScore) {
+          return rightScore - leftScore;
+        }
+
+        return left.name.localeCompare(right.name, "en-AU");
+      })
+      .slice(0, 6);
+  }, [activityDepartmentFallbackId, currentActivityId, currentDepartment?.name, departments, filteredActivities, menuActivities, searchTerm]);
+  const noteContextLabel = currentActivity?.name ?? "Not Timed";
+  const noteContextDetail = currentActivityStartedAt
+    ? formatDisplayTime(currentActivityStartedAt)
+    : currentActivity?.kind === "non-timed"
+      ? "No timer running right now"
+      : "Notes stay with the current session";
   const recentActivityRollupRows = recentActivityRollupState.phase === "ready" || recentActivityRollupState.phase === "refreshing"
     ? recentActivityRollupState.rows
+    : [];
+  const todaysNotes = recentActivityRollupState.phase === "ready" || recentActivityRollupState.phase === "refreshing"
+    ? recentActivityRollupState.notes
     : [];
   const onboardingCopy = settings?.isConfigured
     ? desktopContext
@@ -1125,7 +1218,7 @@ export default function App() {
   }
 
   function getLatestVisibleRecentItem(items: RecentItem[]): RecentItem | undefined {
-    return items.find((item) => !isRecentItemDeleted(item));
+    return items.find((item) => item.eventType !== "note-added" && !isRecentItemDeleted(item));
   }
 
   async function postEvent(event: ActivityEvent, optimisticItem?: RecentItem): Promise<RecentItem["status"]> {
@@ -1294,10 +1387,80 @@ export default function App() {
     const submittedNote = noteDraft.trim();
     setNoteDraft("");
 
-    await postEvent(noteEvent);
+    await postEvent(
+      noteEvent,
+      buildRecentNoteItem(
+        submittedNote,
+        occurredAt,
+        currentActivity ?? nonTimedActivity,
+        departments,
+        activityDepartmentFallbackId,
+        "sent",
+        noteEvent.eventId
+      )
+    );
   }
 
   async function handleRecentItemEditSave(item: RecentItem): Promise<void> {
+    if (item.eventType === "note-added") {
+      const nextNoteText = editingRecentNoteText.trim();
+
+      if (!nextNoteText || nextNoteText === item.note?.trim()) {
+        return;
+      }
+
+      const occurredAt = new Date().toISOString();
+      const correctionEvent: ActivityEvent = {
+        eventId: createIdentifier("event"),
+        userId,
+        deviceId: runtimeTrayPlatform.id,
+        occurredAt,
+        recordedAt: occurredAt,
+        type: "note-corrected",
+        note: nextNoteText,
+        relatedEventId: item.sourceEventId,
+        idempotencyKey: createIdentifier("idempotency"),
+        metadata: {
+          platform: runtimeTrayPlatform.id,
+          currentActivityId: item.activityId ?? "none"
+        }
+      };
+
+      const result = await postEvent(correctionEvent);
+
+      if (result === "failed") {
+        return;
+      }
+
+      const correctionHistoryEntry: RecentItemHistoryEntry = {
+        kind: "corrected",
+        at: occurredAt,
+        previousNoteText: item.note,
+        nextNoteText: nextNoteText
+      };
+
+      setRecentItems((current) => current.map((currentItem) => {
+        if (currentItem.id !== item.id) {
+          return currentItem;
+        }
+
+        return buildRecentNoteItem(
+          nextNoteText,
+          item.timestamp,
+          resolveRecentItemActivity(item),
+          departments,
+          activityDepartmentFallbackId,
+          result,
+          item.sourceEventId,
+          [...currentItem.history, correctionHistoryEntry]
+        );
+      }));
+      setEditingRecentItemId(null);
+      setEditingRecentActivityId("");
+      setEditingRecentNoteText("");
+      return;
+    }
+
     const nextActivity = recentTimedActivityOptions.find((activity) => activity.id === editingRecentActivityId);
 
     if (!nextActivity) {
@@ -1352,6 +1515,7 @@ export default function App() {
     }));
     setEditingRecentItemId(null);
     setEditingRecentActivityId("");
+    setEditingRecentNoteText("");
 
     if (getLatestVisibleRecentItem(recentItems)?.id === item.id) {
       setCurrentActivityId(nextActivity.id);
@@ -1367,7 +1531,7 @@ export default function App() {
       deviceId: runtimeTrayPlatform.id,
       occurredAt,
       recordedAt: occurredAt,
-      type: "activity-deleted",
+      type: item.eventType === "note-added" ? "note-deleted" : "activity-deleted",
       relatedEventId: item.sourceEventId,
       idempotencyKey: createIdentifier("idempotency"),
       metadata: {
@@ -1385,7 +1549,8 @@ export default function App() {
     const deleteHistoryEntry: RecentItemHistoryEntry = {
       kind: "deleted",
       at: occurredAt,
-      previousActivityName: item.activityName
+      previousActivityName: item.activityName,
+      previousNoteText: item.note
     };
 
     const updatedItems = recentItems.map((currentItem) => {
@@ -1404,6 +1569,7 @@ export default function App() {
     if (editingRecentItemId === item.id) {
       setEditingRecentItemId(null);
       setEditingRecentActivityId("");
+      setEditingRecentNoteText("");
     }
 
     if (getLatestVisibleRecentItem(recentItems)?.id === item.id) {
@@ -1861,6 +2027,25 @@ export default function App() {
                 )}
               </div>
 
+              <p className="tray-menu-sublabel">Today's notes</p>
+              <div className="today-note-list">
+                {recentActivityRollupState.phase === "error" ? (
+                  <p className="error-copy">{recentActivityRollupState.message}</p>
+                ) : todaysNotes.length > 0 ? (
+                  todaysNotes.map((note) => (
+                    <div className="today-note-item" key={note.eventId}>
+                      <div className="today-note-copy">
+                        <strong>{note.note}</strong>
+                        <span>{note.activityName} · {note.departmentName}</span>
+                        <small>Synced at {formatTimestamp(note.occurredAt)}</small>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty-copy">Today's synced notes will appear here after note events reach the API.</p>
+                )}
+              </div>
+
               <p className="tray-menu-sublabel">Recent changes</p>
               <div className="recent-list">
                 {recentItems.length > 0 ? recentItems.map((item) => (
@@ -1868,10 +2053,12 @@ export default function App() {
                     <div className="recent-item-header">
                       <div className="recent-item-copy">
                         <div className="recent-item-badges">
+                          {item.eventType === "note-added" ? <span className="recent-item-badge recent-item-badge-note">Note</span> : null}
                           {hasRecentItemCorrections(item) ? <span className="recent-item-badge">Edited</span> : null}
                           {isRecentItemDeleted(item) ? <span className="recent-item-badge recent-item-badge-danger">Deleted</span> : null}
                         </div>
                         <strong>{item.title}</strong>
+                        {item.note ? <p className="recent-item-note">{item.note}</p> : null}
                         <span>{item.subtitle}</span>
                         <small>{item.status === "queued" ? `${formatTimestamp(item.timestamp)} · queued locally` : formatTimestamp(item.timestamp)}</small>
                         {item.history.length > 0 ? (
@@ -1884,14 +2071,22 @@ export default function App() {
                       </div>
 
                       <div className="recent-item-actions">
-                        {item.eventType === "activity-selected" && !isRecentItemDeleted(item) ? (
+                        {(item.eventType === "activity-selected" || item.eventType === "note-added") && !isRecentItemDeleted(item) ? (
                           <button
                             className="button"
                             onClick={() => {
+                              setEditingRecentItemId(item.id);
+
+                              if (item.eventType === "note-added") {
+                                setEditingRecentActivityId("");
+                                setEditingRecentNoteText(item.note ?? "");
+                                return;
+                              }
+
                               const selectedActivity = resolveRecentItemActivity(item);
 
-                              setEditingRecentItemId(item.id);
                               setEditingRecentActivityId(selectedActivity?.id ?? recentTimedActivityOptions[0]?.id ?? "");
+                              setEditingRecentNoteText("");
                             }}
                             type="button"
                           >
@@ -1915,30 +2110,44 @@ export default function App() {
 
                     {editingRecentItemId === item.id && !isRecentItemDeleted(item) ? (
                       <div className="recent-item-editor">
-                        <label className="field">
-                          <span>Correct to</span>
-                          <select
-                            onChange={(event) => {
-                              setEditingRecentActivityId(event.target.value);
-                            }}
-                            value={editingRecentActivityId}
-                          >
-                            {recentTimedActivityOptions.map((activity) => (
-                              <option key={`recent-edit-${activity.id}`} value={activity.id}>{activity.name}</option>
-                            ))}
-                          </select>
-                        </label>
+                        {item.eventType === "note-added" ? (
+                          <label className="field">
+                            <span>Correct note</span>
+                            <textarea
+                              maxLength={500}
+                              onChange={(event) => {
+                                setEditingRecentNoteText(event.target.value);
+                              }}
+                              rows={3}
+                              value={editingRecentNoteText}
+                            />
+                          </label>
+                        ) : (
+                          <label className="field">
+                            <span>Correct to</span>
+                            <select
+                              onChange={(event) => {
+                                setEditingRecentActivityId(event.target.value);
+                              }}
+                              value={editingRecentActivityId}
+                            >
+                              {recentTimedActivityOptions.map((activity) => (
+                                <option key={`recent-edit-${activity.id}`} value={activity.id}>{activity.name}</option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
 
                         <div className="recent-item-editor-actions">
                           <button
                             className="button button-primary"
-                            disabled={!editingRecentActivityId}
+                            disabled={item.eventType === "note-added" ? !editingRecentNoteText.trim() : !editingRecentActivityId}
                             onClick={() => {
                               void handleRecentItemEditSave(item);
                             }}
                             type="button"
                           >
-                            Save change
+                            {item.eventType === "note-added" ? "Save note" : "Save change"}
                           </button>
 
                           <button
@@ -1946,6 +2155,7 @@ export default function App() {
                             onClick={() => {
                               setEditingRecentItemId(null);
                               setEditingRecentActivityId("");
+                              setEditingRecentNoteText("");
                             }}
                             type="button"
                           >
@@ -1964,38 +2174,110 @@ export default function App() {
         <article className="panel selector-panel">
           <div className="selector-header">
             <div>
-              <p className="panel-label">Quick selector</p>
-              <h2>Search and note</h2>
+              <p className="panel-label">Quick actions</p>
+              <h2>Start activity or add note</h2>
             </div>
-            <small>{healthLabel}</small>
+            <small>{selectorStatusLabel}</small>
           </div>
 
-          <label className="field">
-            <span>Search timed activities</span>
-            <input
-              onChange={(event) => {
-                setActivitySearch(event.target.value);
-              }}
-              placeholder="Filter the tray menu"
-              type="search"
-              value={activitySearch}
-            />
-          </label>
+          <p className="field-help selector-intro">
+            Start timing directly from this panel, or add a timestamped note without switching the current activity.
+          </p>
 
-          <form className="note-form" onSubmit={(event) => { void handleNoteSubmit(event); }}>
+          <section className="selector-section">
+            <div className="selector-section-header">
+              <div className="selector-section-copy">
+                <p className="tray-menu-label">Start activity</p>
+                <strong>{searchTerm ? "Matching activities" : "Suggested activities"}</strong>
+              </div>
+              <small>
+                {timedActivitiesLocked
+                  ? "Setup required"
+                  : searchTerm
+                    ? `${filteredActivities.length} match${filteredActivities.length === 1 ? "" : "es"}`
+                    : `${quickActionActivities.length} quick picks`}
+              </small>
+            </div>
+
             <label className="field">
-              <span>Quick note</span>
-              <textarea
+              <span>Find a timed activity</span>
+              <input
                 onChange={(event) => {
-                  setNoteDraft(event.target.value);
+                  setActivitySearch(event.target.value);
                 }}
-                placeholder="Capture a short note"
-                rows={3}
-                value={noteDraft}
+                placeholder="Type to search timed activities"
+                type="search"
+                value={activitySearch}
               />
             </label>
-            <button className="button button-primary" disabled={!noteDraft.trim()} type="submit">Add note</button>
-          </form>
+
+            <p className="field-help">
+              {timedActivitiesLocked
+                ? "Finish setup first, then choose a result here to start timing."
+                : searchTerm
+                  ? "Select a result below to switch your active timer immediately."
+                  : "Choose a quick pick below, or type to narrow the list."}
+            </p>
+
+            <div className="menu-list quick-start-list">
+              {quickActionActivities.length > 0 ? quickActionActivities.map((activity) => {
+                const activityDepartmentSummary = formatActivityDepartmentSummary(
+                  getActivityDepartmentNames(activity, departments, activityDepartmentFallbackId)
+                );
+                const isActive = currentActivityId === activity.id;
+
+                return (
+                  <button
+                    className={`menu-action quick-start-action${isActive ? " is-active" : ""}`}
+                    disabled={timedActivitiesLocked}
+                    key={`quick-start-${activity.id}`}
+                    onClick={() => {
+                      setActivitySearch("");
+                      void handleActivitySelect(activity);
+                    }}
+                    type="button"
+                  >
+                    <div className="quick-start-action-copy">
+                      <strong>{activity.name}</strong>
+                      <small>{activityDepartmentSummary}</small>
+                    </div>
+                    <span className="quick-start-action-state">{isActive ? "Active" : "Start"}</span>
+                  </button>
+                );
+              }) : (
+                <p className="empty-copy">
+                  {searchTerm ? "No timed activities match this search." : "Suggested activities will appear here once setup is complete."}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className="selector-section">
+            <div className="selector-section-header">
+              <div className="selector-section-copy">
+                <p className="tray-menu-label">Add note</p>
+                <strong>{noteContextLabel}</strong>
+              </div>
+              <small>{noteContextDetail}</small>
+            </div>
+
+            <p className="field-help">Adds a timestamped note without changing the current activity.</p>
+
+            <form className="note-form" onSubmit={(event) => { void handleNoteSubmit(event); }}>
+              <label className="field">
+                <span>Note for this session</span>
+                <textarea
+                  onChange={(event) => {
+                    setNoteDraft(event.target.value);
+                  }}
+                  placeholder="Add a short note for the current session"
+                  rows={3}
+                  value={noteDraft}
+                />
+              </label>
+              <button className="button button-primary" disabled={!noteDraft.trim()} type="submit">Add note</button>
+            </form>
+          </section>
         </article>
       </section>
 

@@ -1168,7 +1168,7 @@ body {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 18px;
   margin-bottom: 18px;
 }
@@ -1266,6 +1266,59 @@ body {
 
 .chart-panel {
   overflow: hidden;
+}
+
+.note-audit-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.note-audit-intro,
+.note-audit-overflow {
+  max-width: 72ch;
+}
+
+.dashboard-note-list {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-note-item {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(238, 248, 252, 0.04);
+  border: 1px solid rgba(209, 234, 245, 0.08);
+}
+
+.dashboard-note-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.dashboard-note-header strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.dashboard-note-header small,
+.dashboard-note-meta,
+.note-audit-overflow {
+  color: var(--text-muted);
+}
+
+.dashboard-note-meta {
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.dashboard-note-body {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.65;
 }
 
 .chart-toolbar {
@@ -1665,7 +1718,8 @@ body {
   }
 
   .user-filter-toolbar,
-  .chart-toolbar {
+  .chart-toolbar,
+  .dashboard-note-header {
     flex-direction: column;
     align-items: stretch;
   }

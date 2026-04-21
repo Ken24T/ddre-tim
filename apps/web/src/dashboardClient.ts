@@ -80,6 +80,18 @@ export interface DashboardRecentDay {
   topActivity: string;
 }
 
+export interface DashboardNote {
+  eventId: string;
+  userId: string;
+  employeeName: string;
+  workDate: string;
+  occurredAt: string;
+  note: string;
+  activityName: string;
+  departmentName: string;
+  deviceId: string;
+}
+
 export interface DashboardMonthlyTotal {
   monthKey: string;
   label: string;
@@ -113,6 +125,7 @@ export interface DashboardResponse {
   departmentUserBreakdown: DashboardDepartmentUserRow[];
   activityBreakdown: DashboardBreakdownRow[];
   activityUserBreakdown: DashboardActivityUserRow[];
+  notes: DashboardNote[];
   recentDays: DashboardRecentDay[];
   monthlyTotals: DashboardMonthlyTotal[];
   monthlyUserTotals: DashboardMonthlyUserTotal[];
