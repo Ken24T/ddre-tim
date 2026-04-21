@@ -43,9 +43,17 @@ type RecentItem = {
   status: "queued" | "sent" | "failed";
 };
 
+type TimedActivitySection = {
+  id: string;
+  label: string;
+  kind: "department" | "shared";
+  activities: Activity[];
+};
+
 const defaultUserId = "cinnamon-local-user";
 const userIdStorageKey = "ddre.desktop.user-id";
 const noteStorageKey = "ddre.desktop.last-note";
+const sharedAcrossDepartmentsSectionId = "shared-across-departments";
 const defaultOutboxStatus: OutboxStatus = {
   pendingCount: 0,
   lastSyncedAt: null,
@@ -106,6 +114,18 @@ function formatPendingCount(value: number): string {
   return `${value} event${value === 1 ? "" : "s"}`;
 }
 
+function getExplicitActivityDepartmentIds(activity: Pick<Activity, "departmentId" | "departmentIds">): string[] {
+  if (activity.departmentIds && activity.departmentIds.length > 0) {
+    return Array.from(new Set(activity.departmentIds));
+  }
+
+  if (activity.departmentId) {
+    return [activity.departmentId];
+  }
+
+  return [];
+}
+
 function getActivityDepartmentNames(
   activity: Activity,
   departments: Department[],
@@ -135,6 +155,72 @@ function formatActivityDepartmentSummary(names: string[]): string {
   }
 
   return `${names[0]} +${names.length - 1} more`;
+}
+
+function getTimedActivitySectionId(activity: Pick<Activity, "departmentId" | "departmentIds">): string {
+  const departmentIds = getExplicitActivityDepartmentIds(activity);
+
+  return departmentIds.length === 1 ? departmentIds[0] : sharedAcrossDepartmentsSectionId;
+}
+
+function formatTimedActivitySectionLabel(sectionId: string, departments: Department[]): string {
+  if (sectionId === sharedAcrossDepartmentsSectionId) {
+    return "Shared Across Departments";
+  }
+
+  return departments.find((department) => department.id === sectionId)?.name ?? "Other Activities";
+}
+
+function formatTimedActivitySectionSummary(section: TimedActivitySection): string {
+  const countLabel = `${section.activities.length} ${section.activities.length === 1 ? "activity" : "activities"}`;
+
+  if (section.kind === "shared") {
+    return `${countLabel} shared across departments`;
+  }
+
+  return countLabel;
+}
+
+function groupTimedActivitiesByDepartment(
+  activities: Activity[],
+  departments: Department[]
+): TimedActivitySection[] {
+  const sections = new Map<string, TimedActivitySection>();
+
+  for (const activity of activities) {
+    const sectionId = getTimedActivitySectionId(activity);
+    const existingSection = sections.get(sectionId);
+
+    if (existingSection) {
+      existingSection.activities.push(activity);
+      continue;
+    }
+
+    sections.set(sectionId, {
+      id: sectionId,
+      label: formatTimedActivitySectionLabel(sectionId, departments),
+      kind: sectionId === sharedAcrossDepartmentsSectionId ? "shared" : "department",
+      activities: [activity]
+    });
+  }
+
+  const sectionRank: Record<TimedActivitySection["kind"], number> = {
+    department: 0,
+    shared: 1
+  };
+
+  return [...sections.values()]
+    .map((section) => ({
+      ...section,
+      activities: [...section.activities].sort((left, right) => left.name.localeCompare(right.name, "en-AU"))
+    }))
+    .sort((left, right) => {
+      if (sectionRank[left.kind] !== sectionRank[right.kind]) {
+        return sectionRank[left.kind] - sectionRank[right.kind];
+      }
+
+      return left.label.localeCompare(right.label, "en-AU");
+    });
 }
 
 function isKnownTrayPlatform(value: string): value is DesktopPlatformId {
@@ -245,6 +331,7 @@ export default function App() {
   const [desktopContext, setDesktopContext] = useState<DesktopContext | null>(null);
   const [outboxStatus, setOutboxStatus] = useState<OutboxStatus>(defaultOutboxStatus);
   const [autostartState, setAutostartState] = useState<AutostartState>(defaultAutostartState);
+  const [openTimedActivitySections, setOpenTimedActivitySections] = useState<Record<string, boolean>>({});
   const trayPanelRef = useRef<HTMLElement | null>(null);
   const settingsPanelRef = useRef<HTMLElement | null>(null);
 
@@ -414,7 +501,6 @@ export default function App() {
   const departments = settings?.departments ?? [];
   const allActivities = settings?.activities ?? [];
   const activeActivities = allActivities.filter((activity) => activity.isActive);
-  const timedActivityCatalog = allActivities.filter((activity) => activity.kind === "timed");
   const menuActivities = activeActivities.filter((activity) => activity.kind === "timed");
   const nonTimedActivity = activeActivities.find((activity) => activity.kind === "non-timed") ?? allActivities.find((activity) => activity.kind === "non-timed");
   const currentActivity = activeActivities.find((activity) => activity.id === currentActivityId) ?? allActivities.find((activity) => activity.id === currentActivityId);
@@ -426,6 +512,10 @@ export default function App() {
 
     return activity.name.toLowerCase().includes(searchTerm);
   });
+  const filteredActivitySections = useMemo(
+    () => groupTimedActivitiesByDepartment(filteredActivities, departments),
+    [departments, filteredActivities]
+  );
   const timedActivitiesLocked = !settings || !settings.isConfigured;
   const healthLabel =
     healthState.phase === "ready" ? `${healthState.payload.service} ready` : healthState.phase === "error" ? "API unavailable" : "Checking API";
@@ -457,14 +547,33 @@ export default function App() {
   const desktopHostLabel = desktopContext ? "Native Tauri host" : "Browser shell preview";
   const desktopHostDetail = desktopContext
     ? runningCompatibilitySlice
-      ? `${runtimeTrayPlatform.label} session detected. Native tray events and the local outbox are available for compatibility validation, while Cinnamon remains the first-class target.`
-      : "Native tray events, the local outbox, and Cinnamon autostart are available."
-    : "Use the browser shell while Linux WebKit and libsoup headers are still being installed.";
+      ? `${runtimeTrayPlatform.label} session detected. Native tray events and the local outbox are available for validation.`
+      : "Native tray events, the local outbox, and autostart are available."
+    : "Browser preview only. Native tray features require the Tauri host.";
   const diagnosticsDetail = runningCompatibilitySlice
-    ? `${runtimeTrayPlatform.label} platform diagnostics, compatibility notes, autostart status, and local testing controls.`
-    : "Desktop runtime diagnostics, platform notes, autostart status, and local testing controls.";
+    ? `${runtimeTrayPlatform.label} diagnostics, autostart, and local test controls.`
+    : "Runtime diagnostics, autostart, and local test controls.";
   const activityDepartmentFallbackId = settings?.defaultDepartmentId || defaultDepartmentIdDraft || departments[0]?.id;
   const currentDepartment = departments.find((department) => department.id === (currentActivity?.departmentId ?? settings?.defaultDepartmentId));
+  const currentTimedActivitySectionId = currentActivity && currentActivity.kind === "timed"
+    ? getTimedActivitySectionId(currentActivity)
+    : null;
+  const trayActivitySections = useMemo(
+    () => groupTimedActivitiesByDepartment(menuActivities, departments).map((section) => ({
+      id: section.id,
+      label: section.label,
+      activities: section.activities.map((activity) => ({
+        id: activity.id,
+        label: activity.name,
+        helper: formatActivityDepartmentSummary(
+          getActivityDepartmentNames(activity, departments, activityDepartmentFallbackId)
+        ),
+        active: currentActivityId === activity.id
+      }))
+    })),
+    [activityDepartmentFallbackId, currentActivityId, departments, menuActivities]
+  );
+  const forceOpenTimedActivitySections = searchTerm.length > 0;
   const hasDepartmentOptions = departments.length > 0;
   const defaultDepartmentSelectValue = hasDepartmentOptions && departments.some((department) => department.id === defaultDepartmentIdDraft)
     ? defaultDepartmentIdDraft
@@ -472,13 +581,56 @@ export default function App() {
   const onboardingCopy = settings?.isConfigured
     ? desktopContext
       ? runningCompatibilitySlice
-        ? `${runtimeTrayPlatform.label} compatibility validation is ready. Native tray actions queue locally, flush through the API, and keep timed selection menu-first while Cinnamon remains the product target.`
-        : "Cinnamon tray capture is ready. Native tray actions queue locally, flush through the API, and keep timed selection menu-first."
-      : "Cinnamon tray capture preview is ready. Timed activities stay menu-first, with a quick selector available for long lists or notes."
-    : "First run routes into settings before timed capture begins. Configure the user name and default department below while shared tray activities remain dashboard-managed.";
+        ? `${runtimeTrayPlatform.label} validation ready. Tray actions queue locally and flush through the API.`
+        : "Tray capture ready. Actions queue locally and flush through the API."
+      : "Browser preview ready. Use search and note capture below."
+    : "Finish your name and default department below before timed capture starts.";
   const trayPanelLabel = runtimeTrayPlatform.id === "cinnamon" ? "Cinnamon tray" : `${runtimeTrayPlatform.label} tray`;
 
   const platformCards = useMemo(() => trayPlatforms, []);
+
+  useEffect(() => {
+    setOpenTimedActivitySections((current) => {
+      const sectionIds = filteredActivitySections.map((section) => section.id);
+
+      if (sectionIds.length === 0) {
+        return Object.keys(current).length === 0 ? current : {};
+      }
+
+      const defaultOpenIds = new Set<string>();
+
+      if (currentTimedActivitySectionId && sectionIds.includes(currentTimedActivitySectionId)) {
+        defaultOpenIds.add(currentTimedActivitySectionId);
+      }
+
+      if (settings?.defaultDepartmentId && sectionIds.includes(settings.defaultDepartmentId)) {
+        defaultOpenIds.add(settings.defaultDepartmentId);
+      }
+
+      if (defaultOpenIds.size === 0) {
+        defaultOpenIds.add(sectionIds[0]);
+      }
+
+      let changed = false;
+      const next: Record<string, boolean> = {};
+
+      for (const sectionId of sectionIds) {
+        if (sectionId in current) {
+          next[sectionId] = current[sectionId] ?? false;
+        } else {
+          next[sectionId] = defaultOpenIds.has(sectionId);
+          changed = true;
+        }
+      }
+
+      if (!changed) {
+        const currentIds = Object.keys(current);
+        changed = currentIds.length !== sectionIds.length || currentIds.some((sectionId) => !(sectionId in next));
+      }
+
+      return changed ? next : current;
+    });
+  }, [currentTimedActivitySectionId, filteredActivitySections, settings?.defaultDepartmentId]);
 
   useEffect(() => {
     if (!desktopContext || !settings) {
@@ -491,27 +643,10 @@ export default function App() {
         ? `Synced ${formatTimestamp(syncState.at)}`
         : syncState.message;
 
-    const activities = [
-      ...(nonTimedActivity ? [{
-        id: nonTimedActivity.id,
-        label: nonTimedActivity.name,
-        helper: "Clear active timing",
-        active: currentActivityId === nonTimedActivity.id
-      }] : []),
-      ...menuActivities.map((activity) => ({
-        id: activity.id,
-        label: activity.name,
-        helper: formatActivityDepartmentSummary(
-          getActivityDepartmentNames(activity, departments, activityDepartmentFallbackId)
-        ),
-        active: currentActivityId === activity.id
-      }))
-    ];
-
     void syncNativeTray({
       currentActivityLabel: currentActivity?.name ?? "Not Timed",
       secondaryLabel,
-      activities,
+      activitySections: trayActivitySections,
       configured: settings.isConfigured,
       autostartEnabled: autostartState.enabled,
       autostartAvailable: autostartState.available
@@ -521,13 +656,12 @@ export default function App() {
     autostartState.enabled,
     currentActivity?.name,
     currentActivityId,
-    departments,
     desktopContext,
-    menuActivities,
     nonTimedActivity,
     outboxStatus.pendingCount,
     settings,
     syncState,
+    trayActivitySections,
     timedActivitiesLocked
   ]);
 
@@ -799,48 +933,117 @@ export default function App() {
       <section className="hero panel">
         <div className="hero-copy">
           <p className="eyebrow">Desktop capture</p>
-          <h1>{runningCompatibilitySlice ? `${runtimeTrayPlatform.label} Compatibility Shell` : "Cinnamon Tray Shell"}</h1>
+          <h1>{runningCompatibilitySlice ? `${runtimeTrayPlatform.label} Tray Shell` : "Cinnamon Tray Shell"}</h1>
           <p className="lead">{onboardingCopy}</p>
         </div>
+      </section>
 
-        <div className="hero-meta">
-          <div className={`meta-card is-${syncTone}`}>
-            <span>Sync status</span>
-            <strong>{syncHeading}</strong>
-            <small>{syncDetail}</small>
+      <section className="panel settings-panel" ref={settingsPanelRef}>
+        <div className="settings-header">
+          <div>
+            <p className="panel-label">User settings</p>
+            <h2>{settings?.isConfigured ? "Edit tray settings" : "First-run setup"}</h2>
           </div>
-
-          <div className={`meta-card is-${outboxTone}`}>
-            <span>Local outbox</span>
-            <strong>{outboxHeading}</strong>
-            <small>{outboxDetail}</small>
-            <div className="meta-card-actions">
-              <button
-                className="button"
-                disabled={!desktopContext}
-                onClick={() => {
-                  void flushNativeOutbox("Flushing the local outbox to the API.");
-                }}
-                type="button"
-              >
-                Flush outbox
-              </button>
-            </div>
-          </div>
+          <small>{settingsState.phase === "saving" ? "Saving to the API..." : saveMessage ?? "Saved to the API and mirrored into the tray."}</small>
         </div>
+
+        {settingsState.phase === "error" ? (
+          <div className="settings-error-row">
+            <p className="error-copy">{settingsState.message}</p>
+            <button
+              className="button"
+              onClick={() => {
+                setSaveMessage(null);
+                setSettingsReloadKey((current) => current + 1);
+              }}
+              type="button"
+            >
+              Retry settings load
+            </button>
+          </div>
+        ) : null}
+
+        <form className="settings-form" onSubmit={(event) => { void handleSaveSettings(event); }}>
+          <label className="field">
+            <span>Display name</span>
+            <input
+              maxLength={100}
+              onChange={(event) => {
+                setDisplayNameDraft(event.target.value);
+              }}
+              placeholder="Enter the user’s name"
+              type="text"
+              value={displayNameDraft}
+            />
+          </label>
+
+          <label className="field">
+            <span>Default department</span>
+            <select
+              disabled={!hasDepartmentOptions || settingsState.phase === "loading" || settingsState.phase === "refreshing" || settingsState.phase === "saving"}
+              onChange={(event) => {
+                setDefaultDepartmentIdDraft(event.target.value);
+              }}
+              value={defaultDepartmentSelectValue}
+            >
+              <option value="" disabled>
+                {settingsState.phase === "error"
+                  ? "Retry settings load to see departments"
+                  : settingsState.phase === "loading" || settingsState.phase === "refreshing"
+                    ? "Loading departments..."
+                    : hasDepartmentOptions
+                      ? "Select a default department"
+                      : "No departments available"}
+              </option>
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>{department.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="settings-actions">
+            <button className="button button-primary" disabled={settingsState.phase === "loading" || settingsState.phase === "saving"} type="submit">
+              {settingsState.phase === "saving" ? "Saving..." : settings?.isConfigured ? "Save settings" : "Finish setup"}
+            </button>
+          </div>
+        </form>
       </section>
 
       <details className="diagnostics-panel panel">
         <summary className="diagnostics-summary">
           <div>
-            <p className="eyebrow">Compatibility details</p>
-            <strong>Runtime diagnostics and platform notes</strong>
+            <p className="eyebrow">Diagnostics</p>
+            <strong>Runtime details</strong>
             <small>{diagnosticsDetail}</small>
           </div>
         </summary>
 
         <div className="diagnostics-body">
           <div className="hero-meta diagnostics-grid">
+            <div className={`meta-card is-${syncTone}`}>
+              <span>Sync status</span>
+              <strong>{syncHeading}</strong>
+              <small>{syncDetail}</small>
+            </div>
+
+            <div className={`meta-card is-${outboxTone}`}>
+              <span>Local outbox</span>
+              <strong>{outboxHeading}</strong>
+              <small>{outboxDetail}</small>
+              <div className="meta-card-actions">
+                <button
+                  className="button"
+                  disabled={!desktopContext}
+                  onClick={() => {
+                    void flushNativeOutbox("Flushing the local outbox to the API.");
+                  }}
+                  type="button"
+                >
+                  Flush outbox
+                </button>
+              </div>
+            </div>
+
             <div className="meta-card">
               <span>Desktop host</span>
               <strong>{desktopHostLabel}</strong>
@@ -946,21 +1149,60 @@ export default function App() {
                 <small>{timedActivitiesLocked ? "Finish setup to unlock" : `${filteredActivities.length} visible`}</small>
               </div>
 
-              <div className="menu-list">
-                {filteredActivities.map((activity) => (
-                  <button
-                    className={`menu-action${currentActivityId === activity.id ? " is-active" : ""}`}
-                    disabled={timedActivitiesLocked}
-                    key={activity.id}
-                    onClick={() => {
-                      void handleActivitySelect(activity);
-                    }}
-                    type="button"
-                  >
-                    <span>{activity.name}</span>
-                    <small>{departments.find((department) => department.id === activity.departmentId)?.name ?? "Default department"}</small>
-                  </button>
-                ))}
+              <div className="department-activity-list">
+                {filteredActivitySections.map((section) => {
+                  const isSectionOpen = forceOpenTimedActivitySections || (openTimedActivitySections[section.id] ?? false);
+
+                  return (
+                    <section className={`department-activity-group${isSectionOpen ? " is-open" : ""}`} key={section.id}>
+                      <button
+                        aria-expanded={isSectionOpen}
+                        className={`department-activity-toggle${isSectionOpen ? " is-open" : ""}`}
+                        onClick={() => {
+                          if (forceOpenTimedActivitySections) {
+                            return;
+                          }
+
+                          setOpenTimedActivitySections((current) => ({
+                            ...current,
+                            [section.id]: !(current[section.id] ?? false)
+                          }));
+                        }}
+                        type="button"
+                      >
+                        <div className="department-activity-toggle-copy">
+                          <strong>{section.label}</strong>
+                          <small>{formatTimedActivitySectionSummary(section)}</small>
+                        </div>
+
+                        <div className="department-activity-toggle-meta">
+                          <small>{section.activities.length}</small>
+                          <span className="department-activity-toggle-indicator">{isSectionOpen ? "−" : "+"}</span>
+                        </div>
+                      </button>
+
+                      {isSectionOpen ? (
+                        <div className="menu-list">
+                          {section.activities.map((activity) => (
+                            <button
+                              className={`menu-action${currentActivityId === activity.id ? " is-active" : ""}`}
+                              disabled={timedActivitiesLocked}
+                              key={activity.id}
+                              onClick={() => {
+                                void handleActivitySelect(activity);
+                              }}
+                              type="button"
+                            >
+                              <span>{activity.name}</span>
+                              <small>{formatActivityDepartmentSummary(getActivityDepartmentNames(activity, departments, activityDepartmentFallbackId))}</small>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </section>
+                  );
+                })}
+
                 {!filteredActivities.length ? <p className="empty-copy">No timed activities match the current selector search.</p> : null}
               </div>
             </div>
@@ -984,7 +1226,7 @@ export default function App() {
           <div className="selector-header">
             <div>
               <p className="panel-label">Quick selector</p>
-              <h2>Long-list and notes window</h2>
+              <h2>Search and note</h2>
             </div>
             <small>{healthLabel}</small>
           </div>
@@ -995,7 +1237,7 @@ export default function App() {
               onChange={(event) => {
                 setActivitySearch(event.target.value);
               }}
-              placeholder="Type to filter the tray menu"
+              placeholder="Filter the tray menu"
               type="search"
               value={activitySearch}
             />
@@ -1008,136 +1250,16 @@ export default function App() {
                 onChange={(event) => {
                   setNoteDraft(event.target.value);
                 }}
-                placeholder="Capture a short note alongside the current tray context"
-                rows={4}
+                placeholder="Capture a short note"
+                rows={3}
                 value={noteDraft}
               />
             </label>
-            <button className="button button-primary" disabled={!noteDraft.trim()} type="submit">Send note event</button>
+            <button className="button button-primary" disabled={!noteDraft.trim()} type="submit">Add note</button>
           </form>
-
-          <div className="selector-footer">
-            <div>
-              <p className="panel-label">Current mode</p>
-              <strong>{settings?.isConfigured ? "Configured user" : "First-run onboarding"}</strong>
-            </div>
-            <p>{settings?.isConfigured ? "Timed activities can be selected from the Cinnamon tray immediately." : "Timed activities stay locked until the settings form below is saved once."}</p>
-          </div>
         </article>
       </section>
 
-      <section className="panel settings-panel" ref={settingsPanelRef}>
-        <div className="settings-header">
-          <div>
-            <p className="panel-label">User settings</p>
-            <h2>{settings?.isConfigured ? "Edit tray settings" : "First-run setup"}</h2>
-          </div>
-          <small>{settingsState.phase === "saving" ? "Saving to the API..." : saveMessage ?? "Backed by /v1/users/:userId/settings and mirrored into the native tray"}</small>
-        </div>
-
-        {settingsState.phase === "error" ? (
-          <div className="settings-error-row">
-            <p className="error-copy">{settingsState.message}</p>
-            <button
-              className="button"
-              onClick={() => {
-                setSaveMessage(null);
-                setSettingsReloadKey((current) => current + 1);
-              }}
-              type="button"
-            >
-              Retry settings load
-            </button>
-          </div>
-        ) : null}
-
-        <form className="settings-form" onSubmit={(event) => { void handleSaveSettings(event); }}>
-          <label className="field">
-            <span>Display name</span>
-            <input
-              maxLength={100}
-              onChange={(event) => {
-                setDisplayNameDraft(event.target.value);
-              }}
-              placeholder="Enter the user’s name"
-              type="text"
-              value={displayNameDraft}
-            />
-          </label>
-
-          <label className="field">
-            <span>Default department</span>
-            <select
-              disabled={!hasDepartmentOptions || settingsState.phase === "loading" || settingsState.phase === "refreshing" || settingsState.phase === "saving"}
-              onChange={(event) => {
-                setDefaultDepartmentIdDraft(event.target.value);
-              }}
-              value={defaultDepartmentSelectValue}
-            >
-              <option value="" disabled>
-                {settingsState.phase === "error"
-                  ? "Retry settings load to see departments"
-                  : settingsState.phase === "loading" || settingsState.phase === "refreshing"
-                    ? "Loading departments..."
-                    : hasDepartmentOptions
-                      ? "Select a default department"
-                      : "No departments available"}
-              </option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>{department.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <div className="settings-activities">
-            <div className="settings-activities-header">
-              <div>
-                <p className="panel-label">Shared activity catalog</p>
-                <strong>The dashboard manages shared tray activities. Desktop settings only control the user profile and default department.</strong>
-              </div>
-              <small>{timedActivityCatalog.length} repository entries</small>
-            </div>
-
-            <div className="settings-activity-overview">
-              <p className="settings-activity-copy">
-                Shared repository activities are read-only here. Inactive items stay out of new tray selections, and the
-                system-managed Not Timed state stays pinned automatically.
-              </p>
-
-              <div className="settings-activity-list">
-                {timedActivityCatalog.length > 0 ? timedActivityCatalog.map((activity) => {
-                  const departmentNames = getActivityDepartmentNames(activity, departments, activityDepartmentFallbackId);
-
-                  return (
-                    <div className={`settings-activity-card${activity.isActive ? "" : " is-inactive"}`} key={activity.id}>
-                      <div className="settings-activity-card-main">
-                        <span
-                          className="settings-activity-swatch"
-                          style={{ "--activity-accent": activity.color ?? "#88CFC2" } as CSSProperties}
-                        />
-                        <div>
-                          <strong>{activity.name}</strong>
-                          <small>{departmentNames.length > 0 ? departmentNames.join(" / ") : "Default department"}</small>
-                        </div>
-                      </div>
-
-                      <span className={`settings-activity-badge${activity.isActive ? "" : " is-inactive"}`}>
-                        {activity.isActive ? "Active in tray" : "Inactive"}
-                      </span>
-                    </div>
-                  );
-                }) : <p className="empty-copy">No timed activities are currently available from the shared repository.</p>}
-              </div>
-            </div>
-          </div>
-
-          <div className="settings-actions">
-            <button className="button button-primary" disabled={settingsState.phase === "loading" || settingsState.phase === "saving"} type="submit">
-              {settingsState.phase === "saving" ? "Saving..." : settings?.isConfigured ? "Save settings" : "Finish first-run setup"}
-            </button>
-          </div>
-        </form>
-      </section>
     </main>
   );
 }

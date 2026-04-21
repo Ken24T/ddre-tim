@@ -12,10 +12,16 @@ export interface TrayMenuActivity {
   active: boolean;
 }
 
+export interface TrayMenuActivitySection {
+  id: string;
+  label: string;
+  activities: TrayMenuActivity[];
+}
+
 export interface TrayMenuState {
   currentActivityLabel: string;
   secondaryLabel: string;
-  activities: TrayMenuActivity[];
+  activitySections: TrayMenuActivitySection[];
   configured: boolean;
   autostartEnabled: boolean;
   autostartAvailable: boolean;

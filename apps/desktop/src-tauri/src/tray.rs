@@ -14,11 +14,26 @@ const STATUS_ID: &str = "status";
 const DETAIL_ID: &str = "detail";
 const OPEN_SETTINGS_ID: &str = "open-settings";
 const ACTIVITIES_ID: &str = "activities";
+const ACTIVITY_SECTION_ID_PREFIX: &str = "activity-section::";
 const ACTIVITY_ID_PREFIX: &str = "activity::";
 const EMPTY_ACTIVITY_ID: &str = "activity::empty";
 const TRIGGER_SYNC_ID: &str = "trigger-sync";
 const TOGGLE_AUTOSTART_ID: &str = "toggle-autostart";
 const QUIT_ID: &str = "quit";
+
+enum ActivityMenuEntry<R: Runtime = Wry> {
+    Item(MenuItem<R>),
+    Submenu(Submenu<R>),
+}
+
+impl<R: Runtime> ActivityMenuEntry<R> {
+    fn remove_from(self, menu: &Submenu<R>) -> tauri::Result<()> {
+        match self {
+            Self::Item(item) => menu.remove(&item),
+            Self::Submenu(submenu) => menu.remove(&submenu),
+        }
+    }
+}
 
 pub struct DesktopTrayState<R: Runtime = Wry> {
     #[allow(dead_code)]
@@ -27,7 +42,7 @@ pub struct DesktopTrayState<R: Runtime = Wry> {
     detail_item: MenuItem<R>,
     settings_item: MenuItem<R>,
     activities_menu: Submenu<R>,
-    activity_items: Mutex<Vec<MenuItem<R>>>,
+    activity_entries: Mutex<Vec<ActivityMenuEntry<R>>>,
     autostart_item: CheckMenuItem<R>,
 }
 
@@ -40,12 +55,22 @@ pub struct TrayActivityPayload {
     pub active: bool,
 }
 
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrayActivitySectionPayload {
+    pub id: String,
+    pub label: String,
+    #[serde(default)]
+    pub activities: Vec<TrayActivityPayload>,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TraySyncPayload {
     pub current_activity_label: String,
     pub secondary_label: String,
-    pub activities: Vec<TrayActivityPayload>,
+    #[serde(default)]
+    pub activity_sections: Vec<TrayActivitySectionPayload>,
     pub configured: bool,
     pub autostart_enabled: bool,
     pub autostart_available: bool,
@@ -152,7 +177,7 @@ pub fn build_tray<R: Runtime>(
         detail_item,
         settings_item: open_settings,
         activities_menu,
-        activity_items: Mutex::new(vec![placeholder_activity]),
+        activity_entries: Mutex::new(vec![ActivityMenuEntry::Item(placeholder_activity)]),
         autostart_item,
     })
 }
@@ -191,19 +216,18 @@ pub fn sync_tray_state<R: Runtime>(
         .set_enabled(payload.configured)
         .map_err(|error: tauri::Error| error.to_string())?;
 
-    let mut items = tray_state
-        .activity_items
+    let mut entries = tray_state
+        .activity_entries
         .lock()
         .map_err(|_| String::from("Tray activity menu state was poisoned."))?;
 
-    for item in items.drain(..) {
-        tray_state
-            .activities_menu
-            .remove(&item)
+    for entry in entries.drain(..) {
+        entry
+            .remove_from(&tray_state.activities_menu)
             .map_err(|error: tauri::Error| error.to_string())?;
     }
 
-    if payload.activities.is_empty() {
+    if payload.activity_sections.is_empty() {
         let empty_label = if payload.configured {
             "No timed activities are active"
         } else {
@@ -216,31 +240,45 @@ pub fn sync_tray_state<R: Runtime>(
             .activities_menu
             .append(&placeholder)
             .map_err(|error: tauri::Error| error.to_string())?;
-        items.push(placeholder);
+        entries.push(ActivityMenuEntry::Item(placeholder));
         return Ok(());
     }
 
-    for activity in payload.activities {
-        let label = if activity.active {
-            format!("• {}", activity.label)
-        } else if activity.helper.trim().is_empty() {
-            activity.label
-        } else {
-            format!("{} · {}", activity.label, activity.helper)
-        };
-        let item = MenuItem::with_id(
+    for section in payload.activity_sections {
+        let submenu = Submenu::with_id(
             app,
-            format!("{}{}", ACTIVITY_ID_PREFIX, activity.id),
-            label,
+            format!("{}{}", ACTIVITY_SECTION_ID_PREFIX, section.id),
+            format!("{} ({})", section.label, section.activities.len()),
             payload.configured,
-            None::<&str>,
         )
         .map_err(|error: tauri::Error| error.to_string())?;
+
+        for activity in section.activities {
+            let label = if activity.active {
+                format!("• {}", activity.label)
+            } else if activity.helper.trim().is_empty() {
+                activity.label
+            } else {
+                format!("{} · {}", activity.label, activity.helper)
+            };
+            let item = MenuItem::with_id(
+                app,
+                format!("{}{}", ACTIVITY_ID_PREFIX, activity.id),
+                label,
+                payload.configured,
+                None::<&str>,
+            )
+            .map_err(|error: tauri::Error| error.to_string())?;
+            submenu
+                .append(&item)
+                .map_err(|error: tauri::Error| error.to_string())?;
+        }
+
         tray_state
             .activities_menu
-            .append(&item)
+            .append(&submenu)
             .map_err(|error: tauri::Error| error.to_string())?;
-        items.push(item);
+        entries.push(ActivityMenuEntry::Submenu(submenu));
     }
 
     Ok(())
