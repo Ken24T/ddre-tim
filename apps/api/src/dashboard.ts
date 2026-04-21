@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type ActivityEvent,
+  type DashboardActivityDepartmentBreakdownRow,
   dashboardQuerySchema,
   dashboardResponseSchema,
   type DashboardBreakdownRow,
@@ -160,6 +161,49 @@ function clampDate(value: string, minDate: string, maxDate: string): string {
   return value;
 }
 
+function mergeDailyActivityRecords(records: HistoricalRecord[]): HistoricalRecord[] {
+  const mergedRecords = new Map<string, HistoricalRecord>();
+
+  for (const record of records) {
+    const key = [getRecordUserId(record), record.workDate, record.departmentName, record.activityName].join("\u0000");
+    const existingRecord = mergedRecords.get(key);
+
+    if (!existingRecord) {
+      mergedRecords.set(key, { ...record, hours: Number(record.hours.toFixed(2)) });
+      continue;
+    }
+
+    mergedRecords.set(key, {
+      ...existingRecord,
+      hours: Number((existingRecord.hours + record.hours).toFixed(2)),
+      sourceRowNumber: Math.min(existingRecord.sourceRowNumber, record.sourceRowNumber)
+    });
+  }
+
+  return Array.from(mergedRecords.values()).sort((left, right) => {
+    if (left.workDate !== right.workDate) {
+      return left.workDate.localeCompare(right.workDate);
+    }
+
+    const leftUserId = getRecordUserId(left);
+    const rightUserId = getRecordUserId(right);
+
+    if (leftUserId !== rightUserId) {
+      return leftUserId.localeCompare(rightUserId, "en-AU");
+    }
+
+    if (left.sourceRowNumber !== right.sourceRowNumber) {
+      return left.sourceRowNumber - right.sourceRowNumber;
+    }
+
+    if (left.departmentName !== right.departmentName) {
+      return left.departmentName.localeCompare(right.departmentName, "en-AU");
+    }
+
+    return left.activityName.localeCompare(right.activityName, "en-AU");
+  });
+}
+
 function buildBreakdown(rows: Map<string, HistoricalRecord[]>): DashboardBreakdownRow[] {
   return Array.from(rows.entries(), ([label, records]) => ({
     label,
@@ -167,6 +211,41 @@ function buildBreakdown(rows: Map<string, HistoricalRecord[]>): DashboardBreakdo
     dayCount: new Set(records.map((record) => record.workDate)).size,
     recordCount: records.length
   })).sort((left, right) => right.hours - left.hours || left.label.localeCompare(right.label, "en-AU"));
+}
+
+function buildActivityDepartmentBreakdown(records: HistoricalRecord[]): DashboardActivityDepartmentBreakdownRow[] {
+  const rows = new Map<string, HistoricalRecord[]>();
+
+  for (const record of records) {
+    const key = `${record.activityName}\u0000${record.departmentName}`;
+    const bucket = rows.get(key) ?? [];
+
+    bucket.push(record);
+    rows.set(key, bucket);
+  }
+
+  return Array.from(rows.entries(), ([key, bucket]) => {
+    const [activityName, departmentName] = key.split("\u0000");
+
+    return {
+      activityName: activityName ?? "Unknown activity",
+      departmentName: departmentName ?? "Default department",
+      label: `${activityName ?? "Unknown activity"} · ${departmentName ?? "Default department"}`,
+      hours: sumHours(bucket),
+      dayCount: new Set(bucket.map((record) => record.workDate)).size,
+      recordCount: bucket.length
+    };
+  }).sort((left, right) => {
+    if (left.hours !== right.hours) {
+      return right.hours - left.hours;
+    }
+
+    if (left.activityName !== right.activityName) {
+      return left.activityName.localeCompare(right.activityName, "en-AU");
+    }
+
+    return left.departmentName.localeCompare(right.departmentName, "en-AU");
+  });
 }
 
 function buildUserBreakdown(
@@ -391,6 +470,11 @@ type LiveUserIdentity = {
   displayName: string;
 };
 
+type LiveRecordsProjection = {
+  records: HistoricalRecord[];
+  canonicalUserIdsByRawUserId: Map<string, string>;
+};
+
 async function buildLiveUserIdentities(
   events: ActivityEvent[],
   userSettingsStore: UserSettingsStore
@@ -422,11 +506,14 @@ async function buildLiveRecords(
   activityEventStore: ActivityEventStore,
   userSettingsStore: UserSettingsStore,
   nextSourceRowNumber: number
-): Promise<HistoricalRecord[]> {
+): Promise<LiveRecordsProjection> {
   const events = sortActivityEvents(await activityEventStore.listEvents());
 
   if (events.length === 0) {
-    return [];
+    return {
+      records: [],
+      canonicalUserIdsByRawUserId: new Map()
+    };
   }
 
   const identityByUserId = await buildLiveUserIdentities(events, userSettingsStore);
@@ -499,7 +586,12 @@ async function buildLiveRecords(
     }
   }
 
-  return records;
+  return {
+    records,
+    canonicalUserIdsByRawUserId: new Map(
+      Array.from(identityByUserId.entries()).map(([rawUserId, identity]) => [rawUserId, identity.canonicalUserId])
+    )
+  };
 }
 
 function mergeUsers(users: HistoricalUser[], liveRecords: HistoricalRecord[]): HistoricalUser[] {
@@ -543,7 +635,7 @@ export async function getDashboardReadModel(
 ): Promise<DashboardResponse> {
   const query = dashboardQuerySchema.parse(rawQuery) as DashboardQuery;
   const seed = await readHistoricalSeed();
-  const liveRecords = await buildLiveRecords(
+  const { records: liveRecords, canonicalUserIdsByRawUserId } = await buildLiveRecords(
     options.activityEventStore,
     options.userSettingsStore,
     Math.max(...seed.records.map((record) => record.sourceRowNumber), 0) + 1
@@ -551,7 +643,9 @@ export async function getDashboardReadModel(
   const users = mergeUsers(buildUsers(seed), liveRecords);
   const userById = new Map(users.map((user) => [user.id, user]));
   const userColorById = buildUserColorMap(users);
-  const allRecords = [...seed.records, ...liveRecords].sort((left, right) => left.workDate.localeCompare(right.workDate));
+  const allRecords = mergeDailyActivityRecords(
+    [...seed.records, ...liveRecords].sort((left, right) => left.workDate.localeCompare(right.workDate))
+  );
   const minDate = allRecords[0]?.workDate ?? seed.importedAt.slice(0, 10);
   const maxDate = allRecords[allRecords.length - 1]?.workDate ?? seed.importedAt.slice(0, 10);
   const availableDepartments = [...new Set(allRecords.map((record) => record.departmentName))].sort((left, right) => {
@@ -572,7 +666,16 @@ export async function getDashboardReadModel(
     return true;
   });
   const availableUsers = users.filter((user) => scopedRecords.some((record) => getRecordUserId(record) === user.id));
-  const selectedUserIds = query.userIds.filter((userId) => availableUsers.some((user) => user.id === userId));
+  const queryUserIds = Array.from(new Set(query.userIds.flatMap((userId) => {
+    const canonicalUserId = canonicalUserIdsByRawUserId.get(userId);
+
+    if (canonicalUserId && canonicalUserId !== userId) {
+      return [userId, canonicalUserId];
+    }
+
+    return [userId];
+  })));
+  const selectedUserIds = queryUserIds.filter((userId) => availableUsers.some((user) => user.id === userId));
   const effectiveSelectedUserIds = selectedUserIds.length > 0 ? selectedUserIds : availableUsers.map((user) => user.id);
   const filteredRecords = scopedRecords.filter((record) => effectiveSelectedUserIds.includes(getRecordUserId(record)));
   const selectedUsers = availableUsers.filter((user) => effectiveSelectedUserIds.includes(user.id));
@@ -596,6 +699,7 @@ export async function getDashboardReadModel(
 
   const userBreakdown = buildUserBreakdown(userRecords, userById, userColorById);
   const departmentBreakdown = buildBreakdown(departmentRecords);
+  const activityDepartmentBreakdown = buildActivityDepartmentBreakdown(filteredRecords);
   const departmentUserBreakdown = buildBreakdownByUser(departmentRecords, userById, userColorById);
   const activityBreakdown = buildBreakdown(activityRecords);
   const activityUserBreakdown = buildBreakdownByUser(activityRecords, userById, userColorById);
@@ -636,6 +740,7 @@ export async function getDashboardReadModel(
     },
     userBreakdown,
     departmentBreakdown,
+    activityDepartmentBreakdown,
     departmentUserBreakdown,
     activityBreakdown,
     activityUserBreakdown,

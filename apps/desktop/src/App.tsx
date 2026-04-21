@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
-import type { Activity, ActivityDraft, ActivityEvent, Department, UserSettings, UserSettingsUpdate } from "@ddre/contracts";
-import { fetchActivityCatalog, fetchHealth, fetchUserSettings, getApiBaseUrl, saveUserSettings, sendSyncBatch, type HealthPayload } from "./desktopClient.js";
+import type { Activity, ActivityDraft, ActivityEvent, DashboardActivityDepartmentBreakdownRow, Department, UserSettings, UserSettingsUpdate } from "@ddre/contracts";
+import { fetchActivityCatalog, fetchDashboardSnapshot, fetchHealth, fetchUserSettings, getApiBaseUrl, saveUserSettings, sendSyncBatch, type HealthPayload } from "./desktopClient.js";
 import {
   flushDesktopOutbox,
   getDesktopAutostartState,
@@ -61,6 +61,12 @@ type TimedActivitySection = {
   kind: "department" | "shared";
   activities: Activity[];
 };
+
+type RecentActivityRollupState =
+  | { phase: "loading" }
+  | { phase: "refreshing"; rows: DashboardActivityDepartmentBreakdownRow[] }
+  | { phase: "ready"; rows: DashboardActivityDepartmentBreakdownRow[] }
+  | { phase: "error"; message: string };
 
 const defaultUserId = "cinnamon-local-user";
 const userIdStorageKey = "ddre.desktop.user-id";
@@ -333,6 +339,21 @@ function formatTimestamp(value: string): string {
   }).format(new Date(value));
 }
 
+function formatHoursLabel(value: number): string {
+  return `${new Intl.NumberFormat("en-AU", {
+    minimumFractionDigits: value % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2
+  }).format(Number(value.toFixed(2)))} h`;
+}
+
+function formatCalendarDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function formatDisplayTime(value: string | null): string {
   if (!value) {
     return "Waiting for activity selection";
@@ -568,6 +589,7 @@ export default function App() {
   const [currentActivityId, setCurrentActivityId] = useState<string | null>(null);
   const [currentActivityStartedAt, setCurrentActivityStartedAt] = useState<string | null>(null);
   const [recentItems, setRecentItems] = useState<RecentItem[]>(() => getStoredRecentItems(getStoredValue(userIdStorageKey, defaultUserId)));
+  const [recentActivityRollupState, setRecentActivityRollupState] = useState<RecentActivityRollupState>({ phase: "loading" });
   const [editingRecentItemId, setEditingRecentItemId] = useState<string | null>(null);
   const [editingRecentActivityId, setEditingRecentActivityId] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -634,6 +656,49 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const today = formatCalendarDate(new Date());
+
+    setRecentActivityRollupState((current) => {
+      if (current.phase === "ready" || current.phase === "refreshing") {
+        return { phase: "refreshing", rows: current.rows };
+      }
+
+      return { phase: "loading" };
+    });
+
+    async function loadRecentActivityRollup(): Promise<void> {
+      try {
+        const payload = await fetchDashboardSnapshot({
+          from: today,
+          to: today,
+          userIds: [userId]
+        });
+
+        if (!cancelled) {
+          setRecentActivityRollupState({
+            phase: "ready",
+            rows: payload.activityDepartmentBreakdown
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRecentActivityRollupState({
+            phase: "error",
+            message: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+    }
+
+    void loadRecentActivityRollup();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [outboxStatus.lastSyncedAt, syncState.phase === "ready" ? syncState.at : null, userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -838,6 +903,25 @@ export default function App() {
     [customActivityDrafts, sharedActivitySlugSet]
   );
   const currentDepartment = departments.find((department) => department.id === (currentActivity?.departmentId ?? settings?.defaultDepartmentId));
+  const currentRollupDepartmentNames = useMemo(() => {
+    if (!currentActivity || currentActivity.kind !== "timed") {
+      return new Set<string>();
+    }
+
+    const names = new Set<string>();
+
+    if (currentActivity.departmentId) {
+      names.add(departments.find((department) => department.id === currentActivity.departmentId)?.name ?? "Default department");
+    } else {
+      names.add("Default department");
+    }
+
+    if (currentDepartment?.name) {
+      names.add(currentDepartment.name);
+    }
+
+    return names;
+  }, [currentActivity, currentDepartment?.name, departments]);
   const currentTimedActivitySectionId = currentActivity && currentActivity.kind === "timed"
     ? getTimedActivitySectionId(currentActivity)
     : null;
@@ -870,6 +954,9 @@ export default function App() {
     () => allActivities.filter((activity) => activity.kind === "timed" && activity.isActive),
     [allActivities]
   );
+  const recentActivityRollupRows = recentActivityRollupState.phase === "ready" || recentActivityRollupState.phase === "refreshing"
+    ? recentActivityRollupState.rows
+    : [];
   const onboardingCopy = settings?.isConfigured
     ? desktopContext
       ? runningCompatibilitySlice
@@ -1743,6 +1830,38 @@ export default function App() {
 
             <div className="tray-menu-section">
               <p className="tray-menu-label">Recent activities</p>
+              <p className="tray-menu-sublabel">Today rolled up by activity and department</p>
+              <div className="recent-rollup-list">
+                {recentActivityRollupState.phase === "error" ? (
+                  <p className="error-copy">{recentActivityRollupState.message}</p>
+                ) : recentActivityRollupState.phase === "loading" && recentActivityRollupRows.length === 0 ? (
+                  <p className="empty-copy">Loading today's rolled-up totals from the API.</p>
+                ) : recentActivityRollupRows.length > 0 ? (
+                  recentActivityRollupRows.map((row) => {
+                    const isActiveRow = currentActivity?.kind === "timed"
+                      && row.activityName === currentActivity.name
+                      && currentRollupDepartmentNames.has(row.departmentName);
+
+                    return (
+                      <div className={`recent-rollup-item${isActiveRow ? " is-active" : ""}`} key={row.label}>
+                        <div className="recent-rollup-copy">
+                          <strong>{row.activityName}</strong>
+                          <span>{row.departmentName}</span>
+                          <small>{isActiveRow ? "Active now" : "Synced daily total"}</small>
+                        </div>
+
+                        <div className="recent-rollup-meta">
+                          <strong>{formatHoursLabel(row.hours)}</strong>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="empty-copy">Today's rolled-up totals will appear here after synced tray activity reaches the API.</p>
+                )}
+              </div>
+
+              <p className="tray-menu-sublabel">Recent changes</p>
               <div className="recent-list">
                 {recentItems.length > 0 ? recentItems.map((item) => (
                   <div className={`recent-item is-${item.status}${isRecentItemDeleted(item) ? " is-deleted" : ""}`} key={item.id}>

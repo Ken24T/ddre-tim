@@ -92,7 +92,7 @@ function buildSummaryCards(data: DashboardResponse): Array<{ label: string; valu
     {
       label: "Imported hours",
       value: formatHoursLabel(data.stats.totalHours),
-      helper: `${data.stats.recordCount} combined daily records`
+      helper: `${data.stats.recordCount} rolled-up daily activity records`
     },
     {
       label: "Selected users",

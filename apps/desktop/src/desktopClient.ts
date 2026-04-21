@@ -1,10 +1,12 @@
 import {
   activityCatalogResponseSchema,
+  dashboardResponseSchema,
   syncAckSchema,
   syncBatchSchema,
   userSettingsSchema,
   userSettingsUpdateSchema,
   type ActivityCatalogResponse,
+  type DashboardResponse,
   type SyncAck,
   type SyncBatch,
   type UserSettings,
@@ -15,6 +17,13 @@ interface HealthPayload {
   service: string;
   status: string;
   now: string;
+}
+
+interface DashboardQueryValues {
+  department?: string;
+  from?: string;
+  to?: string;
+  userIds?: string[];
 }
 
 const nativeApiBaseUrl = "http://127.0.0.1:4000";
@@ -43,6 +52,30 @@ function getWebviewApiBaseUrl(): string {
 
 function resolveApiUrl(path: string): string {
   return `${getWebviewApiBaseUrl()}${path}`;
+}
+
+function buildDashboardUrl(query: DashboardQueryValues): string {
+  const params = new URLSearchParams();
+
+  if (query.department) {
+    params.set("department", query.department);
+  }
+
+  if (query.from) {
+    params.set("from", query.from);
+  }
+
+  if (query.to) {
+    params.set("to", query.to);
+  }
+
+  for (const userId of query.userIds ?? []) {
+    params.append("userId", userId);
+  }
+
+  const queryString = params.toString();
+
+  return queryString.length > 0 ? `/v1/dashboard?${queryString}` : "/v1/dashboard";
 }
 
 async function fetchJson(input: RequestInfo | URL, init?: RequestInit): Promise<unknown> {
@@ -80,6 +113,11 @@ export async function fetchUserSettings(userId: string): Promise<UserSettings> {
 export async function fetchActivityCatalog(): Promise<ActivityCatalogResponse> {
   const payload = await fetchJson(resolveApiUrl("/v1/activities"));
   return activityCatalogResponseSchema.parse(payload);
+}
+
+export async function fetchDashboardSnapshot(query: DashboardQueryValues): Promise<DashboardResponse> {
+  const payload = await fetchJson(resolveApiUrl(buildDashboardUrl(query)));
+  return dashboardResponseSchema.parse(payload);
 }
 
 export async function saveUserSettings(userId: string, update: UserSettingsUpdate): Promise<UserSettings> {
