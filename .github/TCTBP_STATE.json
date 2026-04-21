@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "workflow": "TCTBP",
-  "branch": "slice/tray-icon-foundation",
-  "commit": "460606ef1fedb7631d6abd03cf694ba0ecfe9961",
+  "branch": "spike/gnome-tray-validation",
+  "commit": "f27d7b8e19fbe74725ac0484d2e8a5a194c47b1e",
   "version": "0.2.0",
   "tag": "v0.2.0",
-  "updatedAt": "2026-04-20T19:48:35Z"
+  "updatedAt": "2026-04-21T02:50:57Z"
 }
