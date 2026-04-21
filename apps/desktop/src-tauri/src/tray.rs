@@ -12,7 +12,6 @@ pub const TRAY_EVENT_CHANNEL: &str = "desktop://tray-menu";
 
 const STATUS_ID: &str = "status";
 const DETAIL_ID: &str = "detail";
-const OPEN_MAIN_ID: &str = "open-main";
 const OPEN_SETTINGS_ID: &str = "open-settings";
 const ACTIVITIES_ID: &str = "activities";
 const ACTIVITY_ID_PREFIX: &str = "activity::";
@@ -26,6 +25,7 @@ pub struct DesktopTrayState<R: Runtime = Wry> {
     tray_icon: TrayIcon<R>,
     status_item: MenuItem<R>,
     detail_item: MenuItem<R>,
+    settings_item: MenuItem<R>,
     activities_menu: Submenu<R>,
     activity_items: Mutex<Vec<MenuItem<R>>>,
     autostart_item: CheckMenuItem<R>,
@@ -70,9 +70,8 @@ pub fn build_tray<R: Runtime>(
         false,
         None::<&str>,
     )?;
-    let open_main = MenuItem::with_id(app, OPEN_MAIN_ID, "Open TiM", true, None::<&str>)?;
     let open_settings =
-        MenuItem::with_id(app, OPEN_SETTINGS_ID, "Open Settings", true, None::<&str>)?;
+        MenuItem::with_id(app, OPEN_SETTINGS_ID, "Finish setup", true, None::<&str>)?;
     let activities_menu = Submenu::with_id(app, ACTIVITIES_ID, "Timed activities", true)?;
     let placeholder_activity = MenuItem::with_id(
         app,
@@ -103,7 +102,6 @@ pub fn build_tray<R: Runtime>(
             &status_item,
             &detail_item,
             &separator,
-            &open_main,
             &open_settings,
             &activities_menu,
             &secondary_separator,
@@ -127,10 +125,6 @@ pub fn build_tray<R: Runtime>(
         .tooltip("Time in Motion")
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
-            OPEN_MAIN_ID => {
-                let _ = show_main_window(app);
-                let _ = emit_tray_event(app, OPEN_MAIN_ID, None);
-            }
             OPEN_SETTINGS_ID => {
                 let _ = show_main_window(app);
                 let _ = emit_tray_event(app, OPEN_SETTINGS_ID, None);
@@ -156,6 +150,7 @@ pub fn build_tray<R: Runtime>(
         tray_icon,
         status_item,
         detail_item,
+        settings_item: open_settings,
         activities_menu,
         activity_items: Mutex::new(vec![placeholder_activity]),
         autostart_item,
@@ -174,6 +169,14 @@ pub fn sync_tray_state<R: Runtime>(
     tray_state
         .detail_item
         .set_text(payload.secondary_label)
+        .map_err(|error: tauri::Error| error.to_string())?;
+    tray_state
+        .settings_item
+        .set_text(if payload.configured {
+            "Open Settings"
+        } else {
+            "Finish setup"
+        })
         .map_err(|error: tauri::Error| error.to_string())?;
     tray_state
         .autostart_item

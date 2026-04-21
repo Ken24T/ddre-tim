@@ -21,8 +21,11 @@ pub struct ActivityEventPayload {
     pub recorded_at: String,
     #[serde(rename = "type")]
     pub event_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub activity_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub department_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
     pub idempotency_key: String,
     #[serde(default)]
@@ -486,6 +489,37 @@ mod tests {
         server_thread.join().expect("mock server should shut down cleanly");
     }
 
+    #[test]
+    fn flush_outbox_omits_optional_fields_when_event_values_are_empty() {
+        let data_dir = make_test_data_dir("flush-clear");
+        let user_id = "cinnamon-local-user";
+        let event = sample_cleared_event(user_id, "event-cleared");
+        queue_event_in_data_dir(&data_dir, user_id, event).expect("queue should succeed");
+
+        let (api_base_url, request_body_rx, server_thread) = spawn_mock_sync_server(
+            "202 Accepted",
+            r#"{"batchId":"native-batch-test","acceptedEventIds":["event-cleared"],"duplicateEventIds":[],"receivedAt":"2026-04-21T12:00:00Z"}"#,
+        );
+
+        let status = tauri::async_runtime::block_on(flush_outbox_in_data_dir(&data_dir, &api_base_url, user_id))
+            .expect("flush should succeed");
+
+        let request_body = request_body_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("server should receive the sync batch payload");
+        let posted_batch: Value = serde_json::from_str(&request_body).expect("request body should be valid JSON");
+        let event_object = posted_batch["events"][0]
+            .as_object()
+            .expect("queued event should serialize as a JSON object");
+
+        assert!(!event_object.contains_key("activityId"));
+        assert!(!event_object.contains_key("departmentId"));
+        assert!(!event_object.contains_key("note"));
+        assert_eq!(status.pending_count, 0);
+
+        server_thread.join().expect("mock server should shut down cleanly");
+    }
+
     fn make_test_data_dir(label: &str) -> PathBuf {
         let unique_suffix = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -506,6 +540,22 @@ mod tests {
             event_type: String::from("activity-selected"),
             activity_id: Some(String::from("activity-design")),
             department_id: Some(String::from("department-business-development")),
+            note: None,
+            idempotency_key: format!("idempotency-{event_id}"),
+            metadata: BTreeMap::from([(String::from("platform"), String::from("cinnamon"))]),
+        }
+    }
+
+    fn sample_cleared_event(user_id: &str, event_id: &str) -> ActivityEventPayload {
+        ActivityEventPayload {
+            event_id: event_id.to_string(),
+            user_id: user_id.to_string(),
+            device_id: String::from("cinnamon-local-tray"),
+            occurred_at: String::from("2026-04-21T11:05:00Z"),
+            recorded_at: String::from("2026-04-21T11:05:00Z"),
+            event_type: String::from("activity-cleared"),
+            activity_id: None,
+            department_id: None,
             note: None,
             idempotency_key: format!("idempotency-{event_id}"),
             metadata: BTreeMap::from([(String::from("platform"), String::from("cinnamon"))]),

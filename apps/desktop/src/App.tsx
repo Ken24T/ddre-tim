@@ -141,6 +141,93 @@ function isKnownTrayPlatform(value: string): value is DesktopPlatformId {
   return trayPlatforms.some((platform) => platform.id === value);
 }
 
+function formatSyncIssueField(path: unknown): string | null {
+  if (!Array.isArray(path)) {
+    return null;
+  }
+
+  const field = [...path]
+    .reverse()
+    .find((segment) => typeof segment === "string" && segment !== "events");
+
+  if (field === "activityId") {
+    return "activity";
+  }
+
+  if (field === "departmentId") {
+    return "department";
+  }
+
+  if (field === "note") {
+    return "note";
+  }
+
+  return typeof field === "string" ? field : null;
+}
+
+function formatSyncErrorMessage(rawMessage: string | null): string | null {
+  if (!rawMessage) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawMessage) as { message?: unknown; issues?: unknown };
+    const message = typeof parsed.message === "string" ? parsed.message : null;
+
+    if (!Array.isArray(parsed.issues)) {
+      return message ?? rawMessage;
+    }
+
+    const summaries = Array.from(
+      new Set(
+        parsed.issues.flatMap((issue) => {
+          if (!issue || typeof issue !== "object") {
+            return [];
+          }
+
+          const typedIssue = issue as { message?: unknown; path?: unknown };
+          const issueMessage = typeof typedIssue.message === "string" ? typedIssue.message : null;
+          const field = formatSyncIssueField(typedIssue.path);
+
+          if (field && issueMessage === "Expected string, received null") {
+            return [`${field} was sent empty`];
+          }
+
+          if (field && issueMessage) {
+            return [`${field}: ${issueMessage}`];
+          }
+
+          if (issueMessage) {
+            return [issueMessage];
+          }
+
+          return [];
+        })
+      )
+    );
+
+    if (summaries.length === 0) {
+      return message ?? rawMessage;
+    }
+
+    const visibleSummaries = summaries.slice(0, 3);
+    const overflowCount = summaries.length - visibleSummaries.length;
+    const suffix = overflowCount > 0 ? `; +${overflowCount} more` : "";
+
+    return `${message ?? "Sync failed"}: ${visibleSummaries.join("; ")}${suffix}.`;
+  } catch {
+    return rawMessage;
+  }
+}
+
+function formatSyncError(error: unknown): string {
+  if (error instanceof Error) {
+    return formatSyncErrorMessage(error.message) ?? error.message;
+  }
+
+  return formatSyncErrorMessage(String(error)) ?? String(error);
+}
+
 export default function App() {
   const [userId, setUserId] = useState(() => getStoredValue(userIdStorageKey, defaultUserId));
   const [settingsReloadKey, setSettingsReloadKey] = useState(0);
@@ -244,10 +331,6 @@ export default function App() {
 
   const handleTrayMenuEvent = useEffectEvent((payload: TrayMenuEvent) => {
     switch (payload.action) {
-      case "open-main": {
-        trayPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        break;
-      }
       case "open-settings": {
         settingsPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         break;
@@ -357,6 +440,7 @@ export default function App() {
           ? "Attention needed"
           : "Waiting";
   const syncDetail = syncState.phase === "ready" ? `${syncState.message} at ${formatTimestamp(syncState.at)}` : syncState.message;
+  const formattedOutboxError = formatSyncErrorMessage(outboxStatus.lastError);
   const outboxTone = outboxStatus.lastError ? "error" : outboxStatus.pendingCount > 0 ? "sending" : desktopContext ? "ready" : "idle";
   const outboxHeading = desktopContext
     ? outboxStatus.pendingCount > 0
@@ -364,7 +448,7 @@ export default function App() {
       : "Outbox empty"
     : "Browser preview";
   const outboxDetail = desktopContext
-    ? outboxStatus.lastError ?? (outboxStatus.lastSyncedAt ? `Last native flush ${formatTimestamp(outboxStatus.lastSyncedAt)}` : "Native queue is ready for tray actions.")
+    ? formattedOutboxError ?? (outboxStatus.lastSyncedAt ? `Last native flush ${formatTimestamp(outboxStatus.lastSyncedAt)}` : "Native queue is ready for tray actions.")
     : "The preview shell sends directly to the API until the Tauri host is running.";
   const runtimeTrayPlatform = desktopContext && isKnownTrayPlatform(desktopContext.platform)
     ? trayPlatforms.find((platform) => platform.id === desktopContext.platform) ?? activeTrayPlatform
@@ -376,6 +460,9 @@ export default function App() {
       ? `${runtimeTrayPlatform.label} session detected. Native tray events and the local outbox are available for compatibility validation, while Cinnamon remains the first-class target.`
       : "Native tray events, the local outbox, and Cinnamon autostart are available."
     : "Use the browser shell while Linux WebKit and libsoup headers are still being installed.";
+  const diagnosticsDetail = runningCompatibilitySlice
+    ? `${runtimeTrayPlatform.label} platform diagnostics, compatibility notes, autostart status, and local testing controls.`
+    : "Desktop runtime diagnostics, platform notes, autostart status, and local testing controls.";
   const activityDepartmentFallbackId = settings?.defaultDepartmentId || defaultDepartmentIdDraft || departments[0]?.id;
   const currentDepartment = departments.find((department) => department.id === (currentActivity?.departmentId ?? settings?.defaultDepartmentId));
   const hasDepartmentOptions = departments.length > 0;
@@ -473,6 +560,7 @@ export default function App() {
       }
 
       setOutboxStatus(status);
+      const syncErrorMessage = formatSyncErrorMessage(status.lastError);
 
       if (status.pendingCount === 0) {
         setSyncState({
@@ -480,10 +568,10 @@ export default function App() {
           message: "Local outbox flushed to the API.",
           at: status.lastSyncedAt ?? new Date().toISOString()
         });
-      } else if (status.lastError) {
+      } else if (syncErrorMessage) {
         setSyncState({
           phase: "error",
-          message: `${status.lastError} ${formatPendingCount(status.pendingCount)} still queued locally.`
+          message: `${syncErrorMessage} ${formatPendingCount(status.pendingCount)} still queued locally.`
         });
       } else {
         setSyncState({
@@ -494,7 +582,7 @@ export default function App() {
 
       return status;
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = formatSyncError(error);
       const status = await refreshNativeOutbox();
       setSyncState({
         phase: "error",
@@ -554,7 +642,7 @@ export default function App() {
         );
         setSyncState({
           phase: "error",
-          message: error instanceof Error ? error.message : String(error)
+          message: formatSyncError(error)
         });
       }
 
@@ -586,7 +674,7 @@ export default function App() {
       );
       setSyncState({
         phase: "error",
-        message: error instanceof Error ? error.message : String(error)
+        message: formatSyncError(error)
       });
     }
   }
@@ -716,18 +804,6 @@ export default function App() {
         </div>
 
         <div className="hero-meta">
-          <div className="meta-card">
-            <span>Desktop host</span>
-            <strong>{desktopHostLabel}</strong>
-            <small>{desktopHostDetail}</small>
-          </div>
-
-          <div className="meta-card">
-            <span>Tray platform</span>
-            <strong>{runtimeTrayPlatform.label}</strong>
-            <small>{runningCompatibilitySlice ? "Detected from the native desktop session" : runtimeTrayPlatform.helper}</small>
-          </div>
-
           <div className={`meta-card is-${syncTone}`}>
             <span>Sync status</span>
             <strong>{syncHeading}</strong>
@@ -751,56 +827,82 @@ export default function App() {
               </button>
             </div>
           </div>
-
-          <div className="meta-card">
-            <span>Session autostart</span>
-            <strong>{autostartState.enabled ? "Enabled" : autostartState.available ? "Disabled" : "Unavailable"}</strong>
-            <small>{autostartState.detail}</small>
-            <div className="meta-card-actions">
-              <button
-                className="button"
-                disabled={!desktopContext || !autostartState.available}
-                onClick={() => {
-                  void toggleAutostart();
-                }}
-                type="button"
-              >
-                {autostartState.enabled ? "Disable autostart" : "Enable autostart"}
-              </button>
-            </div>
-          </div>
-
-          <div className="meta-card">
-            <span>Local user key</span>
-            <label>
-              <input
-                onChange={(event) => {
-                  setUserId(event.target.value.trim() || defaultUserId);
-                }}
-                type="text"
-                value={userId}
-              />
-            </label>
-            <small>Use different keys locally to preview multiple desktop users.</small>
-          </div>
         </div>
       </section>
 
-      <section className="platform-grid">
-        {platformCards.map((platform) => (
-          <article className={`platform-card panel${platform.id === runtimeTrayPlatform.id ? " is-active" : ""}`} key={platform.id}>
-            <div className="platform-card-header">
-              <img alt={`${platform.label} tray icon`} className="platform-icon" src={platform.iconAsset} />
-              <div>
-                <p className="panel-label">{platform.id === runtimeTrayPlatform.id && desktopContext ? "Active session" : platform.status === "current" ? "Current slice" : "Queued platform"}</p>
-                <h2>{platform.label}</h2>
+      <details className="diagnostics-panel panel">
+        <summary className="diagnostics-summary">
+          <div>
+            <p className="eyebrow">Compatibility details</p>
+            <strong>Runtime diagnostics and platform notes</strong>
+            <small>{diagnosticsDetail}</small>
+          </div>
+        </summary>
+
+        <div className="diagnostics-body">
+          <div className="hero-meta diagnostics-grid">
+            <div className="meta-card">
+              <span>Desktop host</span>
+              <strong>{desktopHostLabel}</strong>
+              <small>{desktopHostDetail}</small>
+            </div>
+
+            <div className="meta-card">
+              <span>Tray platform</span>
+              <strong>{runtimeTrayPlatform.label}</strong>
+              <small>{runningCompatibilitySlice ? "Detected from the native desktop session" : runtimeTrayPlatform.helper}</small>
+            </div>
+
+            <div className="meta-card">
+              <span>Session autostart</span>
+              <strong>{autostartState.enabled ? "Enabled" : autostartState.available ? "Disabled" : "Unavailable"}</strong>
+              <small>{autostartState.detail}</small>
+              <div className="meta-card-actions">
+                <button
+                  className="button"
+                  disabled={!desktopContext || !autostartState.available}
+                  onClick={() => {
+                    void toggleAutostart();
+                  }}
+                  type="button"
+                >
+                  {autostartState.enabled ? "Disable autostart" : "Enable autostart"}
+                </button>
               </div>
             </div>
-            <p>{platform.trayNotes}</p>
-            <small>{platform.helper}</small>
-          </article>
-        ))}
-      </section>
+
+            <div className="meta-card">
+              <span>Local user key</span>
+              <label>
+                <input
+                  onChange={(event) => {
+                    setUserId(event.target.value.trim() || defaultUserId);
+                  }}
+                  type="text"
+                  value={userId}
+                />
+              </label>
+              <small>Use different keys locally to preview multiple desktop users.</small>
+            </div>
+          </div>
+
+          <section className="platform-grid diagnostics-platform-grid">
+            {platformCards.map((platform) => (
+              <article className={`platform-card panel${platform.id === runtimeTrayPlatform.id ? " is-active" : ""}`} key={platform.id}>
+                <div className="platform-card-header">
+                  <img alt={`${platform.label} tray icon`} className="platform-icon" src={platform.iconAsset} />
+                  <div>
+                    <p className="panel-label">{platform.id === runtimeTrayPlatform.id && desktopContext ? "Active session" : platform.status === "current" ? "Current slice" : "Queued platform"}</p>
+                    <h2>{platform.label}</h2>
+                  </div>
+                </div>
+                <p>{platform.trayNotes}</p>
+                <small>{platform.helper}</small>
+              </article>
+            ))}
+          </section>
+        </div>
+      </details>
 
       <section className="workspace-grid">
         <article className="panel tray-panel" ref={trayPanelRef}>

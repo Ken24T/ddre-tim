@@ -1,3 +1,4 @@
+import fastifyCors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
 import {
   activityCatalogEntryInputSchema,
@@ -26,6 +27,20 @@ export interface BuildServerOptions {
   activityRepositoryStore?: ActivityRepositoryStore;
 }
 
+const allowedCorsOrigins = [
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+  /^https?:\/\/tauri\.localhost$/,
+  /^tauri:\/\/localhost$/
+];
+
+function isAllowedCorsOrigin(origin: string | undefined): boolean {
+  if (!origin || origin === "null") {
+    return true;
+  }
+
+  return allowedCorsOrigins.some((pattern) => pattern.test(origin));
+}
+
 export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   const server = Fastify({ logger: options.logger ?? true });
   const seenEventIds = new Set<string>();
@@ -37,6 +52,14 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   server.addHook("onClose", async () => {
     await userSettingsStore.close?.();
     await activityRepositoryStore.close?.();
+  });
+
+  void server.register(fastifyCors, {
+    origin(origin, callback) {
+      callback(null, isAllowedCorsOrigin(origin));
+    },
+    methods: ["GET", "POST", "PUT", "OPTIONS"],
+    allowedHeaders: ["content-type"]
   });
 
   server.setErrorHandler((error, request, reply) => {

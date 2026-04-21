@@ -22,7 +22,7 @@ export interface TrayMenuState {
 }
 
 export interface TrayMenuEvent {
-  action: "open-main" | "open-settings" | "trigger-sync" | "toggle-autostart" | "select-activity";
+  action: "open-settings" | "trigger-sync" | "toggle-autostart" | "select-activity";
   activityId?: string;
 }
 

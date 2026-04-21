@@ -22,11 +22,25 @@ export function isTauriRuntime(): boolean {
 }
 
 export function getApiBaseUrl(): string {
-  return isTauriRuntime() ? nativeApiBaseUrl : "";
+  return nativeApiBaseUrl;
+}
+
+function getWebviewApiBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return nativeApiBaseUrl;
+  }
+
+  const { hostname } = window.location;
+
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return "";
+  }
+
+  return nativeApiBaseUrl;
 }
 
 function resolveApiUrl(path: string): string {
-  return `${getApiBaseUrl()}${path}`;
+  return `${getWebviewApiBaseUrl()}${path}`;
 }
 
 async function fetchJson(input: RequestInfo | URL, init?: RequestInit): Promise<unknown> {
