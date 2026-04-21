@@ -917,6 +917,13 @@ export default function App() {
     [departments, filteredActivities]
   );
   const timedActivitiesLocked = !settings || !settings.isConfigured;
+  const settingsStatusLabel = settingsState.phase === "saving"
+    ? "Saving to the API..."
+    : settingsState.phase === "loading" || settingsState.phase === "refreshing"
+      ? "Loading settings from the API..."
+      : settingsState.phase === "error"
+        ? "Settings could not be loaded from the API."
+        : saveMessage ?? "Saved to the API and mirrored into the tray.";
   const selectorStatusLabel = healthState.phase === "error"
     ? "API unavailable"
     : timedActivitiesLocked
@@ -1631,7 +1638,7 @@ export default function App() {
             <p className="panel-label">User settings</p>
             <h2>{settings?.isConfigured ? "Edit tray settings" : "First-run setup"}</h2>
           </div>
-          <small>{settingsState.phase === "saving" ? "Saving to the API..." : saveMessage ?? "Saved to the API and mirrored into the tray."}</small>
+          <small>{settingsStatusLabel}</small>
         </div>
 
         {settingsState.phase === "error" ? (

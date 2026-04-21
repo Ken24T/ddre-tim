@@ -41,9 +41,13 @@ function getWebviewApiBaseUrl(): string {
     return nativeApiBaseUrl;
   }
 
-  const { hostname } = window.location;
+  if (isTauriRuntime()) {
+    return nativeApiBaseUrl;
+  }
 
-  if (hostname === "localhost" || hostname === "127.0.0.1") {
+  const { hostname, protocol } = window.location;
+
+  if ((protocol === "http:" || protocol === "https:") && (hostname === "localhost" || hostname === "127.0.0.1")) {
     return "";
   }
 

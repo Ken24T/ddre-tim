@@ -156,7 +156,8 @@ pub fn build_tray<R: Runtime>(
     let tray_icon = TrayIconBuilder::with_id("tim-tray")
         .icon(build_cinnamon_icon())
         .temp_dir_path(&temp_dir)
-        .tooltip("Time in Motion")
+        .title("Not Timed")
+        .tooltip("Not Timed")
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             OPEN_SETTINGS_ID => {
@@ -199,6 +200,14 @@ pub fn sync_tray_state<R: Runtime>(
     tray_state: &DesktopTrayState<R>,
     payload: TraySyncPayload,
 ) -> Result<(), String> {
+    tray_state
+        .tray_icon
+        .set_tooltip(Some(payload.current_activity_label.as_str()))
+        .map_err(|error: tauri::Error| error.to_string())?;
+    tray_state
+        .tray_icon
+        .set_title(Some(payload.current_activity_label.as_str()))
+        .map_err(|error: tauri::Error| error.to_string())?;
     tray_state
         .status_item
         .set_text(format!("Current: {}", payload.current_activity_label))
@@ -342,7 +351,15 @@ fn build_cinnamon_icon() -> Image<'static> {
     }
 
     for offset in -1..=1 {
-        draw_line(&mut rgba, size, 10, 8 + offset, 22, 8 + offset, [226, 245, 240, 255]);
+        draw_line(
+            &mut rgba,
+            size,
+            10,
+            8 + offset,
+            22,
+            8 + offset,
+            [226, 245, 240, 255],
+        );
         draw_line(
             &mut rgba,
             size,

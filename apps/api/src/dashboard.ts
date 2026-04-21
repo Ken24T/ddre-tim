@@ -162,6 +162,24 @@ function clampDate(value: string, minDate: string, maxDate: string): string {
   return value;
 }
 
+function getDefaultDashboardDateRange(minDate: string, maxDate: string, now: Date = new Date()): { from: string; to: string } {
+  const currentDate = new Date(now);
+  currentDate.setHours(0, 0, 0, 0);
+
+  const currentDay = currentDate.getDay();
+  const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+  const weekStart = new Date(currentDate);
+  weekStart.setDate(currentDate.getDate() + mondayOffset);
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+
+  return {
+    from: clampDate(formatCalendarDate(weekStart), minDate, maxDate),
+    to: clampDate(formatCalendarDate(weekEnd), minDate, maxDate)
+  };
+}
+
 function mergeDailyActivityRecords(records: HistoricalRecord[]): HistoricalRecord[] {
   const mergedRecords = new Map<string, HistoricalRecord>();
 
@@ -777,8 +795,14 @@ export async function getDashboardReadModel(
     return left.localeCompare(right, "en-AU");
   });
   const selectedDepartment = query.department && availableDepartments.includes(query.department) ? query.department : null;
-  const selectedFrom = clampDate(query.from ?? minDate, minDate, maxDate);
-  const selectedTo = clampDate(query.to ?? maxDate, minDate, maxDate);
+  const defaultDateRange = query.from || query.to
+    ? {
+        from: query.from ?? minDate,
+        to: query.to ?? maxDate
+      }
+    : getDefaultDashboardDateRange(minDate, maxDate);
+  const selectedFrom = clampDate(defaultDateRange.from, minDate, maxDate);
+  const selectedTo = clampDate(defaultDateRange.to, minDate, maxDate);
   const scopedRecords = allRecords.filter((record) => {
     if (record.workDate < selectedFrom || record.workDate > selectedTo) {
       return false;
