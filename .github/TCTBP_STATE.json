@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "workflow": "TCTBP",
   "branch": "spike/gnome-tray-validation",
-  "commit": "f27d7b8e19fbe74725ac0484d2e8a5a194c47b1e",
-  "version": "0.2.0",
-  "tag": "v0.2.0",
-  "updatedAt": "2026-04-21T02:50:57Z"
+  "commit": "b8a1547c099c8fa703558f285384a7e968cdd0a1",
+  "version": "0.2.1",
+  "tag": "v0.2.1",
+  "updatedAt": "2026-04-21T05:35:55Z"
 }
