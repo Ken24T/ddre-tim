@@ -312,6 +312,17 @@ textarea {
   gap: 18px;
 }
 
+.settings-error-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.settings-error-row .error-copy {
+  margin: 0;
+}
+
 .selector-header small,
 .settings-header small,
 .settings-activities-header small {

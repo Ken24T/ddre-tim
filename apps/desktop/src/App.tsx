@@ -143,6 +143,7 @@ function isKnownTrayPlatform(value: string): value is DesktopPlatformId {
 
 export default function App() {
   const [userId, setUserId] = useState(() => getStoredValue(userIdStorageKey, defaultUserId));
+  const [settingsReloadKey, setSettingsReloadKey] = useState(0);
   const [healthState, setHealthState] = useState<HealthState>({ phase: "loading" });
   const [settingsState, setSettingsState] = useState<SettingsState>({ phase: "loading" });
   const [syncState, setSyncState] = useState<SyncState>({ phase: "idle", message: "No tray actions have been synced yet." });
@@ -166,7 +167,7 @@ export default function App() {
     }
 
     window.localStorage.setItem(userIdStorageKey, userId);
-  }, [userId]);
+  }, [settingsReloadKey, userId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -377,6 +378,10 @@ export default function App() {
     : "Use the browser shell while Linux WebKit and libsoup headers are still being installed.";
   const activityDepartmentFallbackId = settings?.defaultDepartmentId || defaultDepartmentIdDraft || departments[0]?.id;
   const currentDepartment = departments.find((department) => department.id === (currentActivity?.departmentId ?? settings?.defaultDepartmentId));
+  const hasDepartmentOptions = departments.length > 0;
+  const defaultDepartmentSelectValue = hasDepartmentOptions && departments.some((department) => department.id === defaultDepartmentIdDraft)
+    ? defaultDepartmentIdDraft
+    : "";
   const onboardingCopy = settings?.isConfigured
     ? desktopContext
       ? runningCompatibilitySlice
@@ -929,7 +934,19 @@ export default function App() {
         </div>
 
         {settingsState.phase === "error" ? (
-          <p className="error-copy">{settingsState.message}</p>
+          <div className="settings-error-row">
+            <p className="error-copy">{settingsState.message}</p>
+            <button
+              className="button"
+              onClick={() => {
+                setSaveMessage(null);
+                setSettingsReloadKey((current) => current + 1);
+              }}
+              type="button"
+            >
+              Retry settings load
+            </button>
+          </div>
         ) : null}
 
         <form className="settings-form" onSubmit={(event) => { void handleSaveSettings(event); }}>
@@ -949,11 +966,21 @@ export default function App() {
           <label className="field">
             <span>Default department</span>
             <select
+              disabled={!hasDepartmentOptions || settingsState.phase === "loading" || settingsState.phase === "refreshing" || settingsState.phase === "saving"}
               onChange={(event) => {
                 setDefaultDepartmentIdDraft(event.target.value);
               }}
-              value={defaultDepartmentIdDraft}
+              value={defaultDepartmentSelectValue}
             >
+              <option value="" disabled>
+                {settingsState.phase === "error"
+                  ? "Retry settings load to see departments"
+                  : settingsState.phase === "loading" || settingsState.phase === "refreshing"
+                    ? "Loading departments..."
+                    : hasDepartmentOptions
+                      ? "Select a default department"
+                      : "No departments available"}
+              </option>
               {departments.map((department) => (
                 <option key={department.id} value={department.id}>{department.name}</option>
               ))}
