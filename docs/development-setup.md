@@ -27,6 +27,8 @@ The desktop workspace now has two local execution modes:
 
 If you launch the repo from the VS Code Snap on Ubuntu, the desktop workspace scripts now clear Snap-injected GTK/GIO environment variables before starting Tauri so the native host uses the system desktop libraries instead of the Snap runtime.
 
+On Linux Wayland sessions, the native desktop host also forces `WEBKIT_DISABLE_DMABUF_RENDERER=1` at process startup to avoid blank or crashed WebKitGTK settings windows seen during GNOME compatibility validation.
+
 Verification is also split deliberately:
 
 - `npm run typecheck` validates the shared contracts, API, desktop React shell, and web TypeScript without requiring the native Tauri Linux headers.

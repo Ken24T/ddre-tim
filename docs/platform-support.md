@@ -41,6 +41,7 @@ The GNOME compatibility spike checklist lives in `docs/gnome-tray-validation.md`
 ## Constraints
 
 - GNOME tray support is inconsistent and may require a fallback launcher or compact window path.
+- GNOME Wayland can also require WebKitGTK renderer workarounds to avoid blank settings windows during compatibility validation.
 - Linux tray events are not portable enough to be the core interaction model.
 - Desktop local persistence should remain per-user regardless of platform.
 - Tauri on Linux requires WebKit and libsoup development headers at build time.

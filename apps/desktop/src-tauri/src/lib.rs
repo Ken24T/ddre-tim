@@ -3,10 +3,20 @@ mod commands;
 mod outbox;
 mod tray;
 
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 pub fn run() {
+    apply_linux_webview_workarounds();
+
     tauri::Builder::default()
+        .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             commands::flush_outbox,
             commands::get_autostart_state,
@@ -33,4 +43,19 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running DDRE TiM desktop host");
+}
+
+fn apply_linux_webview_workarounds() {
+    if !cfg!(target_os = "linux") {
+        return;
+    }
+
+    let is_wayland = std::env::var("XDG_SESSION_TYPE")
+        .map(|value| value.eq_ignore_ascii_case("wayland"))
+        .unwrap_or(false);
+
+    if is_wayland && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        // Recent WebKitGTK Wayland sessions can paint a blank white window or crash the web process.
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
 }
