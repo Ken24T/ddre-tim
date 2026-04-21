@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
-import type { Activity, ActivityEvent, Department, UserSettings, UserSettingsUpdate } from "@ddre/contracts";
-import { fetchHealth, fetchUserSettings, getApiBaseUrl, saveUserSettings, sendSyncBatch, type HealthPayload } from "./desktopClient.js";
+import type { Activity, ActivityDraft, ActivityEvent, Department, UserSettings, UserSettingsUpdate } from "@ddre/contracts";
+import { fetchActivityCatalog, fetchHealth, fetchUserSettings, getApiBaseUrl, saveUserSettings, sendSyncBatch, type HealthPayload } from "./desktopClient.js";
 import {
   flushDesktopOutbox,
   getDesktopAutostartState,
@@ -37,10 +37,22 @@ type SyncState =
 
 type RecentItem = {
   id: string;
+  sourceEventId: string;
   title: string;
   subtitle: string;
   timestamp: string;
   status: "queued" | "sent" | "failed";
+  eventType: "activity-selected" | "activity-cleared";
+  activityId?: string;
+  activityName?: string;
+  history: RecentItemHistoryEntry[];
+};
+
+type RecentItemHistoryEntry = {
+  kind: "corrected" | "deleted";
+  at: string;
+  previousActivityName?: string;
+  nextActivityName?: string;
 };
 
 type TimedActivitySection = {
@@ -53,6 +65,7 @@ type TimedActivitySection = {
 const defaultUserId = "cinnamon-local-user";
 const userIdStorageKey = "ddre.desktop.user-id";
 const noteStorageKey = "ddre.desktop.last-note";
+const recentActivitiesStorageKeyPrefix = "ddre.desktop.recent-activities";
 const sharedAcrossDepartmentsSectionId = "shared-across-departments";
 const defaultOutboxStatus: OutboxStatus = {
   pendingCount: 0,
@@ -73,11 +86,237 @@ function getStoredValue(key: string, fallback: string): string {
   return window.localStorage.getItem(key) ?? fallback;
 }
 
-function buildSettingsUpdate(displayName: string, defaultDepartmentId: string): UserSettingsUpdate {
+function getRecentActivitiesStorageKey(userId: string): string {
+  return `${recentActivitiesStorageKeyPrefix}:${userId}`;
+}
+
+function getStoredRecentItems(userId: string): RecentItem[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(getRecentActivitiesStorageKey(userId));
+
+    if (!rawValue) {
+      return [];
+    }
+
+    const parsed = JSON.parse(rawValue) as unknown;
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.flatMap((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return [];
+      }
+
+      const item = entry as Partial<RecentItem>;
+      const status = item.status;
+      const inferredEventType = typeof item.eventType === "string"
+        ? item.eventType
+        : item.title === "Moved to Not Timed"
+          ? "activity-cleared"
+          : item.title?.startsWith("Selected ")
+            ? "activity-selected"
+            : null;
+      const inferredActivityName = typeof item.activityName === "string"
+        ? item.activityName
+        : item.title === "Moved to Not Timed"
+          ? "Not Timed"
+          : item.title?.startsWith("Selected ")
+            ? item.title.slice("Selected ".length)
+            : undefined;
+
+      if (
+        typeof item.id !== "string"
+        || typeof item.title !== "string"
+        || typeof item.subtitle !== "string"
+        || typeof item.timestamp !== "string"
+        || (status !== "queued" && status !== "sent" && status !== "failed")
+        || (inferredEventType !== "activity-selected" && inferredEventType !== "activity-cleared")
+      ) {
+        return [];
+      }
+
+      const history = Array.isArray(item.history)
+        ? item.history.flatMap((historyEntry) => {
+          if (!historyEntry || typeof historyEntry !== "object") {
+            return [];
+          }
+
+          const typedEntry = historyEntry as Partial<RecentItemHistoryEntry>;
+
+          if (
+            (typedEntry.kind !== "corrected" && typedEntry.kind !== "deleted")
+            || typeof typedEntry.at !== "string"
+          ) {
+            return [];
+          }
+
+          return [{
+            kind: typedEntry.kind,
+            at: typedEntry.at,
+            previousActivityName: typeof typedEntry.previousActivityName === "string" ? typedEntry.previousActivityName : undefined,
+            nextActivityName: typeof typedEntry.nextActivityName === "string" ? typedEntry.nextActivityName : undefined
+          }];
+        })
+        : [];
+
+      return [{
+        id: item.id,
+        sourceEventId: typeof item.sourceEventId === "string" ? item.sourceEventId : item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        timestamp: item.timestamp,
+        status,
+        eventType: inferredEventType,
+        activityId: typeof item.activityId === "string" ? item.activityId : undefined,
+        activityName: inferredActivityName,
+        history
+      }];
+    }).slice(0, 6);
+  } catch {
+    return [];
+  }
+}
+
+function isRecentItemDeleted(item: RecentItem): boolean {
+  return item.history.some((entry) => entry.kind === "deleted");
+}
+
+function hasRecentItemCorrections(item: RecentItem): boolean {
+  return item.history.some((entry) => entry.kind === "corrected");
+}
+
+function formatRecentItemHistoryEntry(entry: RecentItemHistoryEntry): string {
+  if (entry.kind === "deleted") {
+    return `Deleted from live history at ${formatTimestamp(entry.at)}.`;
+  }
+
+  const previousLabel = entry.previousActivityName ?? "Previous activity";
+  const nextLabel = entry.nextActivityName ?? "Updated activity";
+
+  return `Corrected from ${previousLabel} to ${nextLabel} at ${formatTimestamp(entry.at)}.`;
+}
+
+function buildRecentActivityItem(
+  activity: Activity,
+  occurredAt: string,
+  departments: Department[],
+  defaultDepartmentId: string | undefined,
+  status: RecentItem["status"],
+  sourceEventId: string,
+  history: RecentItemHistoryEntry[] = []
+): RecentItem {
+  if (activity.kind === "non-timed") {
+    return {
+      id: sourceEventId,
+      sourceEventId,
+      title: "Moved to Not Timed",
+      subtitle: "Timing cleared from the Cinnamon tray menu",
+      timestamp: occurredAt,
+      status,
+      eventType: "activity-cleared",
+      activityName: activity.name,
+      history
+    };
+  }
+
+  return {
+    id: sourceEventId,
+    sourceEventId,
+    title: `Selected ${activity.name}`,
+    subtitle: `${formatActivityDepartmentSummary(getActivityDepartmentNames(activity, departments, defaultDepartmentId))} from the tray menu`,
+    timestamp: occurredAt,
+    status,
+    eventType: "activity-selected",
+    activityId: activity.id,
+    activityName: activity.name,
+    history
+  };
+}
+
+function slugifyActivityName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function createEmptyActivityDraft(defaultDepartmentId?: string): ActivityDraft {
+  return {
+    name: "",
+    color: undefined,
+    departmentId: defaultDepartmentId,
+    isActive: true
+  };
+}
+
+function buildCustomActivityDrafts(
+  activities: Activity[],
+  sharedActivitySlugs: ReadonlySet<string>,
+  defaultDepartmentId: string
+): ActivityDraft[] {
+  return activities
+    .filter((activity) => activity.kind === "timed" && !activity.isSystem && !sharedActivitySlugs.has(activity.slug))
+    .sort((left, right) => left.name.localeCompare(right.name, "en-AU"))
+    .map((activity) => ({
+      name: activity.name,
+      color: activity.color,
+      departmentId: activity.departmentId ?? activity.departmentIds?.[0] ?? defaultDepartmentId,
+      isActive: activity.isActive
+    }));
+}
+
+function getCustomActivityValidationMessage(
+  drafts: ActivityDraft[],
+  sharedActivitySlugs: ReadonlySet<string>
+): string | null {
+  const seenCustomSlugs = new Set<string>();
+
+  for (const draft of drafts) {
+    if (!draft.name.trim()) {
+      return "Give each personal activity a name before saving.";
+    }
+
+    if (draft.color && !/^#[0-9A-Fa-f]{6}$/.test(draft.color)) {
+      return "Personal activity colors must use the #RRGGBB format.";
+    }
+
+    const slug = slugifyActivityName(draft.name);
+
+    if (slug === "not-timed") {
+      return "The Not Timed fallback stays system-managed.";
+    }
+
+    if (sharedActivitySlugs.has(slug)) {
+      return "Personal activity names cannot duplicate the shared tray activities.";
+    }
+
+    if (seenCustomSlugs.has(slug)) {
+      return "Personal activity names must be unique.";
+    }
+
+    seenCustomSlugs.add(slug);
+  }
+
+  return null;
+}
+
+function buildSettingsUpdate(displayName: string, defaultDepartmentId: string, activities: ActivityDraft[]): UserSettingsUpdate {
   return {
     displayName,
     defaultDepartmentId,
-    activities: []
+    activities: activities.map((activity) => ({
+      name: activity.name.trim(),
+      color: activity.color?.trim() || undefined,
+      departmentId: activity.departmentId || defaultDepartmentId,
+      isActive: activity.isActive ?? true
+    }))
   };
 }
 
@@ -322,11 +561,15 @@ export default function App() {
   const [syncState, setSyncState] = useState<SyncState>({ phase: "idle", message: "No tray actions have been synced yet." });
   const [displayNameDraft, setDisplayNameDraft] = useState("");
   const [defaultDepartmentIdDraft, setDefaultDepartmentIdDraft] = useState("");
+  const [sharedActivitySlugs, setSharedActivitySlugs] = useState<string[]>([]);
+  const [customActivityDrafts, setCustomActivityDrafts] = useState<ActivityDraft[]>([]);
   const [activitySearch, setActivitySearch] = useState("");
   const [noteDraft, setNoteDraft] = useState(() => getStoredValue(noteStorageKey, ""));
   const [currentActivityId, setCurrentActivityId] = useState<string | null>(null);
   const [currentActivityStartedAt, setCurrentActivityStartedAt] = useState<string | null>(null);
-  const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
+  const [recentItems, setRecentItems] = useState<RecentItem[]>(() => getStoredRecentItems(getStoredValue(userIdStorageKey, defaultUserId)));
+  const [editingRecentItemId, setEditingRecentItemId] = useState<string | null>(null);
+  const [editingRecentActivityId, setEditingRecentActivityId] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [desktopContext, setDesktopContext] = useState<DesktopContext | null>(null);
   const [outboxStatus, setOutboxStatus] = useState<OutboxStatus>(defaultOutboxStatus);
@@ -350,6 +593,20 @@ export default function App() {
 
     window.localStorage.setItem(noteStorageKey, noteDraft);
   }, [noteDraft]);
+
+  useEffect(() => {
+    setRecentItems(getStoredRecentItems(userId));
+    setEditingRecentItemId(null);
+    setEditingRecentActivityId("");
+  }, [userId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(getRecentActivitiesStorageKey(userId), JSON.stringify(recentItems));
+  }, [recentItems, userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -391,13 +648,29 @@ export default function App() {
 
     async function loadSettings(): Promise<void> {
       try {
-        const payload = await fetchUserSettings(userId);
+        const [payload, activityCatalog] = await Promise.all([
+          fetchUserSettings(userId),
+          fetchActivityCatalog()
+        ]);
+        const sharedTimedActivitySlugs = new Set(
+          activityCatalog.activities
+            .filter((activity) => activity.kind === "timed" && !activity.isSystem)
+            .map((activity) => activity.slug)
+        );
 
         if (!cancelled) {
           setSettingsState({ phase: "ready", data: payload });
           setDisplayNameDraft(payload.displayName);
           setDefaultDepartmentIdDraft(payload.defaultDepartmentId);
-          setCurrentActivityId((current) => current ?? payload.activities.find((activity) => activity.kind === "non-timed")?.id ?? null);
+          setSharedActivitySlugs([...sharedTimedActivitySlugs].sort((left, right) => left.localeCompare(right, "en-AU")));
+          setCustomActivityDrafts(buildCustomActivityDrafts(payload.activities, sharedTimedActivitySlugs, payload.defaultDepartmentId));
+          setCurrentActivityId((current) => {
+            if (current && payload.activities.some((activity) => activity.id === current)) {
+              return current;
+            }
+
+            return payload.activities.find((activity) => activity.kind === "non-timed")?.id ?? null;
+          });
         }
       } catch (error) {
         if (!cancelled) {
@@ -414,12 +687,17 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [settingsReloadKey, userId]);
 
   const handleTrayMenuEvent = useEffectEvent((payload: TrayMenuEvent) => {
     switch (payload.action) {
       case "open-settings": {
         settingsPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        break;
+      }
+      case "refresh-activities": {
+        setSaveMessage(null);
+        setSettingsReloadKey((current) => current + 1);
         break;
       }
       case "trigger-sync": {
@@ -554,6 +832,11 @@ export default function App() {
     ? `${runtimeTrayPlatform.label} diagnostics, autostart, and local test controls.`
     : "Runtime diagnostics, autostart, and local test controls.";
   const activityDepartmentFallbackId = settings?.defaultDepartmentId || defaultDepartmentIdDraft || departments[0]?.id;
+  const sharedActivitySlugSet = useMemo(() => new Set(sharedActivitySlugs), [sharedActivitySlugs]);
+  const customActivityValidationMessage = useMemo(
+    () => getCustomActivityValidationMessage(customActivityDrafts, sharedActivitySlugSet),
+    [customActivityDrafts, sharedActivitySlugSet]
+  );
   const currentDepartment = departments.find((department) => department.id === (currentActivity?.departmentId ?? settings?.defaultDepartmentId));
   const currentTimedActivitySectionId = currentActivity && currentActivity.kind === "timed"
     ? getTimedActivitySectionId(currentActivity)
@@ -578,6 +861,15 @@ export default function App() {
   const defaultDepartmentSelectValue = hasDepartmentOptions && departments.some((department) => department.id === defaultDepartmentIdDraft)
     ? defaultDepartmentIdDraft
     : "";
+  const canSaveSettings = Boolean(defaultDepartmentSelectValue)
+    && displayNameDraft.trim().length > 0
+    && settingsState.phase !== "loading"
+    && settingsState.phase !== "saving"
+    && customActivityValidationMessage === null;
+  const recentTimedActivityOptions = useMemo(
+    () => allActivities.filter((activity) => activity.kind === "timed" && activity.isActive),
+    [allActivities]
+  );
   const onboardingCopy = settings?.isConfigured
     ? desktopContext
       ? runningCompatibilitySlice
@@ -738,8 +1030,22 @@ export default function App() {
     }
   }
 
-  async function postEvent(event: ActivityEvent, optimisticItem: RecentItem): Promise<void> {
-    setRecentItems((current) => [optimisticItem, ...current].slice(0, 6));
+  function resolveRecentItemActivity(item: RecentItem): Activity | undefined {
+    return allActivities.find((activity) => activity.id === item.activityId)
+      ?? (item.activityName
+        ? allActivities.find((activity) => activity.kind === "timed" && activity.name === item.activityName)
+        : undefined);
+  }
+
+  function getLatestVisibleRecentItem(items: RecentItem[]): RecentItem | undefined {
+    return items.find((item) => !isRecentItemDeleted(item));
+  }
+
+  async function postEvent(event: ActivityEvent, optimisticItem?: RecentItem): Promise<RecentItem["status"]> {
+    if (optimisticItem) {
+      setRecentItems((current) => [optimisticItem, ...current].slice(0, 6));
+    }
+
     if (desktopContext) {
       setSyncState({ phase: "sending", message: "Queueing tray action locally before sync." });
 
@@ -751,36 +1057,44 @@ export default function App() {
         }
 
         setOutboxStatus(queuedStatus);
-        setRecentItems((current) =>
-          current.map((item) => (item.id === optimisticItem.id ? { ...item, status: "queued" } : item))
-        );
+        if (optimisticItem) {
+          setRecentItems((current) =>
+            current.map((item) => (item.id === optimisticItem.id ? { ...item, status: "queued" } : item))
+          );
+        }
 
         const flushedStatus = await flushNativeOutbox("Queued tray action locally. Attempting sync.");
         const delivered = flushedStatus && flushedStatus.pendingCount === 0;
 
-        setRecentItems((current) =>
-          current.map((item) => {
-            if (item.id !== optimisticItem.id) {
-              return item;
-            }
+        if (optimisticItem) {
+          setRecentItems((current) =>
+            current.map((item) => {
+              if (item.id !== optimisticItem.id) {
+                return item;
+              }
 
-            return {
-              ...item,
-              status: delivered ? "sent" : "queued"
-            };
-          })
-        );
+              return {
+                ...item,
+                status: delivered ? "sent" : "queued"
+              };
+            })
+          );
+        }
+
+        return delivered ? "sent" : "queued";
       } catch (error) {
-        setRecentItems((current) =>
-          current.map((item) => (item.id === optimisticItem.id ? { ...item, status: "failed" } : item))
-        );
+        if (optimisticItem) {
+          setRecentItems((current) =>
+            current.map((item) => (item.id === optimisticItem.id ? { ...item, status: "failed" } : item))
+          );
+        }
         setSyncState({
           phase: "error",
           message: formatSyncError(error)
         });
-      }
 
-      return;
+        return "failed";
+      }
     }
 
     setSyncState({ phase: "sending", message: "Sending tray action to the API." });
@@ -794,22 +1108,30 @@ export default function App() {
         events: [event]
       });
 
-      setRecentItems((current) =>
-        current.map((item) => (item.id === optimisticItem.id ? { ...item, status: "sent" } : item))
-      );
+      if (optimisticItem) {
+        setRecentItems((current) =>
+          current.map((item) => (item.id === optimisticItem.id ? { ...item, status: "sent" } : item))
+        );
+      }
       setSyncState({
         phase: "ready",
         message: `${ack.acceptedEventIds.length} event acknowledged by the API.`,
         at: ack.receivedAt
       });
+
+      return "sent";
     } catch (error) {
-      setRecentItems((current) =>
-        current.map((item) => (item.id === optimisticItem.id ? { ...item, status: "failed" } : item))
-      );
+      if (optimisticItem) {
+        setRecentItems((current) =>
+          current.map((item) => (item.id === optimisticItem.id ? { ...item, status: "failed" } : item))
+        );
+      }
       setSyncState({
         phase: "error",
         message: formatSyncError(error)
       });
+
+      return "failed";
     }
   }
 
@@ -819,9 +1141,6 @@ export default function App() {
     }
 
     const occurredAt = new Date().toISOString();
-    const selectedDepartmentName = formatActivityDepartmentSummary(
-      getActivityDepartmentNames(activity, departments, activityDepartmentFallbackId)
-    );
     const nextCurrentActivityId = activity.id;
     const nextEvent: ActivityEvent = activity.kind === "non-timed"
       ? {
@@ -856,13 +1175,10 @@ export default function App() {
     setCurrentActivityId(nextCurrentActivityId);
     setCurrentActivityStartedAt(occurredAt);
 
-    await postEvent(nextEvent, {
-      id: nextEvent.eventId,
-      title: activity.kind === "non-timed" ? "Moved to Not Timed" : `Selected ${activity.name}`,
-      subtitle: activity.kind === "non-timed" ? "Timing cleared from the Cinnamon tray menu" : `${selectedDepartmentName} from the tray menu`,
-      timestamp: occurredAt,
-      status: "sent"
-    });
+    await postEvent(
+      nextEvent,
+      buildRecentActivityItem(activity, occurredAt, departments, activityDepartmentFallbackId, "sent", nextEvent.eventId)
+    );
   }
 
   async function handleNoteSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -891,13 +1207,130 @@ export default function App() {
     const submittedNote = noteDraft.trim();
     setNoteDraft("");
 
-    await postEvent(noteEvent, {
-      id: noteEvent.eventId,
-      title: "Added note",
-      subtitle: submittedNote,
-      timestamp: occurredAt,
-      status: "sent"
+    await postEvent(noteEvent);
+  }
+
+  async function handleRecentItemEditSave(item: RecentItem): Promise<void> {
+    const nextActivity = recentTimedActivityOptions.find((activity) => activity.id === editingRecentActivityId);
+
+    if (!nextActivity) {
+      return;
+    }
+
+    const occurredAt = new Date().toISOString();
+    const correctionEvent: ActivityEvent = {
+      eventId: createIdentifier("event"),
+      userId,
+      deviceId: runtimeTrayPlatform.id,
+      occurredAt,
+      recordedAt: occurredAt,
+      type: "activity-corrected",
+      activityId: nextActivity.id,
+      departmentId: nextActivity.departmentId,
+      relatedEventId: item.sourceEventId,
+      idempotencyKey: createIdentifier("idempotency"),
+      metadata: {
+        activityName: nextActivity.name,
+        platform: runtimeTrayPlatform.id
+      }
+    };
+
+    const result = await postEvent(correctionEvent);
+
+    if (result === "failed") {
+      return;
+    }
+
+    const correctionHistoryEntry: RecentItemHistoryEntry = {
+      kind: "corrected",
+      at: occurredAt,
+      previousActivityName: item.activityName,
+      nextActivityName: nextActivity.name
+    };
+
+    setRecentItems((current) => current.map((currentItem) => {
+      if (currentItem.id !== item.id) {
+        return currentItem;
+      }
+
+      return buildRecentActivityItem(
+        nextActivity,
+        item.timestamp,
+        departments,
+        activityDepartmentFallbackId,
+        result,
+        item.sourceEventId,
+        [...currentItem.history, correctionHistoryEntry]
+      );
+    }));
+    setEditingRecentItemId(null);
+    setEditingRecentActivityId("");
+
+    if (getLatestVisibleRecentItem(recentItems)?.id === item.id) {
+      setCurrentActivityId(nextActivity.id);
+      setCurrentActivityStartedAt(item.timestamp);
+    }
+  }
+
+  async function handleRecentItemDelete(item: RecentItem): Promise<void> {
+    const occurredAt = new Date().toISOString();
+    const deleteEvent: ActivityEvent = {
+      eventId: createIdentifier("event"),
+      userId,
+      deviceId: runtimeTrayPlatform.id,
+      occurredAt,
+      recordedAt: occurredAt,
+      type: "activity-deleted",
+      relatedEventId: item.sourceEventId,
+      idempotencyKey: createIdentifier("idempotency"),
+      metadata: {
+        activityName: item.activityName ?? item.title,
+        platform: runtimeTrayPlatform.id
+      }
+    };
+
+    const result = await postEvent(deleteEvent);
+
+    if (result === "failed") {
+      return;
+    }
+
+    const deleteHistoryEntry: RecentItemHistoryEntry = {
+      kind: "deleted",
+      at: occurredAt,
+      previousActivityName: item.activityName
+    };
+
+    const updatedItems = recentItems.map((currentItem) => {
+      if (currentItem.id !== item.id) {
+        return currentItem;
+      }
+
+      return {
+        ...currentItem,
+        status: result,
+        history: [...currentItem.history, deleteHistoryEntry]
+      };
     });
+    setRecentItems(updatedItems);
+
+    if (editingRecentItemId === item.id) {
+      setEditingRecentItemId(null);
+      setEditingRecentActivityId("");
+    }
+
+    if (getLatestVisibleRecentItem(recentItems)?.id === item.id) {
+      const fallbackItem = getLatestVisibleRecentItem(updatedItems);
+      const fallbackActivity = fallbackItem ? resolveRecentItemActivity(fallbackItem) : undefined;
+
+      if (fallbackItem?.eventType === "activity-selected" && fallbackActivity) {
+        setCurrentActivityId(fallbackActivity.id);
+        setCurrentActivityStartedAt(fallbackItem.timestamp);
+      } else {
+        setCurrentActivityId(nonTimedActivity?.id ?? null);
+        setCurrentActivityStartedAt(fallbackItem?.timestamp ?? null);
+      }
+    }
   }
 
   async function handleSaveSettings(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -913,13 +1346,14 @@ export default function App() {
     try {
       const payload = await saveUserSettings(
         userId,
-        buildSettingsUpdate(displayNameDraft, defaultDepartmentIdDraft)
+        buildSettingsUpdate(displayNameDraft, defaultDepartmentIdDraft, customActivityDrafts)
       );
 
       setSettingsState({ phase: "ready", data: payload });
       setDisplayNameDraft(payload.displayName);
       setDefaultDepartmentIdDraft(payload.defaultDepartmentId);
-      setSaveMessage(`Settings saved. ${runtimeTrayPlatform.label} tray capture is ready to use.`);
+      setCustomActivityDrafts(buildCustomActivityDrafts(payload.activities, sharedActivitySlugSet, payload.defaultDepartmentId));
+      setSaveMessage(`Settings saved. ${runtimeTrayPlatform.label} tray capture is ready with ${customActivityDrafts.length} personal activit${customActivityDrafts.length === 1 ? "y" : "ies"}.`);
     } catch (error) {
       setSettingsState({
         phase: "error",
@@ -1001,8 +1435,108 @@ export default function App() {
             </select>
           </label>
 
+          <section className="draft-activity-section">
+            <div className="draft-activity-toolbar">
+              <div>
+                <p className="panel-label">Personal timed activities</p>
+                <p className="field-help">These stay private to this user and sit alongside the {sharedActivitySlugs.length} shared tray activities.</p>
+              </div>
+              <button
+                className="button"
+                disabled={!hasDepartmentOptions || settingsState.phase === "loading" || settingsState.phase === "saving"}
+                onClick={() => {
+                  setCustomActivityDrafts((current) => [
+                    ...current,
+                    createEmptyActivityDraft(defaultDepartmentIdDraft || departments[0]?.id)
+                  ]);
+                }}
+                type="button"
+              >
+                Add personal activity
+              </button>
+            </div>
+
+            <div className="draft-activity-list">
+              {customActivityDrafts.length > 0 ? customActivityDrafts.map((activity, index) => (
+                <div className="draft-activity-row" key={`draft-activity-${index}`}> 
+                  <label className="field">
+                    <span>Name</span>
+                    <input
+                      maxLength={100}
+                      onChange={(event) => {
+                        const nextName = event.target.value;
+                        setCustomActivityDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: nextName } : item));
+                      }}
+                      placeholder="Enter an activity name"
+                      type="text"
+                      value={activity.name}
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span>Department</span>
+                    <select
+                      disabled={!hasDepartmentOptions}
+                      onChange={(event) => {
+                        const nextDepartmentId = event.target.value;
+                        setCustomActivityDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, departmentId: nextDepartmentId } : item));
+                      }}
+                      value={activity.departmentId ?? defaultDepartmentIdDraft}
+                    >
+                      {departments.map((department) => (
+                        <option key={`${department.id}-${index}`} value={department.id}>{department.name}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="field color-field">
+                    <span>Color</span>
+                    <input
+                      onChange={(event) => {
+                        const nextColor = event.target.value;
+                        setCustomActivityDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? {
+                          ...item,
+                          color: nextColor.trim() || undefined
+                        } : item));
+                      }}
+                      placeholder="#6EA6CF"
+                      type="text"
+                      value={activity.color ?? ""}
+                    />
+                  </label>
+
+                  <label className="toggle-field">
+                    <input
+                      checked={activity.isActive ?? true}
+                      onChange={(event) => {
+                        const nextChecked = event.target.checked;
+                        setCustomActivityDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, isActive: nextChecked } : item));
+                      }}
+                      type="checkbox"
+                    />
+                    <span>Active in tray</span>
+                  </label>
+
+                  <button
+                    className="button button-danger"
+                    onClick={() => {
+                      setCustomActivityDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
+                    }}
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )) : <p className="empty-copy">No personal timed activities yet. Add one here and it will appear in the tray after saving.</p>}
+            </div>
+
+            <p className={customActivityValidationMessage ? "error-copy" : "field-help"}>
+              {customActivityValidationMessage ?? "Use this section for user-specific tray activities that should not live in the shared dashboard catalog."}
+            </p>
+          </section>
+
           <div className="settings-actions">
-            <button className="button button-primary" disabled={settingsState.phase === "loading" || settingsState.phase === "saving"} type="submit">
+            <button className="button button-primary" disabled={!canSaveSettings} type="submit">
               {settingsState.phase === "saving" ? "Saving..." : settings?.isConfigured ? "Save settings" : "Finish setup"}
             </button>
           </div>
@@ -1208,15 +1742,101 @@ export default function App() {
             </div>
 
             <div className="tray-menu-section">
-              <p className="tray-menu-label">Recent actions</p>
+              <p className="tray-menu-label">Recent activities</p>
               <div className="recent-list">
                 {recentItems.length > 0 ? recentItems.map((item) => (
-                  <div className={`recent-item is-${item.status}`} key={item.id}>
-                    <strong>{item.title}</strong>
-                    <span>{item.subtitle}</span>
-                    <small>{item.status === "queued" ? `${formatTimestamp(item.timestamp)} · queued locally` : formatTimestamp(item.timestamp)}</small>
+                  <div className={`recent-item is-${item.status}${isRecentItemDeleted(item) ? " is-deleted" : ""}`} key={item.id}>
+                    <div className="recent-item-header">
+                      <div className="recent-item-copy">
+                        <div className="recent-item-badges">
+                          {hasRecentItemCorrections(item) ? <span className="recent-item-badge">Edited</span> : null}
+                          {isRecentItemDeleted(item) ? <span className="recent-item-badge recent-item-badge-danger">Deleted</span> : null}
+                        </div>
+                        <strong>{item.title}</strong>
+                        <span>{item.subtitle}</span>
+                        <small>{item.status === "queued" ? `${formatTimestamp(item.timestamp)} · queued locally` : formatTimestamp(item.timestamp)}</small>
+                        {item.history.length > 0 ? (
+                          <div className="recent-item-history">
+                            {[...item.history].reverse().map((entry) => (
+                              <small key={`${entry.kind}-${entry.at}`}>{formatRecentItemHistoryEntry(entry)}</small>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="recent-item-actions">
+                        {item.eventType === "activity-selected" && !isRecentItemDeleted(item) ? (
+                          <button
+                            className="button"
+                            onClick={() => {
+                              const selectedActivity = resolveRecentItemActivity(item);
+
+                              setEditingRecentItemId(item.id);
+                              setEditingRecentActivityId(selectedActivity?.id ?? recentTimedActivityOptions[0]?.id ?? "");
+                            }}
+                            type="button"
+                          >
+                            Edit
+                          </button>
+                        ) : null}
+
+                        {!isRecentItemDeleted(item) ? (
+                          <button
+                            className="button button-danger"
+                            onClick={() => {
+                              void handleRecentItemDelete(item);
+                            }}
+                            type="button"
+                          >
+                            Delete
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {editingRecentItemId === item.id && !isRecentItemDeleted(item) ? (
+                      <div className="recent-item-editor">
+                        <label className="field">
+                          <span>Correct to</span>
+                          <select
+                            onChange={(event) => {
+                              setEditingRecentActivityId(event.target.value);
+                            }}
+                            value={editingRecentActivityId}
+                          >
+                            {recentTimedActivityOptions.map((activity) => (
+                              <option key={`recent-edit-${activity.id}`} value={activity.id}>{activity.name}</option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <div className="recent-item-editor-actions">
+                          <button
+                            className="button button-primary"
+                            disabled={!editingRecentActivityId}
+                            onClick={() => {
+                              void handleRecentItemEditSave(item);
+                            }}
+                            type="button"
+                          >
+                            Save change
+                          </button>
+
+                          <button
+                            className="button"
+                            onClick={() => {
+                              setEditingRecentItemId(null);
+                              setEditingRecentActivityId("");
+                            }}
+                            type="button"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
-                )) : <p className="empty-copy">Recent tray actions will appear here after the first selection or note.</p>}
+                )) : <p className="empty-copy">Recent tray activity changes will appear here after the first selection.</p>}
               </div>
             </div>
           </div>

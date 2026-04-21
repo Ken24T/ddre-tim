@@ -11,6 +11,7 @@ import {
 } from "@ddre/contracts";
 import { Pool } from "pg";
 import { ZodError, ZodIssueCode } from "zod";
+import { readLocalStateJson, writeLocalStateJson } from "./localState.js";
 
 export class ActivityCatalogNotFoundError extends Error {
   constructor(activityId: string) {
@@ -44,6 +45,11 @@ interface ActivityRepositoryRow extends QueryResultRow {
 
 interface CountRow extends QueryResultRow {
   count: number | string;
+}
+
+interface StoredActivityCatalogState {
+  refreshedAt: string;
+  activities: Activity[];
 }
 
 export interface ActivityRepositoryStore {
@@ -347,6 +353,82 @@ class InMemoryActivityRepositoryStore implements ActivityRepositoryStore {
   }
 }
 
+class FileActivityRepositoryStore implements ActivityRepositoryStore {
+  private readonly stateFileName = "activity-repository.json";
+
+  private buildDefaultState(): StoredActivityCatalogState {
+    return {
+      refreshedAt: new Date().toISOString(),
+      activities: initialKnownActivities.map(cloneActivity)
+    };
+  }
+
+  private async readState(): Promise<StoredActivityCatalogState> {
+    const storedState = await readLocalStateJson<StoredActivityCatalogState>(
+      this.stateFileName,
+      this.buildDefaultState()
+    );
+
+    const activities = activityCatalogResponseSchema.parse({
+      activities: storedState.activities,
+      refreshedAt: storedState.refreshedAt
+    });
+
+    return {
+      refreshedAt: activities.refreshedAt,
+      activities: activities.activities.map(cloneActivity)
+    };
+  }
+
+  private async writeState(state: StoredActivityCatalogState): Promise<void> {
+    await writeLocalStateJson(this.stateFileName, {
+      refreshedAt: state.refreshedAt,
+      activities: state.activities.map(cloneActivity)
+    });
+  }
+
+  async getActivityCatalog(): Promise<ActivityCatalogResponse> {
+    const state = await this.readState();
+
+    return activityCatalogResponseSchema.parse({
+      activities: state.activities.map(cloneActivity),
+      refreshedAt: state.refreshedAt
+    });
+  }
+
+  async createActivityCatalogEntry(input: ActivityCatalogEntryInput): Promise<Activity> {
+    const state = await this.readState();
+    const activity = buildActivityCatalogEntry(input, state.activities);
+    const nextState: StoredActivityCatalogState = {
+      refreshedAt: new Date().toISOString(),
+      activities: [...state.activities, activity]
+    };
+
+    await this.writeState(nextState);
+
+    return cloneActivity(activity);
+  }
+
+  async updateActivityCatalogEntry(activityId: string, input: ActivityCatalogEntryInput): Promise<Activity> {
+    const state = await this.readState();
+    const existingActivity = state.activities.find((activity) => activity.id === activityId && !activity.isSystem);
+
+    if (!existingActivity) {
+      throw new ActivityCatalogNotFoundError(activityId);
+    }
+
+    const nextActivity = buildActivityCatalogEntry(input, state.activities, existingActivity.id);
+    const nextState: StoredActivityCatalogState = {
+      refreshedAt: new Date().toISOString(),
+      activities: state.activities.map((activity) => (activity.id === activityId ? nextActivity : activity))
+    };
+
+    await this.writeState(nextState);
+
+    return cloneActivity(nextActivity);
+  }
+}
+
 class PostgresActivityRepositoryStore implements ActivityRepositoryStore {
   private initialized = false;
 
@@ -535,7 +617,7 @@ export function createActivityRepositoryStore(
   const connectionString = options.connectionString ?? process.env.DATABASE_URL;
 
   if (!connectionString) {
-    return new InMemoryActivityRepositoryStore();
+    return new FileActivityRepositoryStore();
   }
 
   return new PostgresActivityRepositoryStore(new Pool({ connectionString }));

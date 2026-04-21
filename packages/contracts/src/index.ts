@@ -120,7 +120,9 @@ export const userSettingsUpdateSchema = z
 export const activityEventTypeSchema = z.enum([
   "activity-selected",
   "activity-cleared",
-  "note-added"
+  "note-added",
+  "activity-corrected",
+  "activity-deleted"
 ]);
 
 export const activityEventSchema = z
@@ -133,16 +135,25 @@ export const activityEventSchema = z
     type: activityEventTypeSchema,
     activityId: z.string().min(1).optional(),
     departmentId: z.string().min(1).optional(),
+    relatedEventId: z.string().min(1).optional(),
     note: z.string().trim().min(1).max(500).optional(),
     idempotencyKey: z.string().min(1),
     metadata: z.record(z.string()).default({})
   })
   .superRefine((event, context) => {
-    if (event.type === "activity-selected" && !event.activityId) {
+    if ((event.type === "activity-selected" || event.type === "activity-corrected") && !event.activityId) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "activityId is required for activity-selected events",
+        message: "activityId is required for activity-selected and activity-corrected events",
         path: ["activityId"]
+      });
+    }
+
+    if ((event.type === "activity-corrected" || event.type === "activity-deleted") && !event.relatedEventId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "relatedEventId is required for activity-corrected and activity-deleted events",
+        path: ["relatedEventId"]
       });
     }
   });

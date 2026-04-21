@@ -18,7 +18,7 @@
 6. Open `http://localhost:5174` to confirm the desktop frontend dev server is running when the Tauri host starts.
 7. Open `http://localhost:5173` to confirm the Vite dashboard is running.
 
-By default the current API still uses in-memory storage for user settings if no database connection string is configured.
+By default the current API now uses local file-backed storage under `infra/local-state/` when no database connection string is configured.
 
 The desktop workspace now has two local execution modes:
 
@@ -39,21 +39,27 @@ Current Cinnamon-native behavior:
 
 - the tray menu is owned by Tauri and updated in place from the React shell
 - activity and note events are queued in a per-user local SQLite outbox before being flushed to `POST /v1/sync-batches`
+- the desktop settings surface now saves user-specific personal timed activities that sit alongside the shared dashboard-managed activity catalog
+- the desktop shell keeps a local recent-activities list per user key so tray activity selections survive desktop restarts during local iteration
 - autostart management exists for Cinnamon and GNOME sessions, but stays disabled in development builds so login does not point at a local debug binary
 
 ## API Persistence
 
-The current persistence slice adds PostgreSQL-backed storage for user settings.
+The current persistence slice now has two modes:
 
-To run the API against PostgreSQL instead of the in-memory fallback:
+- local file-backed persistence in `infra/local-state/` when `DATABASE_URL` is not configured
+- PostgreSQL-backed storage for user settings and the shared activity repository when `DATABASE_URL` is configured
+
+To run the API against PostgreSQL instead of the local file-backed fallback:
 
 1. Make sure the SQL files in `infra/sql/` have been applied to the target database.
 2. Start the API with `DATABASE_URL=<postgres-connection-string> npm run dev:api`.
 
 Current behavior:
 
-- without `DATABASE_URL`, user settings stay in memory for local iteration
-- with `DATABASE_URL`, user settings are stored in PostgreSQL using the `user_settings_snapshots` table
+- without `DATABASE_URL`, user settings, the shared activity repository, and accepted sync events are stored in JSON files under `infra/local-state/`
+- with `DATABASE_URL`, user settings are stored in PostgreSQL using the `user_settings_snapshots` table and the shared activity repository is stored in PostgreSQL using `activity_repository_entries`
+- the dashboard read model now treats `infra/seeds/ken-boyle-historical-tim-records.json` as the historical base and layers in live timed sessions derived from the synced tray event log
 
 ## Historical Test Data
 
@@ -112,6 +118,6 @@ Operational assumptions for this target:
 
 ## Next Setup Slices
 
-- Expand API persistence beyond user-settings snapshots into sync batches and activity events.
+- Move the local file-backed sync-event log into normalized database-backed activity-event tables.
 - Expand the web workspace from a local shell into real dashboard read models and views.
 - Add GNOME and Windows native tray-host compatibility work on top of the shared desktop shell.

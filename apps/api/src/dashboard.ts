@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  type ActivityEvent,
   dashboardQuerySchema,
   dashboardResponseSchema,
   type DashboardBreakdownRow,
@@ -14,6 +15,9 @@ import {
   type DashboardUserOption
 } from "@ddre/contracts";
 import { z } from "zod";
+import { getDepartmentCatalog } from "./data.js";
+import type { ActivityEventStore } from "./activityEvents.js";
+import type { UserSettingsStore } from "./settings.js";
 
 const userSchema = z.object({
   id: z.string().min(1),
@@ -52,6 +56,22 @@ const moduleDirectory = dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = resolve(moduleDirectory, "../../..");
 const historicalSeedPath = resolve(workspaceRoot, "infra/seeds/ken-boyle-historical-tim-records.json");
 const userPalette = ["#EEF8FC", "#B9D9EA", "#92D0C8", "#6EA6CF", "#4B79B4", "#72BCB5"];
+const departmentNameById = new Map(getDepartmentCatalog().map((department) => [department.id, department.name]));
+
+interface DashboardReadModelOptions {
+  activityEventStore: ActivityEventStore;
+  userSettingsStore: UserSettingsStore;
+}
+
+interface ActiveTimedSession {
+  userId: string;
+  deviceId: string;
+  employeeName: string;
+  activityName: string;
+  departmentName: string;
+  startedAt: string;
+  sourceEventId: string;
+}
 
 function formatHours(value: number): string {
   return new Intl.NumberFormat("en-AU", {
@@ -301,19 +321,237 @@ function buildAvailableUsers(
   });
 }
 
+function formatCalendarDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function sortActivityEvents(events: ActivityEvent[]): ActivityEvent[] {
+  return [...events].sort((left, right) => {
+    if (left.occurredAt !== right.occurredAt) {
+      return left.occurredAt.localeCompare(right.occurredAt);
+    }
+
+    if (left.recordedAt !== right.recordedAt) {
+      return left.recordedAt.localeCompare(right.recordedAt);
+    }
+
+    return left.eventId.localeCompare(right.eventId);
+  });
+}
+
+function appendSessionRecords(
+  records: HistoricalRecord[],
+  session: ActiveTimedSession,
+  endedAt: string,
+  nextSourceRowNumber: number
+): number {
+  const startedAt = new Date(session.startedAt);
+  const finishedAt = new Date(endedAt);
+
+  if (Number.isNaN(startedAt.valueOf()) || Number.isNaN(finishedAt.valueOf()) || finishedAt <= startedAt) {
+    return nextSourceRowNumber;
+  }
+
+  let cursor = new Date(startedAt);
+  let sourceRowNumber = nextSourceRowNumber;
+
+  while (cursor < finishedAt) {
+    const nextBoundary = new Date(cursor);
+    nextBoundary.setHours(24, 0, 0, 0);
+
+    const segmentEnd = nextBoundary < finishedAt ? nextBoundary : finishedAt;
+    const hours = Number(((segmentEnd.getTime() - cursor.getTime()) / 3_600_000).toFixed(2));
+
+    if (hours > 0) {
+      records.push({
+        id: `${session.sourceEventId}-${sourceRowNumber}`,
+        userId: session.userId,
+        workDate: formatCalendarDate(cursor),
+        employeeName: session.employeeName,
+        departmentName: session.departmentName,
+        activityName: session.activityName,
+        hours,
+        sourceRowNumber
+      });
+      sourceRowNumber += 1;
+    }
+
+    cursor = segmentEnd;
+  }
+
+  return sourceRowNumber;
+}
+
+type LiveUserIdentity = {
+  canonicalUserId: string;
+  displayName: string;
+};
+
+async function buildLiveUserIdentities(
+  events: ActivityEvent[],
+  userSettingsStore: UserSettingsStore
+): Promise<Map<string, LiveUserIdentity>> {
+  const uniqueUserIds = Array.from(new Set(events.map((event) => event.userId))).sort((left, right) => left.localeCompare(right, "en-AU"));
+  const identities = await Promise.all(
+    uniqueUserIds.map(async (userId) => {
+      try {
+        const settings = await userSettingsStore.getUserSettings(userId);
+        const displayName = normalizeWhitespace(settings.displayName) || userId;
+
+        return [userId, {
+          canonicalUserId: displayName === userId ? userId : buildFallbackUserId(displayName),
+          displayName
+        }] as const;
+      } catch {
+        return [userId, {
+          canonicalUserId: userId,
+          displayName: userId
+        }] as const;
+      }
+    })
+  );
+
+  return new Map(identities);
+}
+
+async function buildLiveRecords(
+  activityEventStore: ActivityEventStore,
+  userSettingsStore: UserSettingsStore,
+  nextSourceRowNumber: number
+): Promise<HistoricalRecord[]> {
+  const events = sortActivityEvents(await activityEventStore.listEvents());
+
+  if (events.length === 0) {
+    return [];
+  }
+
+  const identityByUserId = await buildLiveUserIdentities(events, userSettingsStore);
+  const streams = new Map<string, ActivityEvent[]>();
+
+  for (const event of events) {
+    const streamKey = `${event.userId}::${event.deviceId}`;
+    const streamEvents = streams.get(streamKey) ?? [];
+    streamEvents.push(event);
+    streams.set(streamKey, streamEvents);
+  }
+
+  const records: HistoricalRecord[] = [];
+  let sourceRowNumber = nextSourceRowNumber;
+  const projectionCutoff = new Date().toISOString();
+
+  for (const streamEvents of streams.values()) {
+    const correctionByTarget = new Map<string, ActivityEvent>();
+    const deletedEventIds = new Set<string>();
+
+    for (const event of streamEvents) {
+      if (event.type === "activity-corrected" && event.relatedEventId) {
+        correctionByTarget.set(event.relatedEventId, event);
+      }
+
+      if (event.type === "activity-deleted" && event.relatedEventId) {
+        deletedEventIds.add(event.relatedEventId);
+      }
+    }
+
+    let activeSession: ActiveTimedSession | null = null;
+
+    for (const event of streamEvents) {
+      if (event.type === "activity-selected") {
+        if (deletedEventIds.has(event.eventId)) {
+          continue;
+        }
+
+        if (activeSession) {
+          sourceRowNumber = appendSessionRecords(records, activeSession, event.occurredAt, sourceRowNumber);
+        }
+
+        const effectiveSelection = correctionByTarget.get(event.eventId) ?? event;
+        const userIdentity = identityByUserId.get(event.userId);
+
+        activeSession = {
+          userId: userIdentity?.canonicalUserId ?? event.userId,
+          deviceId: event.deviceId,
+          employeeName: userIdentity?.displayName ?? event.userId,
+          activityName: effectiveSelection.metadata.activityName ?? effectiveSelection.activityId ?? "Selected activity",
+          departmentName: departmentNameById.get(effectiveSelection.departmentId ?? "") ?? "Default department",
+          startedAt: event.occurredAt,
+          sourceEventId: event.eventId
+        };
+        continue;
+      }
+
+      if (event.type === "activity-cleared" && activeSession) {
+        if (deletedEventIds.has(event.eventId)) {
+          continue;
+        }
+
+        sourceRowNumber = appendSessionRecords(records, activeSession, event.occurredAt, sourceRowNumber);
+        activeSession = null;
+      }
+    }
+
+    if (activeSession) {
+      sourceRowNumber = appendSessionRecords(records, activeSession, projectionCutoff, sourceRowNumber);
+    }
+  }
+
+  return records;
+}
+
+function mergeUsers(users: HistoricalUser[], liveRecords: HistoricalRecord[]): HistoricalUser[] {
+  const mergedUsers = new Map(users.map((user) => [user.id, user]));
+
+  for (const record of liveRecords) {
+    const userId = getRecordUserId(record);
+    const displayName = normalizeWhitespace(record.employeeName) || userId;
+    const existingUser = mergedUsers.get(userId);
+
+    if (!existingUser) {
+      mergedUsers.set(userId, {
+        id: userId,
+        displayName,
+        isSynthetic: false
+      });
+      continue;
+    }
+
+    if (existingUser.displayName !== displayName && displayName.length > 0) {
+      mergedUsers.set(userId, {
+        ...existingUser,
+        displayName,
+        isSynthetic: false
+      });
+    }
+  }
+
+  return Array.from(mergedUsers.values()).sort((left, right) => left.displayName.localeCompare(right.displayName, "en-AU"));
+}
+
 async function readHistoricalSeed(): Promise<HistoricalSeed> {
   const fileContents = await readFile(historicalSeedPath, "utf8");
 
   return historicalSeedSchema.parse(JSON.parse(fileContents));
 }
 
-export async function getDashboardReadModel(rawQuery: unknown): Promise<DashboardResponse> {
+export async function getDashboardReadModel(
+  rawQuery: unknown,
+  options: DashboardReadModelOptions
+): Promise<DashboardResponse> {
   const query = dashboardQuerySchema.parse(rawQuery) as DashboardQuery;
   const seed = await readHistoricalSeed();
-  const users = buildUsers(seed);
+  const liveRecords = await buildLiveRecords(
+    options.activityEventStore,
+    options.userSettingsStore,
+    Math.max(...seed.records.map((record) => record.sourceRowNumber), 0) + 1
+  );
+  const users = mergeUsers(buildUsers(seed), liveRecords);
   const userById = new Map(users.map((user) => [user.id, user]));
   const userColorById = buildUserColorMap(users);
-  const allRecords = [...seed.records].sort((left, right) => left.workDate.localeCompare(right.workDate));
+  const allRecords = [...seed.records, ...liveRecords].sort((left, right) => left.workDate.localeCompare(right.workDate));
   const minDate = allRecords[0]?.workDate ?? seed.importedAt.slice(0, 10);
   const maxDate = allRecords[allRecords.length - 1]?.workDate ?? seed.importedAt.slice(0, 10);
   const availableDepartments = [...new Set(allRecords.map((record) => record.departmentName))].sort((left, right) => {

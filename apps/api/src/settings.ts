@@ -13,6 +13,7 @@ import {
   getDepartmentCatalog,
   type ActivityRepositoryStore
 } from "./data.js";
+import { readLocalStateJson, writeLocalStateJson } from "./localState.js";
 
 const availableDepartments = getDepartmentCatalog();
 const preferredDefaultDepartmentId = "department-property-management";
@@ -32,6 +33,10 @@ interface Queryable {
 
 interface StoredSettingsRow extends QueryResultRow {
   settings_payload: unknown;
+}
+
+interface StoredUserSettingsState {
+  users: Record<string, UserSettings>;
 }
 
 export interface UserSettingsStore {
@@ -275,6 +280,46 @@ class InMemoryUserSettingsStore implements UserSettingsStore {
   }
 }
 
+class FileUserSettingsStore implements UserSettingsStore {
+  private readonly stateFileName = "user-settings.json";
+
+  constructor(private readonly activityRepositoryStore: ActivityRepositoryStore) {}
+
+  private async readState(): Promise<StoredUserSettingsState> {
+    const storedState = await readLocalStateJson<StoredUserSettingsState>(this.stateFileName, { users: {} });
+    const users = Object.fromEntries(
+      Object.entries(storedState.users).map(([userId, settings]) => [userId, userSettingsSchema.parse(settings)])
+    );
+
+    return { users };
+  }
+
+  private async writeState(state: StoredUserSettingsState): Promise<void> {
+    await writeLocalStateJson(this.stateFileName, state);
+  }
+
+  async getUserSettings(userId: string): Promise<UserSettings> {
+    const state = await this.readState();
+    const existingSettings = state.users[userId];
+
+    if (!existingSettings) {
+      return createDefaultUserSettings(userId, this.activityRepositoryStore);
+    }
+
+    return hydrateUserSettings(existingSettings, this.activityRepositoryStore);
+  }
+
+  async upsertUserSettings(userId: string, settingsUpdate: UserSettingsUpdate): Promise<UserSettings> {
+    const state = await this.readState();
+    const storedSettings = await createStoredUserSettings(userId, settingsUpdate, this.activityRepositoryStore);
+
+    state.users[userId] = storedSettings;
+    await this.writeState(state);
+
+    return hydrateUserSettings(storedSettings, this.activityRepositoryStore);
+  }
+}
+
 class PostgresUserSettingsStore implements UserSettingsStore {
   constructor(
     private readonly pool: Queryable,
@@ -334,7 +379,7 @@ export function createUserSettingsStore(options: CreateUserSettingsStoreOptions 
   const connectionString = options.connectionString ?? process.env.DATABASE_URL;
 
   if (!connectionString) {
-    return new InMemoryUserSettingsStore(sharedActivityRepositoryStore ?? createActivityRepositoryStore());
+    return new FileUserSettingsStore(sharedActivityRepositoryStore ?? createActivityRepositoryStore());
   }
 
   const activityRepositoryStore = sharedActivityRepositoryStore ?? createActivityRepositoryStore({ connectionString });

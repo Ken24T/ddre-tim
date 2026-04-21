@@ -7,5 +7,6 @@ coverage/
 *.db
 *.sqlite
 *.sqlite3
+infra/local-state/
 .DS_Store
 .github/.tctbp-backups/

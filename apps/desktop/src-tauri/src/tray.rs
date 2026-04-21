@@ -17,6 +17,7 @@ const ACTIVITIES_ID: &str = "activities";
 const ACTIVITY_SECTION_ID_PREFIX: &str = "activity-section::";
 const ACTIVITY_ID_PREFIX: &str = "activity::";
 const EMPTY_ACTIVITY_ID: &str = "activity::empty";
+const REFRESH_ACTIVITIES_ID: &str = "refresh-activities";
 const TRIGGER_SYNC_ID: &str = "trigger-sync";
 const TOGGLE_AUTOSTART_ID: &str = "toggle-autostart";
 const QUIT_ID: &str = "quit";
@@ -106,6 +107,13 @@ pub fn build_tray<R: Runtime>(
         None::<&str>,
     )?;
     activities_menu.append(&placeholder_activity)?;
+    let refresh_activities = MenuItem::with_id(
+        app,
+        REFRESH_ACTIVITIES_ID,
+        "Refresh Activities",
+        true,
+        None::<&str>,
+    )?;
     let trigger_sync = MenuItem::with_id(app, TRIGGER_SYNC_ID, "Sync Now", true, None::<&str>)?;
     let autostart_item = CheckMenuItem::with_id(
         app,
@@ -130,6 +138,7 @@ pub fn build_tray<R: Runtime>(
             &open_settings,
             &activities_menu,
             &secondary_separator,
+            &refresh_activities,
             &trigger_sync,
             &autostart_item,
             &tertiary_separator,
@@ -156,6 +165,9 @@ pub fn build_tray<R: Runtime>(
             }
             TRIGGER_SYNC_ID => {
                 let _ = emit_tray_event(app, TRIGGER_SYNC_ID, None);
+            }
+            REFRESH_ACTIVITIES_ID => {
+                let _ = emit_tray_event(app, REFRESH_ACTIVITIES_ID, None);
             }
             TOGGLE_AUTOSTART_ID => {
                 let _ = emit_tray_event(app, TOGGLE_AUTOSTART_ID, None);
@@ -330,27 +342,75 @@ fn build_cinnamon_icon() -> Image<'static> {
     }
 
     for offset in -1..=1 {
+        draw_line(&mut rgba, size, 10, 8 + offset, 22, 8 + offset, [226, 245, 240, 255]);
         draw_line(
             &mut rgba,
             size,
-            16 + offset,
+            10,
+            24 + offset,
+            22,
+            24 + offset,
+            [226, 245, 240, 255],
+        );
+
+        draw_line(
+            &mut rgba,
+            size,
+            11 + offset,
+            9,
+            15 + offset,
             16,
-            16 + offset,
-            8,
             [226, 245, 240, 255],
         );
         draw_line(
             &mut rgba,
             size,
+            21 + offset,
+            9,
+            17 + offset,
             16,
-            16 + offset,
+            [226, 245, 240, 255],
+        );
+        draw_line(
+            &mut rgba,
+            size,
+            15 + offset,
+            16,
+            11 + offset,
             23,
-            19 + offset,
-            [138, 216, 200, 255],
+            [226, 245, 240, 255],
+        );
+        draw_line(
+            &mut rgba,
+            size,
+            17 + offset,
+            16,
+            21 + offset,
+            23,
+            [226, 245, 240, 255],
         );
     }
 
-    set_pixel(&mut rgba, size, 16, 16, [255, 255, 255, 255]);
+    for y in 10..=14 {
+        let inset = y - 10;
+        for x in (12 + inset)..=(20 - inset) {
+            set_pixel(&mut rgba, size, x, y, [138, 216, 200, 255]);
+        }
+    }
+
+    for y in 18..=22 {
+        let inset = 22 - y;
+        for x in (12 + inset)..=(20 - inset) {
+            set_pixel(&mut rgba, size, x, y, [138, 216, 200, 255]);
+        }
+    }
+
+    for y in 15..=18 {
+        set_pixel(&mut rgba, size, 16, y, [234, 247, 243, 255]);
+        set_pixel(&mut rgba, size, 15, y + 1, [138, 216, 200, 255]);
+        set_pixel(&mut rgba, size, 17, y + 1, [138, 216, 200, 255]);
+    }
+
     Image::new_owned(rgba, size, size)
 }
 

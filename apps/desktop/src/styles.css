@@ -497,6 +497,79 @@ textarea {
   padding: 10px 12px;
 }
 
+.recent-item-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.recent-item-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.recent-item-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.recent-item-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(146, 208, 200, 0.26);
+  background: rgba(146, 208, 200, 0.12);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.recent-item-badge-danger {
+  border-color: rgba(241, 169, 169, 0.26);
+  background: rgba(241, 169, 169, 0.12);
+}
+
+.recent-item-history {
+  display: grid;
+  gap: 2px;
+}
+
+.recent-item-history small {
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.recent-item-actions,
+.recent-item-editor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recent-item-actions .button,
+.recent-item-editor-actions .button {
+  min-width: 0;
+  width: auto;
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.recent-item-editor {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.recent-item.is-deleted {
+  opacity: 0.88;
+}
+
 .recent-item.is-failed {
   border-color: rgba(241, 169, 169, 0.22);
 }
@@ -528,6 +601,12 @@ textarea {
   text-align: right;
 }
 
+.field-help {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -542,6 +621,19 @@ textarea {
 .settings-form {
   grid-template-columns: minmax(0, 1fr) minmax(220px, 0.5fr) auto;
   align-items: end;
+}
+
+.draft-activity-section {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+}
+
+.draft-activity-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
 }
 
 .settings-actions {
@@ -630,9 +722,11 @@ textarea {
 
   .platform-card-header,
   .diagnostics-summary,
+  .recent-item-header,
   .tray-panel-header,
   .selector-header,
   .settings-header,
+  .draft-activity-toolbar,
   .tray-menu-label-row {
     flex-direction: column;
     align-items: flex-start;

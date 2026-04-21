@@ -12,6 +12,7 @@ import {
   userSettingsUpdateSchema
 } from "@ddre/contracts";
 import { ZodError, z } from "zod";
+import { createActivityEventStore, type ActivityEventStore } from "./activityEvents.js";
 import { getDashboardReadModel } from "./dashboard.js";
 import {
   ActivityCatalogNotFoundError,
@@ -25,6 +26,7 @@ export interface BuildServerOptions {
   logger?: boolean;
   userSettingsStore?: UserSettingsStore;
   activityRepositoryStore?: ActivityRepositoryStore;
+  activityEventStore?: ActivityEventStore;
 }
 
 const allowedCorsOrigins = [
@@ -43,11 +45,11 @@ function isAllowedCorsOrigin(origin: string | undefined): boolean {
 
 export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   const server = Fastify({ logger: options.logger ?? true });
-  const seenEventIds = new Set<string>();
   const userParamsSchema = userSettingsSchema.pick({ userId: true });
   const activityParamsSchema = z.object({ activityId: z.string().min(1) });
   const activityRepositoryStore = options.activityRepositoryStore ?? createActivityRepositoryStore();
   const userSettingsStore = options.userSettingsStore ?? createUserSettingsStore({ activityRepositoryStore });
+  const activityEventStore = options.activityEventStore ?? createActivityEventStore();
 
   server.addHook("onClose", async () => {
     await userSettingsStore.close?.();
@@ -110,7 +112,10 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   });
 
   server.get("/v1/dashboard", async (request) => {
-    return dashboardResponseSchema.parse(await getDashboardReadModel(request.query));
+    return dashboardResponseSchema.parse(await getDashboardReadModel(request.query, {
+      activityEventStore,
+      userSettingsStore
+    }));
   });
 
   server.get("/v1/users/:userId/settings", async (request) => {
@@ -128,18 +133,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
 
   server.post("/v1/sync-batches", async (request, reply) => {
     const batch = syncBatchSchema.parse(request.body);
-    const acceptedEventIds: string[] = [];
-    const duplicateEventIds: string[] = [];
-
-    for (const event of batch.events) {
-      if (seenEventIds.has(event.eventId)) {
-        duplicateEventIds.push(event.eventId);
-        continue;
-      }
-
-      seenEventIds.add(event.eventId);
-      acceptedEventIds.push(event.eventId);
-    }
+    const { acceptedEventIds, duplicateEventIds } = await activityEventStore.appendEvents(batch.events);
 
     reply.status(202);
 

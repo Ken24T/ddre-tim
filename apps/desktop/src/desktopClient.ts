@@ -1,8 +1,10 @@
 import {
+  activityCatalogResponseSchema,
   syncAckSchema,
   syncBatchSchema,
   userSettingsSchema,
   userSettingsUpdateSchema,
+  type ActivityCatalogResponse,
   type SyncAck,
   type SyncBatch,
   type UserSettings,
@@ -73,6 +75,11 @@ export async function fetchHealth(): Promise<HealthPayload> {
 export async function fetchUserSettings(userId: string): Promise<UserSettings> {
   const payload = await fetchJson(resolveApiUrl(`/v1/users/${encodeURIComponent(userId)}/settings`));
   return userSettingsSchema.parse(payload);
+}
+
+export async function fetchActivityCatalog(): Promise<ActivityCatalogResponse> {
+  const payload = await fetchJson(resolveApiUrl("/v1/activities"));
+  return activityCatalogResponseSchema.parse(payload);
 }
 
 export async function saveUserSettings(userId: string, update: UserSettingsUpdate): Promise<UserSettings> {
