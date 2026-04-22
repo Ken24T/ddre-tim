@@ -11,12 +11,13 @@
 ## First Run
 
 1. Run `npm install` at the repo root.
-2. Start the API with `npm run dev:api`.
-3. Optional: start the Cinnamon-first desktop workspace with `npm run dev:desktop`.
-4. Optional: start the web workspace with `npm run dev:web` if you want the local dashboard prototype.
-5. Open `http://localhost:4000/health` to confirm the API is running.
-6. Open `http://localhost:5174` to confirm the desktop frontend dev server is running when the Tauri host starts.
-7. Open `http://localhost:5173` to confirm the Vite dashboard is running.
+2. Run `npm run dev:all` if you want to launch the API, dashboard, and native desktop together for a local runtime trial.
+3. Or start the API alone with `npm run dev:api`.
+4. Optional: start the Cinnamon-first desktop workspace with `npm run dev:desktop`.
+5. Optional: start the web workspace with `npm run dev:web` if you want the local dashboard prototype.
+6. Open `http://localhost:4000/health` to confirm the API is running.
+7. Open `http://localhost:5174` to confirm the desktop frontend dev server is running when the Tauri host starts.
+8. Open `http://localhost:5173` to confirm the Vite dashboard is running.
 
 By default the current API now uses local file-backed storage under `infra/local-state/` when no database connection string is configured.
 
@@ -24,6 +25,11 @@ The desktop workspace now has two local execution modes:
 
 - `npm run dev:desktop` starts the native Tauri host and the desktop frontend together.
 - `npm run dev:web --workspace @ddre/desktop` builds or previews the browser fallback shell without launching the native host.
+
+For a single-command local trial across the main runtime surfaces:
+
+- `npm run dev:all` starts the API, the dashboard, and the native desktop host together and stops them as a group when you press `Ctrl+C`.
+- `npm run trial:local` builds the current repo, builds the native desktop release binary, then runs the built API, the dashboard preview server, and the desktop release binary together. Use `npm run trial:local -- --skip-build` for repeat launches when you already have fresh build artifacts.
 
 If you launch the repo from the VS Code Snap on Ubuntu, the desktop workspace scripts now clear Snap-injected GTK/GIO environment variables before starting Tauri so the native host uses the system desktop libraries instead of the Snap runtime.
 

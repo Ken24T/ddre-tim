@@ -14,10 +14,12 @@
     "build": "npm run build --workspace @ddre/contracts && npm run build --workspace @ddre/api && npm run build --workspace @ddre/desktop && npm run build --workspace @ddre/web",
     "db:generate-seed": "tsx scripts/generate-historical-seed-sql.ts",
     "db:validate": "tsx scripts/validate-dev-db.ts",
+    "dev:all": "bash ./scripts/start-local-runtime.sh",
     "dev:api": "npm run dev --workspace @ddre/api",
     "dev:desktop": "npm run dev --workspace @ddre/desktop",
     "dev:web": "npm run dev --workspace @ddre/web",
     "import:tim-records": "tsx scripts/import-tim-records.ts",
+    "trial:local": "bash ./scripts/start-local-runtime-trial.sh",
     "typecheck": "npm run typecheck --workspace @ddre/contracts && npm run typecheck --workspace @ddre/api && npm run typecheck --workspace @ddre/desktop && npm run typecheck --workspace @ddre/web"
   },
   "devDependencies": {
