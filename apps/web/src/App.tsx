@@ -70,7 +70,14 @@ type ActivityRepositoryDepartmentSection = {
   inactiveCount: number;
 };
 
+type DashboardRollupState = {
+  summary: boolean;
+  scope: boolean;
+};
+
 type DashboardFocus = "all" | "monthly" | "departments" | "activities";
+
+const dashboardRollupStorageKey = "ddre.web.dashboard-rollups";
 
 const dashboardFocusOptions: Array<{ id: DashboardFocus; label: string; helper: string; cardCount: number }> = [
   { id: "all", label: "All charts", helper: "Full dashboard", cardCount: 6 },
@@ -78,6 +85,38 @@ const dashboardFocusOptions: Array<{ id: DashboardFocus; label: string; helper: 
   { id: "departments", label: "Departments", helper: "Share and split", cardCount: 2 },
   { id: "activities", label: "Activity views", helper: "Mix and by user", cardCount: 2 }
 ];
+
+function getStoredDashboardRollupState(): DashboardRollupState {
+  const fallback: DashboardRollupState = {
+    summary: false,
+    scope: false
+  };
+
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(dashboardRollupStorageKey);
+
+    if (!rawValue) {
+      return fallback;
+    }
+
+    const parsed = JSON.parse(rawValue) as Partial<DashboardRollupState> | null;
+
+    if (!parsed || typeof parsed !== "object") {
+      return fallback;
+    }
+
+    return {
+      summary: parsed.summary ?? fallback.summary,
+      scope: parsed.scope ?? fallback.scope
+    };
+  } catch {
+    return fallback;
+  }
+}
 
 function createEmptyFilters(): FilterFormState {
   return {
@@ -730,6 +769,7 @@ export default function App() {
   const [openActivityRepositorySections, setOpenActivityRepositorySections] = useState<Record<string, boolean>>({});
   const [draftFilters, setDraftFilters] = useState<FilterFormState>(createEmptyFilters());
   const [appliedFilters, setAppliedFilters] = useState<DashboardQueryValues>({});
+  const [dashboardRollups, setDashboardRollups] = useState<DashboardRollupState>(() => getStoredDashboardRollupState());
   const [dashboardFocus, setDashboardFocus] = useState<DashboardFocus>("all");
   const [userSearch, setUserSearch] = useState("");
   const [activeDepartmentLabel, setActiveDepartmentLabel] = useState<string | undefined>(undefined);
@@ -740,6 +780,14 @@ export default function App() {
   const availableRepositoryDepartments = departmentCatalogData?.departments.filter((department) => department.isActive) ?? [];
   const repositoryDepartmentNameById = new Map((departmentCatalogData?.departments ?? []).map((department) => [department.id, department.name]));
   const activityRepositorySections = groupActivityRepositoryEntries(activityRepositoryEntries, repositoryDepartmentNameById);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(dashboardRollupStorageKey, JSON.stringify(dashboardRollups));
+  }, [dashboardRollups]);
 
   useEffect(() => {
     let cancelled = false;
@@ -986,6 +1034,13 @@ export default function App() {
     setActiveActivityLabel((current) => (current === label ? undefined : label));
   }
 
+  function handleDashboardRollupToggle(section: keyof DashboardRollupState, nextOpen: boolean): void {
+    setDashboardRollups((current) => (current[section] === nextOpen ? current : {
+      ...current,
+      [section]: nextOpen
+    }));
+  }
+
   function getDefaultActivityRepositoryDepartmentIds(): string[] {
     if (departmentCatalogState.phase !== "ready") {
       return [];
@@ -1130,6 +1185,12 @@ export default function App() {
   const dateWindowLabel = dashboardData
     ? formatScopeDateRange(dashboardData.filters.selectedFrom, dashboardData.filters.selectedTo)
     : "Waiting for dates";
+  const summaryRollupDetail = dashboardData
+    ? `${summaryCards[0]?.value ?? formatHoursLabel(0)} imported · ${summaryCards[1]?.value ?? "0"} users · ${summaryCards[4]?.value ?? "0"} notes`
+    : "Imported hours, users, user-days, departments, and notes in scope";
+  const currentScopeRollupDetail = dashboardData
+    ? `${selectedUserSummary} · ${dashboardData.filters.selectedDepartment ?? "All departments"} · ${dateWindowLabel}`
+    : "Users, department, date window, and data freshness";
   const dashboardBusy = dashboardState.phase === "loading" || dashboardState.phase === "refreshing";
   const apiStatusTone = healthState.phase === "ready" ? "online" : healthState.phase === "error" ? "offline" : "checking";
   const apiStatusLabel =
@@ -1714,50 +1775,83 @@ export default function App() {
       </section>
 
       {dashboardData ? (
-        <section className="summary-grid">
-          {summaryCards.map((card) => (
-            <article className="panel stat-card" key={card.label}>
-              <p className="panel-label">{card.label}</p>
-              <h2>{card.value}</h2>
-              <p>{card.helper}</p>
-            </article>
-          ))}
-        </section>
+        <details
+          className="panel rollup-panel"
+          onToggle={(event) => {
+            handleDashboardRollupToggle("summary", event.currentTarget.open);
+          }}
+          open={dashboardRollups.summary}
+        >
+          <summary className="rollup-summary">
+            <div>
+              <p className="panel-label">Dashboard snapshot</p>
+              <strong>Imported hours and summary cards</strong>
+              <small>{summaryRollupDetail}</small>
+            </div>
+          </summary>
+
+          <div className="rollup-body">
+            <section className="summary-grid">
+              {summaryCards.map((card) => (
+                <article className="panel stat-card" key={card.label}>
+                  <p className="panel-label">{card.label}</p>
+                  <h2>{card.value}</h2>
+                  <p>{card.helper}</p>
+                </article>
+              ))}
+            </section>
+          </div>
+        </details>
       ) : null}
 
       {dashboardData ? (
-        <section className="panel scope-panel">
-          <div className="scope-copy">
-            <p className="panel-label">Current scope</p>
-            <p className="scope-hint">The charts below reflect this exact reporting window, including the latest imported read model.</p>
+        <details
+          className="panel rollup-panel scope-rollup-panel"
+          onToggle={(event) => {
+            handleDashboardRollupToggle("scope", event.currentTarget.open);
+          }}
+          open={dashboardRollups.scope}
+        >
+          <summary className="rollup-summary">
+            <div>
+              <p className="panel-label">Current scope</p>
+              <strong>Users, department, dates, and freshness</strong>
+              <small>{currentScopeRollupDetail}</small>
+            </div>
+          </summary>
+
+          <div className="rollup-body">
+            <div className="scope-copy">
+              <p className="scope-hint">The charts below reflect this exact reporting window, including the latest imported read model.</p>
+            </div>
+
+            <div className="scope-chip-list">
+              <div className="scope-chip">
+                <span>Users</span>
+                <strong>{selectedUserSummary}</strong>
+                <small>{selectedUserMeta}</small>
+              </div>
+
+              <div className="scope-chip">
+                <span>Department</span>
+                <strong>{dashboardData.filters.selectedDepartment ?? "All departments"}</strong>
+                <small>{dashboardData.stats.departmentCount} departments represented</small>
+              </div>
+
+              <div className="scope-chip">
+                <span>Date window</span>
+                <strong>{dateWindowLabel}</strong>
+                <small>{formatHoursLabel(dashboardData.stats.totalHours)} imported hours in view</small>
+              </div>
+
+              <div className="scope-chip">
+                <span>Data freshness</span>
+                <strong>{formatTimestamp(dashboardData.importedAt)}</strong>
+                <small>Latest dashboard import</small>
+              </div>
+            </div>
           </div>
-
-          <div className="scope-chip-list">
-            <div className="scope-chip">
-              <span>Users</span>
-              <strong>{selectedUserSummary}</strong>
-              <small>{selectedUserMeta}</small>
-            </div>
-
-            <div className="scope-chip">
-              <span>Department</span>
-              <strong>{dashboardData.filters.selectedDepartment ?? "All departments"}</strong>
-              <small>{dashboardData.stats.departmentCount} departments represented</small>
-            </div>
-
-            <div className="scope-chip">
-              <span>Date window</span>
-              <strong>{dateWindowLabel}</strong>
-              <small>{formatHoursLabel(dashboardData.stats.totalHours)} imported hours in view</small>
-            </div>
-
-            <div className="scope-chip">
-              <span>Data freshness</span>
-              <strong>{formatTimestamp(dashboardData.importedAt)}</strong>
-              <small>Latest dashboard import</small>
-            </div>
-          </div>
-        </section>
+        </details>
       ) : null}
 
       {dashboardData ? (

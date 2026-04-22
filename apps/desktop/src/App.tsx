@@ -652,8 +652,10 @@ export default function App() {
   const [outboxStatus, setOutboxStatus] = useState<OutboxStatus>(defaultOutboxStatus);
   const [autostartState, setAutostartState] = useState<AutostartState>(defaultAutostartState);
   const [openTimedActivitySections, setOpenTimedActivitySections] = useState<Record<string, boolean>>({});
+  const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false);
+  const [isRecentChangesOpen, setIsRecentChangesOpen] = useState(false);
   const trayPanelRef = useRef<HTMLElement | null>(null);
-  const settingsPanelRef = useRef<HTMLElement | null>(null);
+  const settingsPanelRef = useRef<HTMLDetailsElement | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1012,6 +1014,9 @@ export default function App() {
   const defaultDepartmentSelectValue = hasDepartmentOptions && departments.some((department) => department.id === defaultDepartmentIdDraft)
     ? defaultDepartmentIdDraft
     : "";
+  const defaultDepartmentName = departments.find((department) => department.id === defaultDepartmentSelectValue)?.name
+    ?? departments.find((department) => department.id === settings?.defaultDepartmentId)?.name
+    ?? "No default department selected";
   const canSaveSettings = Boolean(defaultDepartmentSelectValue)
     && displayNameDraft.trim().length > 0
     && settingsState.phase !== "loading"
@@ -1065,6 +1070,18 @@ export default function App() {
       : "Browser preview ready. Use search and note capture below."
     : "Finish your name and default department below before timed capture starts.";
   const trayPanelLabel = runtimeTrayPlatform.id === "cinnamon" ? "Cinnamon tray" : `${runtimeTrayPlatform.label} tray`;
+  const settingsRollupDetail = settingsState.phase === "error"
+    ? settingsState.message
+    : settings?.isConfigured
+      ? `${displayNameDraft.trim() || settings.displayName} · ${defaultDepartmentName} default · ${customActivityDrafts.length} personal activit${customActivityDrafts.length === 1 ? "y" : "ies"}`
+      : settingsStatusLabel;
+  const queuedRecentChangeCount = recentItems.filter((item) => item.status === "queued").length;
+  const recentChangesRollupDetail = recentItems.length > 0
+    ? queuedRecentChangeCount > 0
+      ? `${recentItems.length} change${recentItems.length === 1 ? "" : "s"} · ${queuedRecentChangeCount} queued locally`
+      : `${recentItems.length} change${recentItems.length === 1 ? "" : "s"} · latest ${formatTimestamp(recentItems[0].timestamp)}`
+    : "Edits, corrections, and deletions appear here after the first tray change.";
+  const forceOpenSettingsPanel = settingsState.phase === "error" || Boolean(settings && !settings.isConfigured);
 
   const platformCards = useMemo(() => trayPlatforms, []);
 
@@ -1632,32 +1649,40 @@ export default function App() {
         </div>
       </section>
 
-      <section className="panel settings-panel" ref={settingsPanelRef}>
-        <div className="settings-header">
+      <details
+        className="panel settings-panel"
+        onToggle={(event) => {
+          setIsSettingsPanelOpen(event.currentTarget.open);
+        }}
+        open={forceOpenSettingsPanel || isSettingsPanelOpen}
+        ref={settingsPanelRef}
+      >
+        <summary className="settings-header rollup-summary">
           <div>
             <p className="panel-label">User settings</p>
             <h2>{settings?.isConfigured ? "Edit tray settings" : "First-run setup"}</h2>
+            <small>{settingsRollupDetail}</small>
           </div>
-          <small>{settingsStatusLabel}</small>
-        </div>
+        </summary>
 
-        {settingsState.phase === "error" ? (
-          <div className="settings-error-row">
-            <p className="error-copy">{settingsState.message}</p>
-            <button
-              className="button"
-              onClick={() => {
-                setSaveMessage(null);
-                setSettingsReloadKey((current) => current + 1);
-              }}
-              type="button"
-            >
-              Retry settings load
-            </button>
-          </div>
-        ) : null}
+        <div className="rollup-body settings-rollup-body">
+          {settingsState.phase === "error" ? (
+            <div className="settings-error-row">
+              <p className="error-copy">{settingsState.message}</p>
+              <button
+                className="button"
+                onClick={() => {
+                  setSaveMessage(null);
+                  setSettingsReloadKey((current) => current + 1);
+                }}
+                type="button"
+              >
+                Retry settings load
+              </button>
+            </div>
+          ) : null}
 
-        <form className="settings-form" onSubmit={(event) => { void handleSaveSettings(event); }}>
+          <form className="settings-form" onSubmit={(event) => { void handleSaveSettings(event); }}>
           <label className="field">
             <span>Display name</span>
             <input
@@ -1800,8 +1825,9 @@ export default function App() {
               {settingsState.phase === "saving" ? "Saving..." : settings?.isConfigured ? "Save settings" : "Finish setup"}
             </button>
           </div>
-        </form>
-      </section>
+          </form>
+        </div>
+      </details>
 
       <details className="diagnostics-panel panel">
         <summary className="diagnostics-summary">
@@ -2053,127 +2079,143 @@ export default function App() {
                 )}
               </div>
 
-              <p className="tray-menu-sublabel">Recent changes</p>
-              <div className="recent-list">
-                {recentItems.length > 0 ? recentItems.map((item) => (
-                  <div className={`recent-item is-${item.status}${isRecentItemDeleted(item) ? " is-deleted" : ""}`} key={item.id}>
-                    <div className="recent-item-header">
-                      <div className="recent-item-copy">
-                        <div className="recent-item-badges">
-                          {item.eventType === "note-added" ? <span className="recent-item-badge recent-item-badge-note">Note</span> : null}
-                          {hasRecentItemCorrections(item) ? <span className="recent-item-badge">Edited</span> : null}
-                          {isRecentItemDeleted(item) ? <span className="recent-item-badge recent-item-badge-danger">Deleted</span> : null}
+              <details
+                className="tray-rollup"
+                onToggle={(event) => {
+                  setIsRecentChangesOpen(event.currentTarget.open);
+                }}
+                open={isRecentChangesOpen || editingRecentItemId !== null}
+              >
+                <summary className="tray-rollup-summary rollup-summary">
+                  <div className="tray-rollup-copy">
+                    <p className="tray-menu-sublabel">Recent changes</p>
+                    <small>{recentChangesRollupDetail}</small>
+                  </div>
+                </summary>
+
+                <div className="tray-rollup-body rollup-body">
+                  <div className="recent-list">
+                    {recentItems.length > 0 ? recentItems.map((item) => (
+                      <div className={`recent-item is-${item.status}${isRecentItemDeleted(item) ? " is-deleted" : ""}`} key={item.id}>
+                        <div className="recent-item-header">
+                          <div className="recent-item-copy">
+                            <div className="recent-item-badges">
+                              {item.eventType === "note-added" ? <span className="recent-item-badge recent-item-badge-note">Note</span> : null}
+                              {hasRecentItemCorrections(item) ? <span className="recent-item-badge">Edited</span> : null}
+                              {isRecentItemDeleted(item) ? <span className="recent-item-badge recent-item-badge-danger">Deleted</span> : null}
+                            </div>
+                            <strong>{item.title}</strong>
+                            {item.note ? <p className="recent-item-note">{item.note}</p> : null}
+                            <span>{item.subtitle}</span>
+                            <small>{item.status === "queued" ? `${formatTimestamp(item.timestamp)} · queued locally` : formatTimestamp(item.timestamp)}</small>
+                            {item.history.length > 0 ? (
+                              <div className="recent-item-history">
+                                {[...item.history].reverse().map((entry) => (
+                                  <small key={`${entry.kind}-${entry.at}`}>{formatRecentItemHistoryEntry(entry)}</small>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div className="recent-item-actions">
+                            {(item.eventType === "activity-selected" || item.eventType === "note-added") && !isRecentItemDeleted(item) ? (
+                              <button
+                                className="button"
+                                onClick={() => {
+                                  setEditingRecentItemId(item.id);
+
+                                  if (item.eventType === "note-added") {
+                                    setEditingRecentActivityId("");
+                                    setEditingRecentNoteText(item.note ?? "");
+                                    return;
+                                  }
+
+                                  const selectedActivity = resolveRecentItemActivity(item);
+
+                                  setEditingRecentActivityId(selectedActivity?.id ?? recentTimedActivityOptions[0]?.id ?? "");
+                                  setEditingRecentNoteText("");
+                                }}
+                                type="button"
+                              >
+                                Edit
+                              </button>
+                            ) : null}
+
+                            {!isRecentItemDeleted(item) ? (
+                              <button
+                                className="button button-danger"
+                                onClick={() => {
+                                  void handleRecentItemDelete(item);
+                                }}
+                                type="button"
+                              >
+                                Delete
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
-                        <strong>{item.title}</strong>
-                        {item.note ? <p className="recent-item-note">{item.note}</p> : null}
-                        <span>{item.subtitle}</span>
-                        <small>{item.status === "queued" ? `${formatTimestamp(item.timestamp)} · queued locally` : formatTimestamp(item.timestamp)}</small>
-                        {item.history.length > 0 ? (
-                          <div className="recent-item-history">
-                            {[...item.history].reverse().map((entry) => (
-                              <small key={`${entry.kind}-${entry.at}`}>{formatRecentItemHistoryEntry(entry)}</small>
-                            ))}
+
+                        {editingRecentItemId === item.id && !isRecentItemDeleted(item) ? (
+                          <div className="recent-item-editor">
+                            {item.eventType === "note-added" ? (
+                              <label className="field">
+                                <span>Correct note</span>
+                                <textarea
+                                  maxLength={500}
+                                  onChange={(event) => {
+                                    setEditingRecentNoteText(event.target.value);
+                                  }}
+                                  rows={3}
+                                  value={editingRecentNoteText}
+                                />
+                              </label>
+                            ) : (
+                              <label className="field">
+                                <span>Correct to</span>
+                                <select
+                                  onChange={(event) => {
+                                    setEditingRecentActivityId(event.target.value);
+                                  }}
+                                  value={editingRecentActivityId}
+                                >
+                                  {recentTimedActivityOptions.map((activity) => (
+                                    <option key={`recent-edit-${activity.id}`} value={activity.id}>{activity.name}</option>
+                                  ))}
+                                </select>
+                              </label>
+                            )}
+
+                            <div className="recent-item-editor-actions">
+                              <button
+                                className="button button-primary"
+                                disabled={item.eventType === "note-added" ? !editingRecentNoteText.trim() : !editingRecentActivityId}
+                                onClick={() => {
+                                  void handleRecentItemEditSave(item);
+                                }}
+                                type="button"
+                              >
+                                {item.eventType === "note-added" ? "Save note" : "Save change"}
+                              </button>
+
+                              <button
+                                className="button"
+                                onClick={() => {
+                                  setEditingRecentItemId(null);
+                                  setEditingRecentActivityId("");
+                                  setEditingRecentNoteText("");
+                                }}
+                                type="button"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
                         ) : null}
                       </div>
-
-                      <div className="recent-item-actions">
-                        {(item.eventType === "activity-selected" || item.eventType === "note-added") && !isRecentItemDeleted(item) ? (
-                          <button
-                            className="button"
-                            onClick={() => {
-                              setEditingRecentItemId(item.id);
-
-                              if (item.eventType === "note-added") {
-                                setEditingRecentActivityId("");
-                                setEditingRecentNoteText(item.note ?? "");
-                                return;
-                              }
-
-                              const selectedActivity = resolveRecentItemActivity(item);
-
-                              setEditingRecentActivityId(selectedActivity?.id ?? recentTimedActivityOptions[0]?.id ?? "");
-                              setEditingRecentNoteText("");
-                            }}
-                            type="button"
-                          >
-                            Edit
-                          </button>
-                        ) : null}
-
-                        {!isRecentItemDeleted(item) ? (
-                          <button
-                            className="button button-danger"
-                            onClick={() => {
-                              void handleRecentItemDelete(item);
-                            }}
-                            type="button"
-                          >
-                            Delete
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    {editingRecentItemId === item.id && !isRecentItemDeleted(item) ? (
-                      <div className="recent-item-editor">
-                        {item.eventType === "note-added" ? (
-                          <label className="field">
-                            <span>Correct note</span>
-                            <textarea
-                              maxLength={500}
-                              onChange={(event) => {
-                                setEditingRecentNoteText(event.target.value);
-                              }}
-                              rows={3}
-                              value={editingRecentNoteText}
-                            />
-                          </label>
-                        ) : (
-                          <label className="field">
-                            <span>Correct to</span>
-                            <select
-                              onChange={(event) => {
-                                setEditingRecentActivityId(event.target.value);
-                              }}
-                              value={editingRecentActivityId}
-                            >
-                              {recentTimedActivityOptions.map((activity) => (
-                                <option key={`recent-edit-${activity.id}`} value={activity.id}>{activity.name}</option>
-                              ))}
-                            </select>
-                          </label>
-                        )}
-
-                        <div className="recent-item-editor-actions">
-                          <button
-                            className="button button-primary"
-                            disabled={item.eventType === "note-added" ? !editingRecentNoteText.trim() : !editingRecentActivityId}
-                            onClick={() => {
-                              void handleRecentItemEditSave(item);
-                            }}
-                            type="button"
-                          >
-                            {item.eventType === "note-added" ? "Save note" : "Save change"}
-                          </button>
-
-                          <button
-                            className="button"
-                            onClick={() => {
-                              setEditingRecentItemId(null);
-                              setEditingRecentActivityId("");
-                              setEditingRecentNoteText("");
-                            }}
-                            type="button"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
+                    )) : <p className="empty-copy">Recent tray activity changes will appear here after the first selection.</p>}
                   </div>
-                )) : <p className="empty-copy">Recent tray activity changes will appear here after the first selection.</p>}
-              </div>
+                </div>
+              </details>
             </div>
           </div>
         </article>

@@ -76,6 +76,7 @@ body {
 }
 
 .hero,
+.rollup-panel,
 .summary-grid,
 .grid,
 .control-panel,
@@ -1173,6 +1174,70 @@ body {
   margin-bottom: 18px;
 }
 
+.rollup-panel {
+  margin-bottom: 20px;
+}
+
+.rollup-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+
+.rollup-summary::-webkit-details-marker {
+  display: none;
+}
+
+.rollup-summary::after {
+  content: "+";
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(213, 234, 244, 0.18);
+  background: rgba(231, 245, 252, 0.08);
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.rollup-panel[open] .rollup-summary::after {
+  content: "−";
+}
+
+.rollup-summary strong {
+  display: block;
+  font-size: 0.98rem;
+}
+
+.rollup-summary small {
+  display: block;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.rollup-body {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.rollup-body .summary-grid {
+  margin-bottom: 0;
+}
+
+.scope-rollup-panel .rollup-body {
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.9fr);
+  gap: 20px;
+  align-items: start;
+}
+
 .scope-copy {
   max-width: 24rem;
 }
@@ -1633,6 +1698,7 @@ body {
 @media (max-width: 980px) {
   .activity-repository-header,
   .activity-repository-grid,
+  .scope-rollup-panel .rollup-body,
   .scope-panel,
   .focus-panel,
   .control-panel,

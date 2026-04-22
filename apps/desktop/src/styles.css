@@ -54,45 +54,13 @@ textarea {
   max-width: 1240px;
   margin: 0 auto;
   padding: 34px 18px 48px;
-  isolation: isolate;
-  overflow: hidden;
-}
-
-.shell::before {
-  content: "";
-  position: fixed;
-  top: -220px;
-  left: 50%;
-  width: min(74vw, 760px);
-  aspect-ratio: 1;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, transparent 31%, rgba(234, 245, 250, 0.18) 32% 43%, rgba(159, 205, 230, 0.18) 44% 56%, rgba(104, 165, 208, 0.14) 57% 67%, transparent 68%);
-  pointer-events: none;
-  filter: blur(0.8px);
-  opacity: 0.94;
-  z-index: -2;
-}
-
-.shell::after {
-  content: "";
-  position: fixed;
-  inset: auto -120px -120px auto;
-  width: 340px;
-  height: 340px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(114, 188, 181, 0.28), transparent 70%);
-  pointer-events: none;
-  z-index: -2;
 }
 
 .panel {
   border: 1px solid var(--panel-border);
   border-radius: 24px;
-  background: linear-gradient(180deg, rgba(33, 53, 114, 0.72), rgba(18, 31, 73, 0.72));
+  background: linear-gradient(180deg, rgba(33, 53, 114, 0.9), rgba(18, 31, 73, 0.88));
   box-shadow: 0 22px 60px rgba(10, 16, 42, 0.34);
-  backdrop-filter: blur(20px);
 }
 
 .hero,
@@ -102,6 +70,7 @@ textarea {
 
 .settings-panel {
   margin-bottom: 14px;
+  scroll-margin-top: 18px;
 }
 
 .hero {
@@ -114,6 +83,7 @@ textarea {
   padding: 16px 18px 18px;
 }
 
+.rollup-summary,
 .diagnostics-summary {
   display: flex;
   justify-content: space-between;
@@ -123,10 +93,12 @@ textarea {
   list-style: none;
 }
 
+.rollup-summary::-webkit-details-marker,
 .diagnostics-summary::-webkit-details-marker {
   display: none;
 }
 
+.rollup-summary::after,
 .diagnostics-summary::after {
   content: "+";
   display: inline-flex;
@@ -142,19 +114,28 @@ textarea {
   line-height: 1;
 }
 
+.rollup-summary::after {
+  flex: 0 0 auto;
+}
+
+details[open] > .rollup-summary::after,
 .diagnostics-panel[open] .diagnostics-summary::after {
   content: "−";
 }
 
+.rollup-summary strong,
 .diagnostics-summary strong {
   display: block;
   font-size: 0.94rem;
 }
 
+.rollup-summary small,
 .diagnostics-summary small {
+  display: block;
   color: var(--text-secondary);
 }
 
+.rollup-body,
 .diagnostics-body {
   display: grid;
   gap: 14px;
@@ -367,6 +348,30 @@ textarea {
   display: grid;
   gap: 14px;
   margin-top: 14px;
+}
+
+.tray-rollup {
+  display: grid;
+  gap: 8px;
+}
+
+.tray-rollup-summary {
+  align-items: flex-start;
+}
+
+.tray-rollup-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tray-rollup-copy .tray-menu-sublabel {
+  margin: 0;
+}
+
+.tray-rollup-body {
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .tray-menu-section {
