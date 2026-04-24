@@ -9,11 +9,12 @@ The current runtime target is a zero-cost office-hosted deployment: the shared A
 - Monorepo root tooling for TypeScript workspaces.
 - Shared domain contracts for activities, user settings, and sync batches.
 - A minimal Fastify API with health, activity catalog, user settings, and sync-batch endpoints.
-- User settings can now persist in PostgreSQL when `DATABASE_URL` is configured, while local development can still fall back to in-memory storage.
+- User settings can now persist in PostgreSQL when `DATABASE_URL` is configured, while local development can still fall back to file-backed state under `infra/local-state/`.
 - A Cinnamon-first desktop workspace with a native Tauri host, mutable tray menu, local SQLite outbox, and a browser preview fallback for UI iteration.
 - A minimal Vite + React web workspace for local dashboard testing.
 - A repeatable workbook import script that uses Ken Boyle workbook rows as the source slice, then expands the dev seed into a multi-user historical dataset for dashboard testing.
 - An initial PostgreSQL schema plus generated SQL seed files for local development and future persistence work.
+- A user-local GNOME runtime scaffold for validating the compiled API, dashboard preview, and native desktop binary together on this workstation.
 - Core architecture and workflow docs to keep implementation decisions explicit.
 
 ## Workspace Components
@@ -33,5 +34,7 @@ The current runtime target is a zero-cost office-hosted deployment: the shared A
 5. Optional: run `npm run import:tim-records -- "/home/ken/Downloads/TiM Metrics.xlsx"` to regenerate the multi-user historical dashboard seed.
 6. Optional: run `npm run db:generate-seed && npm run db:validate` to refresh and validate the local SQL seed artifacts.
 7. Optional: run `npm run dev:web` to start the local API-backed dashboard prototype.
+8. Optional: run `scripts/install-local-gnome-runtime.sh --dry-run --skip-build` to inspect the local GNOME runtime install plan.
 
 See `docs/development-setup.md` for more detail.
+See `docs/runtime-deployment.md` for the current local runtime deployment notes.

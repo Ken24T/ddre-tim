@@ -4,6 +4,7 @@ import {
   fetchActivityCatalog,
   fetchDepartmentCatalog,
   fetchDashboardSnapshot,
+  fetchHealth,
   formatHoursLabel,
   formatTimestamp,
   type ActivityCatalogResponse,
@@ -794,13 +795,7 @@ export default function App() {
 
     async function loadHealth(): Promise<void> {
       try {
-        const response = await fetch("/health");
-
-        if (!response.ok) {
-          throw new Error(`Health check failed with status ${response.status}`);
-        }
-
-        const payload = (await response.json()) as HealthPayload;
+        const payload = await fetchHealth();
 
         if (!cancelled) {
           setHealthState({ phase: "ready", payload });

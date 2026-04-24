@@ -14,6 +14,7 @@
     "build": "npm run build --workspace @ddre/contracts && npm run build --workspace @ddre/api && npm run build --workspace @ddre/desktop && npm run build --workspace @ddre/web",
     "db:generate-seed": "tsx scripts/generate-historical-seed-sql.ts",
     "db:validate": "tsx scripts/validate-dev-db.ts",
+    "deploy:local:gnome": "bash ./scripts/install-local-gnome-runtime.sh",
     "dev:all": "bash ./scripts/start-local-runtime.sh",
     "dev:api": "npm run dev --workspace @ddre/api",
     "dev:desktop": "npm run dev --workspace @ddre/desktop",
