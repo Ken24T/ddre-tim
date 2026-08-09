@@ -1,0 +1,155 @@
+{
+  "contract": {
+    "name": "tctbp-adviser-inspection",
+    "major": 1,
+    "minor": 0,
+    "capabilities": [
+      "inspection.local-v1",
+      "workflow-catalogue.core-v1",
+      "reason-codes.core-v1"
+    ],
+    "schema": "schemas/tctbp-adviser-inspection-v1.schema.json"
+  },
+  "observation": {
+    "provider": "tctbp-web",
+    "observedAt": "2026-01-01T00:00:00.000Z",
+    "basis": "local-working-copy-and-local-tracking-refs",
+    "fetchPerformed": false,
+    "repository": {
+      "name": "staged-fixture",
+      "tctbpSchemaVersion": 11,
+      "tctbpVersion": "0.2.0",
+      "versionSource": "VERSION"
+    },
+    "branchModel": {
+      "strategy": "staged",
+      "workingBranch": "development",
+      "preProductionBranch": "staging",
+      "productionBranch": "main",
+      "promotionTargets": [
+        "staging",
+        "production"
+      ]
+    },
+    "head": {
+      "branch": "development",
+      "detached": false,
+      "sha": "2222222"
+    },
+    "workingTree": {
+      "clean": false,
+      "pathCount": 1,
+      "counts": {
+        "modified": 1,
+        "added": 0,
+        "deleted": 0,
+        "renamed": 0,
+        "copied": 0,
+        "untracked": 0,
+        "other": 0
+      }
+    },
+    "operations": [],
+    "localTracking": {
+      "basis": "refs/remotes/origin/*",
+      "freshness": "unknown",
+      "current": {
+        "remoteExists": true,
+        "localSha": "2222222",
+        "remoteSha": "2222222",
+        "sync": {
+          "state": "in-sync",
+          "ahead": 0,
+          "behind": 0,
+          "diverged": false
+        }
+      },
+      "branches": [
+        {
+          "role": "working",
+          "name": "development",
+          "local": {
+            "exists": true,
+            "sha": "2222222"
+          },
+          "tracking": {
+            "exists": true,
+            "sha": "2222222"
+          },
+          "sync": {
+            "state": "in-sync",
+            "ahead": 0,
+            "behind": 0,
+            "diverged": false
+          }
+        },
+        {
+          "role": "pre-production",
+          "name": "staging",
+          "local": {
+            "exists": true,
+            "sha": "2222222"
+          },
+          "tracking": {
+            "exists": true,
+            "sha": "2222222"
+          },
+          "sync": {
+            "state": "in-sync",
+            "ahead": 0,
+            "behind": 0,
+            "diverged": false
+          }
+        },
+        {
+          "role": "production",
+          "name": "main",
+          "local": {
+            "exists": true,
+            "sha": "2222222"
+          },
+          "tracking": {
+            "exists": true,
+            "sha": "2222222"
+          },
+          "sync": {
+            "state": "in-sync",
+            "ahead": 0,
+            "behind": 0,
+            "diverged": false
+          }
+        }
+      ]
+    },
+    "release": {
+      "reachableTag": null,
+      "publishedTag": null
+    },
+    "continuationFileCount": 0,
+    "workflows": [
+      {
+        "id": "status",
+        "installed": true,
+        "policyEnabled": true,
+        "preferredTriggers": [
+          "status"
+        ]
+      }
+    ],
+    "statusAdvice": {
+      "tokens": [
+        "checkpoint"
+      ],
+      "reasonCodes": [
+        "working-tree-dirty"
+      ]
+    },
+    "activeGuardrails": [
+      {
+        "id": "git.working-tree.dirty",
+        "reasonCode": "working-tree-dirty"
+      }
+    ]
+  },
+  "errors": []
+}

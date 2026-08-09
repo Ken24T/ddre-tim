@@ -1,0 +1,547 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Ken24T/TCTBP-Web/schemas/tctbp-adviser-inspection-v1.schema.json",
+  "title": "TCTBP Adviser Inspection Contract v1",
+  "type": "object",
+  "required": [
+    "contract",
+    "observation",
+    "errors"
+  ],
+  "properties": {
+    "contract": {
+      "type": "object",
+      "required": [
+        "name",
+        "major",
+        "minor",
+        "capabilities",
+        "schema"
+      ],
+      "properties": {
+        "name": {
+          "const": "tctbp-adviser-inspection"
+        },
+        "major": {
+          "const": 1
+        },
+        "minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "observation": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/observation"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/error"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "observation": {
+      "type": "object",
+      "required": [
+        "provider",
+        "observedAt",
+        "basis",
+        "fetchPerformed",
+        "repository",
+        "branchModel",
+        "head",
+        "workingTree",
+        "operations",
+        "localTracking",
+        "release",
+        "continuationFileCount",
+        "workflows",
+        "statusAdvice",
+        "activeGuardrails"
+      ],
+      "properties": {
+        "provider": {
+          "const": "tctbp-web"
+        },
+        "observedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "basis": {
+          "const": "local-working-copy-and-local-tracking-refs"
+        },
+        "fetchPerformed": {
+          "type": "boolean"
+        },
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "branchModel": {
+          "$ref": "#/$defs/branchModel"
+        },
+        "head": {
+          "$ref": "#/$defs/head"
+        },
+        "workingTree": {
+          "$ref": "#/$defs/workingTree"
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "localTracking": {
+          "$ref": "#/$defs/localTracking"
+        },
+        "release": {
+          "$ref": "#/$defs/release"
+        },
+        "continuationFileCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "workflows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workflow"
+          }
+        },
+        "statusAdvice": {
+          "$ref": "#/$defs/statusAdvice"
+        },
+        "activeGuardrails": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/guardrail"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "repository": {
+      "type": "object",
+      "required": [
+        "name",
+        "tctbpSchemaVersion",
+        "tctbpVersion",
+        "versionSource"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "tctbpSchemaVersion": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "tctbpVersion": {
+          "type": "string"
+        },
+        "versionSource": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "branchModel": {
+      "type": "object",
+      "required": [
+        "strategy",
+        "workingBranch",
+        "preProductionBranch",
+        "productionBranch",
+        "promotionTargets"
+      ],
+      "properties": {
+        "strategy": {
+          "type": "string"
+        },
+        "workingBranch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "preProductionBranch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "productionBranch": {
+          "type": "string"
+        },
+        "promotionTargets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "head": {
+      "type": "object",
+      "required": [
+        "branch",
+        "detached",
+        "sha"
+      ],
+      "properties": {
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "detached": {
+          "type": "boolean"
+        },
+        "sha": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "workingTree": {
+      "type": "object",
+      "required": [
+        "clean",
+        "pathCount",
+        "counts"
+      ],
+      "properties": {
+        "clean": {
+          "type": "boolean"
+        },
+        "pathCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "counts": {
+          "type": "object",
+          "required": [
+            "modified",
+            "added",
+            "deleted",
+            "renamed",
+            "copied",
+            "untracked",
+            "other"
+          ],
+          "properties": {
+            "modified": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "added": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "deleted": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "renamed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "copied": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "untracked": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "other": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "localTracking": {
+      "type": "object",
+      "required": [
+        "basis",
+        "freshness",
+        "current",
+        "branches"
+      ],
+      "properties": {
+        "basis": {
+          "const": "refs/remotes/origin/*"
+        },
+        "freshness": {
+          "enum": [
+            "unknown",
+            "refreshed-at-observation"
+          ]
+        },
+        "current": {
+          "$ref": "#/$defs/currentTracking"
+        },
+        "branches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/branchObservation"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "currentTracking": {
+      "type": "object",
+      "required": [
+        "remoteExists",
+        "localSha",
+        "remoteSha",
+        "sync"
+      ],
+      "properties": {
+        "remoteExists": {
+          "type": "boolean"
+        },
+        "localSha": {
+          "type": "string"
+        },
+        "remoteSha": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sync": {
+          "$ref": "#/$defs/sync"
+        }
+      },
+      "additionalProperties": true
+    },
+    "branchObservation": {
+      "type": "object",
+      "required": [
+        "role",
+        "name",
+        "local",
+        "tracking",
+        "sync"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "working",
+            "pre-production",
+            "production",
+            "other"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "local": {
+          "$ref": "#/$defs/refState"
+        },
+        "tracking": {
+          "$ref": "#/$defs/refState"
+        },
+        "sync": {
+          "$ref": "#/$defs/sync"
+        }
+      },
+      "additionalProperties": true
+    },
+    "refState": {
+      "type": "object",
+      "required": [
+        "exists",
+        "sha"
+      ],
+      "properties": {
+        "exists": {
+          "type": "boolean"
+        },
+        "sha": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "sync": {
+      "type": "object",
+      "required": [
+        "state",
+        "ahead",
+        "behind",
+        "diverged"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "unpublished",
+            "in-sync",
+            "ahead",
+            "behind",
+            "diverged"
+          ]
+        },
+        "ahead": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "behind": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diverged": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "release": {
+      "type": "object",
+      "required": [
+        "reachableTag",
+        "publishedTag"
+      ],
+      "properties": {
+        "reachableTag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "publishedTag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "workflow": {
+      "type": "object",
+      "required": [
+        "id",
+        "installed",
+        "policyEnabled",
+        "preferredTriggers"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "policyEnabled": {
+          "type": "boolean"
+        },
+        "preferredTriggers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "statusAdvice": {
+      "type": "object",
+      "required": [
+        "tokens",
+        "reasonCodes"
+      ],
+      "properties": {
+        "tokens": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "abort",
+              "investigate",
+              "resume",
+              "checkpoint",
+              "publish",
+              "ship",
+              "handover",
+              "none"
+            ]
+          }
+        },
+        "reasonCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "guardrail": {
+      "type": "object",
+      "required": [
+        "id",
+        "reasonCode"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reasonCode": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "error": {
+      "type": "object",
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
