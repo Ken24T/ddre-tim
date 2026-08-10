@@ -1,7 +1,7 @@
 {
   "sourceRepository": "Ken24T/TCTBP-Web",
-  "sourceRevision": "e274b51e5c23c412fe2bacc1f979721fee7ae583",
-  "sourceVersion": "0.3.3",
+  "sourceRevision": "0e207162eadd2314d970b620c8fb96b65ead1c82",
+  "sourceVersion": "0.3.4",
   "installedSchemaVersion": 11,
   "adviserContract": {
     "major": 1,
@@ -25,6 +25,7 @@
     "contracts/adviser-v1/fixtures/staged-dirty.json",
     "docs/adviser-contract-v1.md",
     "schemas/tctbp-adviser-inspection-v1.schema.json",
+    "scripts/package.json",
     "scripts/tctbp-branch-model.js",
     "scripts/tctbp-candidate-guard.js",
     "scripts/tctbp-core.js",

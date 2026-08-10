@@ -1,0 +1,4 @@
+{
+  "type": "commonjs",
+  "description": "Pins CommonJS semantics for the TCTBP runner scripts in this directory. Consumer repositories whose root package.json sets \"type\": \"module\" would otherwise load these CommonJS .js runners as ES modules and fail with 'require is not defined'. This nearest-package.json override keeps the runner working in ESM app repos (e.g. Vite/React)."
+}
