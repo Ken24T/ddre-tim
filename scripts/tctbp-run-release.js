@@ -407,7 +407,7 @@ async function main(cliOptions) {
   await runStage(context, "preflight-gates", async () => {
     fetchOrigin(cliOptions.dryRun);
     if (!cliOptions.dryRun) runMutableGit(["checkout", devBranch], false, `Switch to ${devBranch} for gates`);
-    runShipGates(cliOptions.dryRun);
+    runShipGates(config, cliOptions.dryRun);
     if (cliOptions.dryRun) return {};
     return { developmentCandidate: candidateEvidence(captureCandidate(devBranch)) };
   });

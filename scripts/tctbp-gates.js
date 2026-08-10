@@ -49,13 +49,36 @@ function runBuildGate(config, dryRun, description = "Runtime build gate") {
   runShellCommand(buildCommand, dryRun, description);
 }
 
-// ── Ship gates (package.json driven) ────────────────────────────────────────
+// ── Ship gates (profile-driven, package.json fallback) ─────────────────────
 
-function runShipGates(dryRun) {
+const SHIP_GATE_NAMES = ["format", "test", "lint", "build", "release-build"];
+const SHIP_GATE_LABELS = {
+  format: "Format",
+  test: "Test",
+  lint: "Lint",
+  build: "Build",
+  "release-build": "Release build"
+};
+
+function runShipGates(config, dryRun) {
+  const profileCommands = config.profile && config.profile.commands ? config.profile.commands : {};
+  const configured = SHIP_GATE_NAMES
+    .map((gateName) => [SHIP_GATE_LABELS[gateName] || gateName, profileCommands[gateName]])
+    .filter(([, command]) => typeof command === "string" && command.trim().length > 0);
+
+  if (configured.length > 0) {
+    for (const [label, command] of configured) {
+      runShellCommand(command, dryRun, `Ship gate: ${label}`);
+    }
+    return;
+  }
+
+  // Fall back to package.json-driven gates for web projects that declare no
+  // profile commands.
   const packageJson = maybeReadJsonFile(path.join(runtimeCwd, "package.json"));
 
   if (!packageJson || !packageJson.scripts) {
-    fail(`Could not read ${path.join(runtimeCwd, "package.json")} for ship gates.`);
+    fail(`No ship gates are configured in .github/TCTBP.json or ${path.join(runtimeCwd, "package.json")}.`);
   }
 
   const commands = [];
@@ -81,7 +104,7 @@ function runShipGates(dryRun) {
   }
 
   if (commands.length === 0) {
-    fail("No ship gates are configured in the local runtime package.json.");
+    fail("No ship gates are configured in .github/TCTBP.json or the local runtime package.json.");
   }
 
   for (const [command, args, label] of commands) {

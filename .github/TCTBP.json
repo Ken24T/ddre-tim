@@ -3,9 +3,20 @@
   "governance": {
     "sourceOfTruth": "TCTBP.json",
     "fallbackDocument": "TCTBP Agent.md",
-    "templateMode": true,
+    "templateMode": false,
     "templateType": "web",
-    "templateInstructions": "This repository is the canonical source for the TCTBP-Web templates and runner architecture. Replace repo-specific values in downstream projects. Scaffolded projects receive a populated non-template profile."
+    "templateInstructions": "This repository uses the TCTBP workflow as a repo-specific profile. Preserve Time in Motion commands, docs paths, version source, tag format, status-report tables, deployment expectations, and local runtime conventions when updating these files."
+  },
+  "branchModel": {
+    "strategy": "simple",
+    "strategies": {
+      "simple": {
+        "description": "Single production branch only. Suitable for template repos, libraries, and non-deployed projects.",
+        "productionBranch": "main",
+        "promoteEnabled": false,
+        "deployStagingEnabled": false
+      }
+    }
   },
   "project": {
     "name": "ddre-tim",
@@ -34,7 +45,7 @@
       "requireBuildBeforeShip": true
     },
     "versioning": {
-      "sourceOfTruth": "package.json version fields",
+      "sourceOfTruth": "package.json",
       "tagFormat": "v{version}"
     },
     "releaseBuildPolicy": "No separate release build exists yet. Use `npm run build` as the normal build gate. Deploy remains disabled until a repo-specific runtime target exists.",
@@ -605,7 +616,8 @@
     "capabilities": [
       "inspection.local-v1",
       "workflow-catalogue.core-v1",
-      "reason-codes.core-v1"
+      "reason-codes.core-v1",
+      "version-files.multi-format-v1"
     ],
     "schema": "schemas/tctbp-adviser-inspection-v1.schema.json",
     "compatibility": "Readers reject unsupported major versions, ignore unknown additive fields, and degrade by missing capability."
