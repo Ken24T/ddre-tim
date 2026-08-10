@@ -90,6 +90,10 @@ function findRisk(command) {
       reason: "TCTBP safety hook flagged a remote deletion push. Confirm before deleting remote refs."
     },
     {
+      pattern: /(^|[;&|])\s*git\s+push(\s|$)/,
+      reason: "TCTBP safety hook flagged 'git push'. Remote updates require explicit confirmation under the repo's code-loss-prevention policy."
+    },
+    {
       pattern: /(^|[;&|])\s*git\s+branch\s+-d{1,2}(\s|$)/,
       reason: "TCTBP safety hook flagged branch deletion. Confirm before deleting local branches."
     },
@@ -134,7 +138,7 @@ function ask(reason) {
       permissionDecision: "ask",
       permissionDecisionReason: reason,
       additionalContext:
-        "TCTBP safety hook escalated a risky git command for explicit approval under the repo's no-code-loss policy."
+        "TCTBP safety hook escalated a risky git command for explicit approval under the repo's code-loss-prevention policy."
     }
   };
 }

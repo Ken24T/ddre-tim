@@ -167,6 +167,32 @@ export interface ActivityRepositoryMutation {
   isActive: boolean;
 }
 
+interface HealthPayload {
+  service: string;
+  status: string;
+  now: string;
+}
+
+const defaultApiBaseUrl = "http://127.0.0.1:4000";
+
+function getApiBaseUrl(): string {
+  const configuredBaseUrl = import.meta.env.VITE_DDRE_API_BASE_URL;
+
+  if (configuredBaseUrl === "same-origin") {
+    return "";
+  }
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(/\/$/, "");
+  }
+
+  return import.meta.env.DEV ? "" : defaultApiBaseUrl;
+}
+
+function resolveApiUrl(path: string): string {
+  return `${getApiBaseUrl()}${path}`;
+}
+
 async function readErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
   const responseText = await response.text();
 
@@ -242,7 +268,7 @@ export function formatTimestamp(value: string): string {
 }
 
 export async function fetchDashboardSnapshot(query: DashboardQueryValues): Promise<DashboardResponse> {
-  const response = await fetch(buildDashboardUrl(query));
+  const response = await fetch(resolveApiUrl(buildDashboardUrl(query)));
 
   if (!response.ok) {
     throw new Error(`Dashboard request failed with status ${response.status}`);
@@ -251,8 +277,18 @@ export async function fetchDashboardSnapshot(query: DashboardQueryValues): Promi
   return (await response.json()) as DashboardResponse;
 }
 
+export async function fetchHealth(): Promise<HealthPayload> {
+  const response = await fetch(resolveApiUrl("/health"));
+
+  if (!response.ok) {
+    throw new Error(`Health check failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as HealthPayload;
+}
+
 export async function fetchActivityCatalog(): Promise<ActivityCatalogResponse> {
-  const response = await fetch("/v1/activities");
+  const response = await fetch(resolveApiUrl("/v1/activities"));
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response, `Activity repository request failed with status ${response.status}`));
@@ -262,7 +298,7 @@ export async function fetchActivityCatalog(): Promise<ActivityCatalogResponse> {
 }
 
 export async function fetchDepartmentCatalog(): Promise<DepartmentCatalogResponse> {
-  const response = await fetch("/v1/departments");
+  const response = await fetch(resolveApiUrl("/v1/departments"));
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response, `Department catalog request failed with status ${response.status}`));
@@ -274,7 +310,7 @@ export async function fetchDepartmentCatalog(): Promise<DepartmentCatalogRespons
 export async function createActivityRepositoryEntry(
   payload: ActivityRepositoryMutation
 ): Promise<ActivityRepositoryEntry> {
-  const response = await fetch("/v1/activities", {
+  const response = await fetch(resolveApiUrl("/v1/activities"), {
     method: "POST",
     headers: {
       "content-type": "application/json"
@@ -293,7 +329,7 @@ export async function updateActivityRepositoryEntry(
   activityId: string,
   payload: ActivityRepositoryMutation
 ): Promise<ActivityRepositoryEntry> {
-  const response = await fetch(`/v1/activities/${encodeURIComponent(activityId)}`, {
+  const response = await fetch(resolveApiUrl(`/v1/activities/${encodeURIComponent(activityId)}`), {
     method: "PUT",
     headers: {
       "content-type": "application/json"

@@ -26,14 +26,23 @@ The desktop workspace now has two local execution modes:
 - `npm run dev:desktop` starts the native Tauri host and the desktop frontend together.
 - `npm run dev:web --workspace @ddre/desktop` builds or previews the browser fallback shell without launching the native host.
 
+When you launch the native desktop binary directly in a debug-oriented local run, the main window now prefers the desktop dev server at `http://localhost:5174` only when it is actually reachable. If that dev server is not running, the tray `Finish setup` action falls back to the built desktop frontend instead of opening a refused-connection page.
+
 For a single-command local trial across the main runtime surfaces:
 
 - `npm run dev:all` starts the API, the dashboard, and the native desktop host together and stops them as a group when you press `Ctrl+C`.
 - `npm run trial:local` builds the current repo, builds the native desktop release binary, then runs the built API, the dashboard preview server, and the desktop release binary together. Use `npm run trial:local -- --skip-build` for repeat launches when you already have fresh build artifacts.
+- `npm run deploy:local:gnome` runs `scripts/install-local-gnome-runtime.sh`, which installs a user-local GNOME runtime scaffold from this checkout, including a copied desktop release binary, desktop launcher, and systemd user units for the API and dashboard.
 
 If you launch the repo from the VS Code Snap on Ubuntu, the desktop workspace scripts now clear Snap-injected GTK/GIO environment variables before starting Tauri so the native host uses the system desktop libraries instead of the Snap runtime.
 
 On Linux Wayland sessions, the native desktop host also forces `WEBKIT_DISABLE_DMABUF_RENDERER=1` at process startup to avoid blank or crashed WebKitGTK settings windows seen during GNOME compatibility validation.
+
+On the current GNOME workstation, Node.js 22 is installed under `~/.local/node-v22/bin`. If your shell does not already expose that directory, prefix commands with:
+
+```bash
+PATH="$HOME/.local/node-v22/bin:$PATH"
+```
 
 Verification is also split deliberately:
 
@@ -121,6 +130,8 @@ Operational assumptions for this target:
 - prefer exposing only the API surface needed by desktop clients
 - keep dashboard access restricted to the office LAN unless a later slice intentionally expands that scope
 - deployment remains a planned/manual slice until the repo defines the exact service supervisor, backup process, rollback procedure, and remote-access approach
+
+The current local GNOME runtime deployment notes live in `docs/runtime-deployment.md`.
 
 ## Next Setup Slices
 

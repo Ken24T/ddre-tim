@@ -3,6 +3,9 @@ mod commands;
 mod outbox;
 mod tray;
 
+use std::net::{TcpStream, ToSocketAddrs};
+use std::time::Duration;
+
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 pub fn run() {
@@ -30,7 +33,23 @@ pub fn run() {
         ])
         .setup(|app| {
             if app.get_webview_window("main").is_none() {
-                WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+                eprintln!(
+                    "ddre-desktop main window source: {}",
+                    describe_main_window_source()
+                );
+
+                WebviewWindowBuilder::new(app, "main", resolve_main_window_url())
+                    .on_navigation(|url| {
+                        eprintln!("ddre-desktop main window navigation: {url}");
+                        true
+                    })
+                    .on_page_load(|window, payload| {
+                        eprintln!(
+                            "ddre-desktop page load for {}: {}",
+                            window.label(),
+                            payload.url()
+                        );
+                    })
                     .title("DDRE TiM Desktop")
                     .visible(false)
                     .build()?;
@@ -43,6 +62,32 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running DDRE TiM desktop host");
+}
+
+fn resolve_main_window_url() -> WebviewUrl {
+    if cfg!(debug_assertions) && is_desktop_dev_server_available() {
+        WebviewUrl::default()
+    } else {
+        WebviewUrl::App("index.html".into())
+    }
+}
+
+fn describe_main_window_source() -> &'static str {
+    if cfg!(debug_assertions) && is_desktop_dev_server_available() {
+        "desktop dev server"
+    } else {
+        "bundled app assets"
+    }
+}
+
+fn is_desktop_dev_server_available() -> bool {
+    let Ok(addresses) = "localhost:5174".to_socket_addrs() else {
+        return false;
+    };
+
+    addresses.into_iter().any(|address| {
+        TcpStream::connect_timeout(&address, Duration::from_millis(200)).is_ok()
+    })
 }
 
 fn apply_linux_webview_workarounds() {

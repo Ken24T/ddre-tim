@@ -28,10 +28,11 @@ Current direction:
 
 ## Planned Targets
 
-- GNOME: planned after the Cinnamon MVP, with explicit testing on X11 and Wayland.
+- GNOME: compatibility validation is in progress on Ubuntu GNOME Wayland with AppIndicator support enabled.
 - Windows 11: planned after the Cinnamon MVP, including packaging, autostart, and tray smoke tests.
 
 The GNOME compatibility spike checklist lives in `docs/gnome-tray-validation.md`.
+The current local GNOME runtime deployment notes live in `docs/runtime-deployment.md`.
 
 ## Future Considerations
 

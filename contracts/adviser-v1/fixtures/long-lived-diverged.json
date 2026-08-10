@@ -1,0 +1,155 @@
+{
+  "contract": {
+    "name": "tctbp-adviser-inspection",
+    "major": 1,
+    "minor": 0,
+    "capabilities": [
+      "inspection.local-v1",
+      "workflow-catalogue.core-v1",
+      "reason-codes.core-v1"
+    ],
+    "schema": "schemas/tctbp-adviser-inspection-v1.schema.json"
+  },
+  "observation": {
+    "provider": "tctbp-web",
+    "observedAt": "2026-01-01T00:00:00.000Z",
+    "basis": "local-working-copy-and-local-tracking-refs",
+    "fetchPerformed": false,
+    "repository": {
+      "name": "long-lived-fixture",
+      "tctbpSchemaVersion": 11,
+      "tctbpVersion": "0.2.0",
+      "versionSource": "VERSION"
+    },
+    "branchModel": {
+      "strategy": "long-lived-environment-branches",
+      "workingBranch": "development",
+      "preProductionBranch": "review",
+      "productionBranch": "main",
+      "promotionTargets": [
+        "review",
+        "production"
+      ]
+    },
+    "head": {
+      "branch": "development",
+      "detached": false,
+      "sha": "3333333"
+    },
+    "workingTree": {
+      "clean": true,
+      "pathCount": 0,
+      "counts": {
+        "modified": 0,
+        "added": 0,
+        "deleted": 0,
+        "renamed": 0,
+        "copied": 0,
+        "untracked": 0,
+        "other": 0
+      }
+    },
+    "operations": [],
+    "localTracking": {
+      "basis": "refs/remotes/origin/*",
+      "freshness": "unknown",
+      "current": {
+        "remoteExists": true,
+        "localSha": "3333333",
+        "remoteSha": "4444444",
+        "sync": {
+          "state": "diverged",
+          "ahead": 1,
+          "behind": 1,
+          "diverged": true
+        }
+      },
+      "branches": [
+        {
+          "role": "working",
+          "name": "development",
+          "local": {
+            "exists": true,
+            "sha": "3333333"
+          },
+          "tracking": {
+            "exists": true,
+            "sha": "4444444"
+          },
+          "sync": {
+            "state": "diverged",
+            "ahead": 1,
+            "behind": 1,
+            "diverged": true
+          }
+        },
+        {
+          "role": "pre-production",
+          "name": "review",
+          "local": {
+            "exists": true,
+            "sha": "5555555"
+          },
+          "tracking": {
+            "exists": true,
+            "sha": "5555555"
+          },
+          "sync": {
+            "state": "in-sync",
+            "ahead": 0,
+            "behind": 0,
+            "diverged": false
+          }
+        },
+        {
+          "role": "production",
+          "name": "main",
+          "local": {
+            "exists": true,
+            "sha": "6666666"
+          },
+          "tracking": {
+            "exists": true,
+            "sha": "6666666"
+          },
+          "sync": {
+            "state": "in-sync",
+            "ahead": 0,
+            "behind": 0,
+            "diverged": false
+          }
+        }
+      ]
+    },
+    "release": {
+      "reachableTag": null,
+      "publishedTag": null
+    },
+    "continuationFileCount": 0,
+    "workflows": [
+      {
+        "id": "status",
+        "installed": true,
+        "policyEnabled": true,
+        "preferredTriggers": [
+          "status"
+        ]
+      }
+    ],
+    "statusAdvice": {
+      "tokens": [
+        "investigate"
+      ],
+      "reasonCodes": [
+        "branch-diverged"
+      ]
+    },
+    "activeGuardrails": [
+      {
+        "id": "git.branch.diverged",
+        "reasonCode": "branch-diverged"
+      }
+    ]
+  },
+  "errors": []
+}

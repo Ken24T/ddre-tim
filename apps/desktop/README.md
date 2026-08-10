@@ -14,6 +14,11 @@ Current slice:
 - Cinnamon autostart management for packaged builds
 - a quick-selector panel for longer activity lists and notes
 
+Local launch modes:
+
+- `npm run dev` or `npm run tauri:dev` keeps the Tauri host attached to the desktop Vite dev server for live frontend iteration.
+- Direct native launches now fall back to the built desktop frontend when the Vite server is not running, so tray actions like `Finish setup` still open the settings surface.
+
 Still planned next:
 
 - GNOME and Windows tray-host compatibility work

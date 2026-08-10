@@ -10,16 +10,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "DDRE TiM Desktop",
-        "width": 1180,
-        "height": 860,
-        "visible": false,
-        "resizable": true
-      }
-    ],
     "security": {
       "csp": null
     }
