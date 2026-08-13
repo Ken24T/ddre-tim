@@ -2,6 +2,7 @@
 
 const { spawnSync } = require("child_process");
 const { resolveRepoRoot, resolveRuntimeCwd, resolvePolicyPath } = require("./tctbp-runtime");
+const { resolveProfileCommand } = require("./tctbp-gates");
 
 const repoRoot = resolveRepoRoot();
 const runtimeCwd = resolveRuntimeCwd(repoRoot);
@@ -38,7 +39,10 @@ if (!GATE_LABEL[gate]) {
 }
 
 const policy = loadPolicy();
-const profileCommand = (policy.profile && policy.profile.commands && policy.profile.commands[gate]) || null;
+const profileCommand = resolveProfileCommand(
+  (policy.profile && policy.profile.commands) || {},
+  gate
+);
 
 if (profileCommand && typeof profileCommand === "string" && profileCommand.trim().length > 0) {
   // Profile-driven gate: run the configured shell command.

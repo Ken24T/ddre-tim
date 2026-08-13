@@ -5,6 +5,7 @@ const { captureBranchSnapshots, printPostTriggerStatusReport } = require("./tctb
 const { resolvePolicyPath, resolveRepoRoot } = require("./tctbp-runtime");
 const {
   assertSyncedBranchCandidate,
+  buildEffectivePromoteTargets,
   captureSyncedBranchCandidate,
   createTimestamp,
   fail,
@@ -54,65 +55,8 @@ if (!options.docsNoteKind || !options.docsNote) {
   printUsage(1);
 }
 
-function buildDefaultPromoteTargets(config) {
-  const branchModel = resolveBranchModel(config);
-  const workingBranch = branchModel.workingBranch;
-  const preProductionBranch = branchModel.preProductionBranch;
-  const productionBranch = branchModel.productionBranch;
-  const targets = {};
-
-  if (preProductionBranch) {
-    targets[preProductionBranch] = {
-      sourceBranch: workingBranch,
-      targetBranch: preProductionBranch,
-      allowDirtySourceSync: true,
-      publishSourceWhenNeeded: true,
-      allowFirstSourcePublish: true,
-      requireCleanTargetBeforeMerge: true,
-      allowTargetFastForwardFromOrigin: true,
-      publishTargetAfterPromotion: true,
-      allowFirstTargetPublish: true,
-      returnToSourceBranchAfterPromotion: true,
-      stopIfVerificationOrBuildChangesWorkingTree: true,
-      defaultSourceSyncCommitMessage: `chore(promote): sync ${workingBranch} before ${preProductionBranch} promotion`,
-      defaultMergeCommitMessage: `chore(${preProductionBranch}): promote ${workingBranch} to ${preProductionBranch}`,
-      postPromotionValidation: [
-        `Confirm origin/${preProductionBranch} now contains the promoted ${preProductionBranch} candidate.`,
-        `Confirm the ${preProductionBranch} environment can pick up the updated ${preProductionBranch} branch state.`,
-      ],
-    };
-  }
-
-  if (productionBranch) {
-    targets.production = {
-      sourceBranch: preProductionBranch || workingBranch,
-      targetBranch: productionBranch,
-      allowDirtySourceSync: false,
-      publishSourceWhenNeeded: true,
-      allowFirstSourcePublish: true,
-      requireCleanTargetBeforeMerge: true,
-      allowTargetFastForwardFromOrigin: true,
-      publishTargetAfterPromotion: false,
-      allowFirstTargetPublish: true,
-      returnToSourceBranchAfterPromotion: false,
-      requireShipAfterPromotion: true,
-      stopIfVerificationOrBuildChangesWorkingTree: true,
-      defaultMergeCommitMessage: `chore(${productionBranch}): promote ${preProductionBranch || workingBranch} to ${productionBranch}`,
-      postPromotionValidation: [
-        `Confirm local ${productionBranch} now contains the promoted production candidate.`,
-        `Confirm ${productionBranch} is ready for SHIP from a clean local branch.`,
-        `Confirm no push or deployment occurred as part of promote production.`,
-      ],
-    };
-  }
-
-  return targets;
-}
-
 const policy = loadPolicy();
-const targets = policy.promote && Object.keys(policy.promote.targets || {}).length > 0
-  ? policy.promote.targets
-  : buildDefaultPromoteTargets(policy);
+const targets = buildEffectivePromoteTargets(policy);
 policy.promote = { ...(policy.promote || {}), targets };
 const resolvedTarget = resolveTarget(policy.promote.targets, options.target);
 
@@ -373,7 +317,16 @@ function prepareTargetBranch(target, dryRun) {
   const remoteTargetExists = gitRemoteBranchExists(targetBranch);
 
   if (!localTargetExists && !remoteTargetExists) {
-    fail(`Promotion target branch '${targetBranch}' does not exist locally or on origin.`);
+    if (!target.allowFirstTargetPublish) {
+      fail(`Promotion target branch '${targetBranch}' does not exist locally or on origin.`);
+    }
+    // First promotion into a branch that has never been created: seed the local
+    // target from the current source branch (the promotion is required to run
+    // from the source branch), then let the merge below produce the candidate.
+    // The target is published afterwards because allowFirstTargetPublish is set.
+    const sourceBranch = target.sourceBranch || getCurrentBranch();
+    runMutableGit(["switch", "-c", targetBranch, sourceBranch], dryRun, `Create local ${targetBranch} branch from ${sourceBranch}`);
+    return;
   }
 
   if (!localTargetExists) {

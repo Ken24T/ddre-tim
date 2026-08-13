@@ -65,6 +65,8 @@ module.exports = {
   sumRemovedLines: promotionSafety.sumRemovedLines,
 
   // Profile I/O and semver
+  buildDefaultPromoteTargets: profileIO.buildDefaultPromoteTargets,
+  buildEffectivePromoteTargets: profileIO.buildEffectivePromoteTargets,
   detectVersionFileFormat: profileIO.detectVersionFileFormat,
   getReleaseTagGlob: profileIO.getReleaseTagGlob,
   getReleaseTagPattern: profileIO.getReleaseTagPattern,

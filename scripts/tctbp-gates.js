@@ -11,6 +11,20 @@ const runtimeCwd = resolveRuntimeCwd(repoRoot);
 
 // ── Verification gates (profile-driven) ─────────────────────────────────────
 
+/**
+ * Resolve a configured profile command for a gate, normalising the
+ * release-build key spelling (profiles store `releaseBuild`; gate names use
+ * `release-build`).
+ */
+function resolveProfileCommand(commands, gateName) {
+  if (!commands || typeof commands !== "object") return null;
+  if (typeof commands[gateName] === "string") return commands[gateName];
+  if (gateName === "release-build" && typeof commands.releaseBuild === "string") {
+    return commands.releaseBuild;
+  }
+  return null;
+}
+
 function runVerificationGates(config, dryRun, descriptionPrefix = "Verification") {
   const commands = config.profile && config.profile.commands ? config.profile.commands : {};
   const configuredBlockingCommands =
@@ -25,7 +39,7 @@ function runVerificationGates(config, dryRun, descriptionPrefix = "Verification"
     "release-build": "Release build"
   };
   const verificationCommands = configuredBlockingCommands
-    .map((gateName) => [labelMap[gateName] || gateName, commands[gateName]])
+    .map((gateName) => [labelMap[gateName] || gateName, resolveProfileCommand(commands, gateName)])
     .filter(([, command]) => typeof command === "string" && command.trim().length > 0);
 
   if (verificationCommands.length === 0) {
@@ -63,7 +77,7 @@ const SHIP_GATE_LABELS = {
 function runShipGates(config, dryRun) {
   const profileCommands = config.profile && config.profile.commands ? config.profile.commands : {};
   const configured = SHIP_GATE_NAMES
-    .map((gateName) => [SHIP_GATE_LABELS[gateName] || gateName, profileCommands[gateName]])
+    .map((gateName) => [SHIP_GATE_LABELS[gateName] || gateName, resolveProfileCommand(profileCommands, gateName)])
     .filter(([, command]) => typeof command === "string" && command.trim().length > 0);
 
   if (configured.length > 0) {
@@ -113,6 +127,7 @@ function runShipGates(config, dryRun) {
 }
 
 module.exports = {
+  resolveProfileCommand,
   runBuildGate,
   runShipGates,
   runVerificationGates

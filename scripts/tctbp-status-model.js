@@ -14,6 +14,7 @@ const DEFAULT_ADVISER_CONTRACT = Object.freeze({
 
 const WORKFLOW_IDS = [
   "status",
+  "preflight",
   "abort",
   "resume",
   "checkpoint",
@@ -23,7 +24,14 @@ const WORKFLOW_IDS = [
   "promote",
   "deploy",
   "ship",
-  "hotfix"
+  "hotfix",
+  "release",
+  "ticket",
+  "gate",
+  "version",
+  "rollback",
+  "scaffold",
+  "orient"
 ];
 
 function createStatusDocument(input) {

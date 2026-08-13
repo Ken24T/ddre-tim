@@ -63,7 +63,7 @@ These safeguards exist because a single destructive sync can silently delete fil
 
 Before merging **any** branch into a default or environment branch, create a lightweight safety tag:
 
-```
+```bash
 git tag safety/<branch-name>-<YYYYMMDD> <target-branch>
 ```
 
@@ -78,7 +78,7 @@ This ensures the pre-merge state is always recoverable with a single `git checko
 After the merge completes but **before committing or pushing**, run a deletion audit. Thresholds are configured in `TCTBP.json` under `codeLossPrevention.mergeDeletionAudit`:
 
 | Condition | Action |
-|---|---|
+| --- | --- |
 | 0 files deleted | Proceed silently |
 | 1–5 files deleted, <500 lines removed | Log the list, proceed with a note |
 | >5 files deleted **or** >500 lines removed | **STOP.** Display the full list of deleted files. Require explicit user confirmation. |
@@ -241,11 +241,13 @@ The `handover local` variant creates a local-only checkpoint without pushing to 
 **Every handover invocation MUST include a session narrative** so `orient` / `resume` can recover full context — not just git stats.
 
 The note is resolved in this order:
+
 1. `--note "<markdown>"` — user-provided text (highest priority)
 2. `--note-file <path>` — agent writes session context to a temp file, passes the path
 3. Auto-generated from git commit messages (fallback)
 
 **Agent procedure when the user does not provide a note:**
+
 1. Compose a 2–5 sentence narrative from the session's chat context: what was done, key design decisions, gotchas encountered, and unfinished items.
 2. Write the narrative to a temp file: `/tmp/tctbp-handover-note-<timestamp>.md`
 3. Invoke the runner: `node scripts/tctbp-run-handover.js --note-file /tmp/tctbp-handover-note-<timestamp>.md`
@@ -268,9 +270,29 @@ Handover never merges into staging or main as part of the sync flow. Code-loss s
 
 ---
 
+## Preflight Workflow
+
+Trigger: `preflight` / `preflight please`
+
+Purpose: non-mutating aggregate verification of the current working state — including uncommitted changes — before preserving, publishing, handing over, promoting, deploying, or otherwise advancing.
+
+Executable path: `node scripts/tctbp-run-preflight.js`
+
+Preflight runs:
+
+1. **Git sanity** — attached HEAD, branch identification.
+2. **Active operation detection** — merge, rebase, cherry-pick, or revert in progress.
+3. **Working-tree inspection** — reports clean vs dirty state without requiring a clean tree.
+4. **Configured quality gates** — test, lint, build, format, release-build when configured; unconfigured gates report NOT-CONFIGURED.
+5. **Side-effect detection** — the working tree is compared before and after verification; any modification caused by a verification command is reported rather than silently accepted.
+
+Preflight never commits, pushes, tags, merges, switches branch, deploys, bumps a version, creates release state, or modifies remote state. It reports a concise PASS / FAIL / NOT-CONFIGURED summary and exits non-zero only on FAIL.
+
+---
+
 ## SHIP Workflow
 
-Trigger: `ship` / `ship please` / `shipping` / `prepare release`
+Trigger: `ship` / `ship please` / `shipping`
 
 Purpose: create a formal shipped production version from a clean, fetched `main` branch.
 
@@ -289,9 +311,9 @@ Ship is reserved for `main` so version tags remain production release markers. T
 
 Patch bump behaviour is controlled by `versioning.patchEveryShip` and `versioning.patchEveryShipForDocsInfrastructureOnly`. Minor and major bumps are explicit release decisions on `main`.
 
-### Journaled release orchestration
+### Release orchestration
 
-For staged projects, `scripts/tctbp-run-release.js` composes deploy, promote, and ship into a journaled workflow. Each stage records atomic evidence under the configured `releaseState.path`, including the candidate commit and tree. Use `--resume` after an interrupted workflow; resume revalidates the candidate and shipped tag before continuing. The release journal is ignored by Git and must never be treated as a release artefact.
+`release` / `prepare release` are public triggers for the composite release orchestrator. For staged projects, `scripts/tctbp-run-release.js` composes deploy, promote, and ship into a journaled workflow. Each stage records atomic evidence under the configured `releaseState.path`, including the candidate commit and tree. Use `--resume` after an interrupted workflow; resume revalidates the candidate and shipped tag before continuing. The release journal is ignored by Git and must never be treated as a release artefact.
 
 The generic runner does not assume a backup format, service manager, runtime storage layout, or restore rehearsal. Downstream projects must provide those integrations through their own profile and adapters. DDRE-specific backup and restore runners are not part of TCTBP-Web.
 
@@ -306,9 +328,11 @@ Purpose: explicitly merge the current source branch into the target environment 
 Executable path: `node scripts/tctbp-run-promote.js <staging|production> --no-docs-impact "<reason>"`
 
 **`promote staging`** (development → staging):
+
 - Verifies and syncs development, creates a safety snapshot of staging, merges development into staging, runs the deletion audit, verifies and builds staging, publishes staging to origin, returns to development.
 
 **`promote production`** (staging → main):
+
 - Verifies staging, creates a safety snapshot of main, merges staging into main, runs the deletion audit, verifies main. Does NOT push main — `ship` and `deploy production` are separate explicit workflows. Stays on main.
 
 Promotion is a merge workflow, not a deploy workflow. When `branchModel.strategy` is `"simple"`, promote is disabled.
@@ -322,10 +346,12 @@ Trigger: `hotfix` / `hotfix start` / `hotfix finish` / `emergency fix`
 Purpose: emergency-lane production fix that bypasses the normal promote-review/promote-production chain. Creates a `hotfix/*` branch from `main`, merges it into `main`, ships a patch release, and backports the new `main` into the pre-production and working branches.
 
 Executable paths:
+
 - `node scripts/tctbp-run-hotfix.js start <name>` — create `hotfix/<name>` from the production branch
 - `node scripts/tctbp-run-hotfix.js finish --no-docs-impact "<reason>"` — merge, ship, and backport
 
 Notes:
+
 - `start` requires the current branch to be the production branch with a clean working tree.
 - `finish` requires the current branch to be a `hotfix/*` branch with a clean working tree.
 - `finish` runs verification gates before merging and ships with `--bump patch` by default.
@@ -341,6 +367,7 @@ Trigger: `deploy dev` / `deploy development` / `deploy staging` / `deploy prod` 
 Purpose: deploy the current environment branch to its mapped runtime environment. Never promotes code between branches.
 
 Executable paths:
+
 - `node scripts/tctbp-run-deploy.js dev --no-docs-impact "<reason>"`
 - `node scripts/tctbp-run-deploy.js staging --no-docs-impact "<reason>"`
 - `node scripts/tctbp-run-deploy.js production --no-docs-impact "<reason>"`
@@ -348,7 +375,7 @@ Executable paths:
 Per-target behaviour:
 
 | Target | Branch | Sync strategy | Can commit? |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `dev` | `development` | commit-and-publish-current-branch-when-needed | Yes (with explicit dirty-sync confirmation) |
 | `staging` | `staging` | push-clean-branch-when-needed | No (must already be clean) |
 | `production` | `main` | require-already-published-shipped-branch | No |

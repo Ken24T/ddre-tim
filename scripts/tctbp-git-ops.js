@@ -123,9 +123,28 @@ function runShellCommand(command, dryRun, description, options = {}) {
   }
 }
 
+// ── Remote detection ────────────────────────────────────────────────────────
+
+function hasRemoteNamed(remoteName) {
+  const remotesOutput = runGitCapture(["remote"], "List configured remotes", true);
+  return remotesOutput
+    .split(/\r?\n/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .includes(remoteName);
+}
+
 // ── Fetch and branch inspection ─────────────────────────────────────────────
 
 function fetchOrigin(dryRun, includeTags = false) {
+  // A repository without an origin remote has nothing to fetch. Skipping the
+  // preflight fetch keeps read-only workflows (status, version, gate) usable
+  // on local-only repositories; remote-dependent workflows still fail at the
+  // actual push/publish step with a clear message.
+  if (!hasRemoteNamed("origin")) {
+    console.log("No origin remote is configured — skipping preflight fetch.");
+    return;
+  }
   const args = includeTags ? ["fetch", "--prune", "--tags", "origin"] : ["fetch", "--prune", "origin"];
   runMutableGit(args, dryRun, "Fetch origin before workflow preflight");
 }
@@ -147,15 +166,15 @@ function getWorkingTreeStatus() {
 }
 
 function getDefaultRemote() {
+  if (hasRemoteNamed("origin")) {
+    return "origin";
+  }
+
   const remotesOutput = runGitCapture(["remote"], "List configured remotes", true);
   const remotes = remotesOutput
     .split(/\r?\n/)
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
-
-  if (remotes.includes("origin")) {
-    return "origin";
-  }
 
   if (remotes.length > 0) {
     return remotes[0];
@@ -184,6 +203,11 @@ function gitRemoteBranchExists(branchName) {
 }
 
 function gitRemoteTagExists(tagName) {
+  // No origin remote means there can be no remote release tags to inspect.
+  if (!hasRemoteNamed("origin")) {
+    return false;
+  }
+
   const result = spawnSync("git", ["ls-remote", "--tags", "origin", `refs/tags/${tagName}`], {
     cwd: repoRoot,
     encoding: "utf8",

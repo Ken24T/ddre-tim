@@ -1,5 +1,5 @@
 ---
-description: "Use when the user explicitly asks for any configured TCTBP trigger in this repository, including ship/checkpoint/publish/promote/deploy/handover/resume/orient/status/abort/branch, gate commands (run tests|run lint|run build|gate test|gate lint|gate build), version commands (version status|version check), scaffold commands (scaffold|scaffold web|new project|create project), or rollback (rollback|revert last checkpoint)."
+description: "Use when the user explicitly asks for any configured TCTBP trigger in this repository, including ship/release/checkpoint/publish/promote/deploy/handover/resume/orient/status/preflight/abort/branch, hotfix commands (hotfix start|hotfix finish|emergency fix), ticket commands (ticket create|ticket report|ticket triage), gate commands (run tests|run lint|run build|gate test|gate lint|gate build), version commands (version status|version check), scaffold commands (scaffold|scaffold web|new project|create project), or rollback (rollback|revert last checkpoint)."
 tools: [read, search, execute, edit, todo]
 argument-hint: "Explicit TCTBP workflow request, branch/promote command, or scaffold command"
 user-invocable: true

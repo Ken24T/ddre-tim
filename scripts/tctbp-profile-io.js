@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { resolvePolicyPath, resolveRepoRoot } = require("./tctbp-runtime");
+const { resolveBranchModel } = require("./tctbp-branch-model");
 
 const repoRoot = resolveRepoRoot();
 const policyPath = resolvePolicyPath(repoRoot);
@@ -455,7 +456,124 @@ function resolveTarget(targets, targetArg) {
   return null;
 }
 
+/**
+ * Builds the default promotion targets from the active branch model. For a
+ * long-lived model (development → review → main) this yields a `review` target
+ * (development → review) and a `production` target (review → main). For a
+ * staged model it yields `staging` (development → staging) and `production`
+ * (staging → main). `simple` models yield only `production`.
+ */
+function buildDefaultPromoteTargets(config) {
+  const branchModel = resolveBranchModel(config);
+  const workingBranch = branchModel.workingBranch;
+  const preProductionBranch = branchModel.preProductionBranch;
+  const productionBranch = branchModel.productionBranch;
+  const targets = {};
+
+  if (preProductionBranch) {
+    targets[preProductionBranch] = {
+      sourceBranch: workingBranch,
+      targetBranch: preProductionBranch,
+      allowDirtySourceSync: true,
+      publishSourceWhenNeeded: true,
+      allowFirstSourcePublish: true,
+      requireCleanTargetBeforeMerge: true,
+      allowTargetFastForwardFromOrigin: true,
+      publishTargetAfterPromotion: true,
+      allowFirstTargetPublish: true,
+      returnToSourceBranchAfterPromotion: true,
+      stopIfVerificationOrBuildChangesWorkingTree: true,
+      defaultSourceSyncCommitMessage: `chore(promote): sync ${workingBranch} before ${preProductionBranch} promotion`,
+      defaultMergeCommitMessage: `chore(${preProductionBranch}): promote ${workingBranch} to ${preProductionBranch}`,
+      postPromotionValidation: [
+        `Confirm origin/${preProductionBranch} now contains the promoted ${preProductionBranch} candidate.`,
+        `Confirm the ${preProductionBranch} environment can pick up the updated ${preProductionBranch} branch state.`,
+      ],
+    };
+  }
+
+  if (productionBranch) {
+    targets.production = {
+      sourceBranch: preProductionBranch || workingBranch,
+      targetBranch: productionBranch,
+      allowDirtySourceSync: false,
+      publishSourceWhenNeeded: true,
+      allowFirstSourcePublish: true,
+      requireCleanTargetBeforeMerge: true,
+      allowTargetFastForwardFromOrigin: true,
+      publishTargetAfterPromotion: false,
+      allowFirstTargetPublish: true,
+      returnToSourceBranchAfterPromotion: false,
+      requireShipAfterPromotion: true,
+      stopIfVerificationOrBuildChangesWorkingTree: true,
+      defaultMergeCommitMessage: `chore(${productionBranch}): promote ${preProductionBranch || workingBranch} to ${productionBranch}`,
+      postPromotionValidation: [
+        `Confirm local ${productionBranch} now contains the promoted production candidate.`,
+        `Confirm ${productionBranch} is ready for SHIP from a clean local branch.`,
+        `Confirm no push or deployment occurred as part of promote production.`,
+      ],
+    };
+  }
+
+  return targets;
+}
+
+/**
+ * Resolves the effective promotion targets for a repository.
+ *
+ * Branch-model-derived defaults are always present so that every repository can
+ * promote through its configured chain (e.g. `promote review` in a long-lived
+ * repo). Config-defined `promote.targets` are honored only when they reference
+ * branches that actually exist in the active branch model — stale template
+ * targets (for example a `staging` target in a long-lived development → review
+ * → main repo) are dropped instead of shadowing the correct defaults. Aliases
+ * from a dropped config target are preserved onto the same-key default target
+ * so shorthand triggers such as `promote prod` keep working.
+ */
+function buildEffectivePromoteTargets(config) {
+  const branchModel = resolveBranchModel(config);
+  const defaultTargets = buildDefaultPromoteTargets(config);
+  const configTargets =
+    config && config.promote && typeof config.promote.targets === "object"
+      ? config.promote.targets
+      : {};
+  const knownBranches = new Set(
+    [
+      branchModel.workingBranch,
+      branchModel.preProductionBranch,
+      branchModel.productionBranch,
+    ].filter((value) => typeof value === "string" && value.trim().length > 0)
+  );
+
+  const validConfigTargets = {};
+  for (const [key, target] of Object.entries(configTargets)) {
+    if (!target || typeof target !== "object") continue;
+    const sourceBranch = target.sourceBranch;
+    const targetBranch = target.targetBranch;
+    const referencesKnownBranches =
+      (!sourceBranch || knownBranches.has(sourceBranch)) &&
+      (!targetBranch || knownBranches.has(targetBranch));
+
+    if (referencesKnownBranches) {
+      validConfigTargets[key] = target;
+    } else if (defaultTargets[key] && Array.isArray(target.aliases)) {
+      const mergedAliases = [
+        ...(defaultTargets[key].aliases || []),
+        ...target.aliases,
+      ];
+      defaultTargets[key] = {
+        ...defaultTargets[key],
+        aliases: [...new Set(mergedAliases)],
+      };
+    }
+  }
+
+  return { ...defaultTargets, ...validConfigTargets };
+}
+
 module.exports = {
+  buildDefaultPromoteTargets,
+  buildEffectivePromoteTargets,
   detectVersionFileFormat,
   getReleaseTagGlob,
   getReleaseTagPattern,

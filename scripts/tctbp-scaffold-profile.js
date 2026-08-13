@@ -1,12 +1,28 @@
-#!/usr/bin/env node
+"use strict";
+
+/**
+ * scripts/tctbp-scaffold-profile.js
+ *
+ * Canonical scaffold profile generator (Phase 4 of the ecosystem
+ * consolidation plan). Single source of truth for the profile that
+ * `scaffold` writes into a new project's `.github/TCTBP.json`.
+ *
+ * The activation trigger surface comes from the shared managed-surface
+ * manifest so generated profiles always carry the canonical trigger set.
+ *
+ * Consumed by `tctbp-run-scaffold.js` and available to downstream projects
+ * (this module is scaffold-managed).
+ */
 
 const fs = require("fs");
 const path = require("path");
+const { ACTIVATION_TRIGGERS } = require("./tctbp-managed-surface");
 
 function generateProfile(answers) {
   const isStaged = answers.branchStrategy === "staged";
   const isLongLived = answers.branchStrategy === "long-lived-environment-branches";
   const hasTests = answers.testFramework !== "none";
+  const hasVite = answers.framework === "vite";
   const deployTarget = answers.deployTarget.toLowerCase();
   const contractMetadata = readContractMetadata();
 
@@ -59,14 +75,14 @@ function generateProfile(answers) {
         format: null,
         test: hasTests ? "npm run test" : null,
         lint: null,
-        build: null,
+        build: hasVite ? "npm run build" : null,
         releaseBuild: null,
       },
       qualityGates: {
         requireZeroProblems: true,
         requireTestsBeforeShip: hasTests,
         requireLintBeforeShip: false,
-        requireBuildBeforeShip: false,
+        requireBuildBeforeShip: hasVite,
       },
       versioning: {
         sourceOfTruth: "package.json",
@@ -74,8 +90,8 @@ function generateProfile(answers) {
         formatAfterBump: false,
       },
       devServer: {
-        port: 5173,
-        label: "Vite dev server",
+        port: hasVite ? 5173 : null,
+        label: hasVite ? "Vite dev server" : null,
       },
       developmentPolicy: {
         maxFileLines: {
@@ -96,40 +112,23 @@ function generateProfile(answers) {
       },
     },
     activation: {
-      triggers: [
-        "ship", "ship please", "shipping", "prepare release",
-        "checkpoint", "checkpoint please",
-        "publish", "publish please",
-        "promote", "promote please", "promote staging", "promote staging please",
-        "promote production", "promote production please", "promote prod", "promote prod please",
-        "deploy", "deploy please", "deploy dev", "deploy dev please",
-        "deploy development", "deploy development please",
-        "deploy staging", "deploy staging please",
-        "deploy prod", "deploy prod please", "deploy production", "deploy production please",
-        "handover", "handover please", "handover local", "handover local please",
-        "resume", "resume please", "orient", "orient please",
-        "status", "status please", "abort",
-        "run tests", "run lint", "run build", "gate test", "gate lint", "gate build",
-        "version status", "version check",
-        "rollback", "revert last checkpoint",
-      ],
+      triggers: ACTIVATION_TRIGGERS,
       caseInsensitive: true,
+      branchCommand: {
+        enabled: true,
+        pattern: "^branch(?:\\s+(.+))?$",
+        allowCloseoutWithoutNewBranch: true,
+        stopIfTargetBranchExistsLocal: true,
+        stopIfTargetBranchExistsRemote: true,
+        stopIfTargetBranchEqualsDefault: true,
+        stopIfTargetBranchInvalid: true,
+      },
     },
     deploy: {
       enabled: deployTarget !== "none yet",
       targets: {},
     },
-    codeLossPrevention: {
-      enabled: true,
-      safetyTagsEnabled: true,
-      mergeDeletionAudit: {
-        enabled: true,
-        warnThreshold: { files: 1, lines: 500 },
-        stopThreshold: { files: 5, lines: 500 },
-        hardStopThreshold: { files: 20, lines: 2000 },
-      },
-      prePushNetDeletionCheck: { enabled: true, mode: "warn" },
-    },
+    ...contractMetadata.hardening,
     versioning: {
       scheme: "semver",
       patchEveryShip: true,
@@ -165,61 +164,74 @@ function readContractMetadata() {
   return {
     schemaVersion: sourceProfile.schemaVersion,
     adviserContract: sourceProfile.adviserContract,
-    adviserVocabulary: sourceProfile.adviserVocabulary
+    adviserVocabulary: sourceProfile.adviserVocabulary,
+    hardening: {
+      candidateGuard: sourceProfile.candidateGuard,
+      promotionSafety: sourceProfile.promotionSafety,
+      releaseState: sourceProfile.releaseState,
+      runtimeTransaction: sourceProfile.runtimeTransaction,
+      codeLossPrevention: sourceProfile.codeLossPrevention
+    }
   };
 }
 
 function generateDeployTargets(answers) {
-  const deployTarget = answers.deployTarget.toLowerCase();
-  const isStaged = answers.branchStrategy === "staged";
-  const isLongLived = answers.branchStrategy === "long-lived-environment-branches";
-
-  const targets = {};
-
-  if (isStaged || isLongLived) {
-    targets.dev = {
+  const target = answers.deployTarget.toLowerCase();
+  const baseTargets = {
+    dev: {
       aliases: ["development"],
       expectedBranch: answers.workingBranch,
-      requireCleanTreeBeforeDeployAction: false,
+      description: `Deploy ${answers.workingBranch} to the development environment.`,
+      preDeploySyncStrategy: "commit-and-publish-current-branch-when-needed",
       allowCommitBeforeDeploy: true,
-      requireExplicitDirtySyncConfirmation: true,
-      allowFirstPublishBeforeDeploy: true,
       allowPushBeforeDeploy: true,
-      requireSyncedBranchBeforeDeployAction: false,
-      postDeployValidation: ["Verify dev environment is reachable."],
-    };
-
-    const preProductionKey = isLongLived ? "review" : "staging";
-    const preProductionBranch = isLongLived ? "review" : "staging";
-    targets[preProductionKey] = {
+      requireCleanTreeBeforeDeployAction: false,
+      deployCommand: null,
+      comment: `Configure the deployCommand for your ${target} development target.`,
+    },
+    staging: {
       aliases: [],
-      expectedBranch: preProductionBranch,
-      requireCleanTreeBeforeDeployAction: true,
+      expectedBranch: "staging",
+      description: "Deploy staging to the staging environment.",
+      preDeploySyncStrategy: "push-clean-branch-when-needed",
       allowCommitBeforeDeploy: false,
-      requireExplicitDirtySyncConfirmation: false,
-      allowFirstPublishBeforeDeploy: true,
       allowPushBeforeDeploy: true,
+      requireCleanTreeBeforeDeployAction: true,
+      deployCommand: null,
+      comment: `Configure the deployCommand for your ${target} staging target.`,
+    },
+    production: {
+      aliases: ["prod"],
+      expectedBranch: "main",
+      description: "Deploy main to the production environment.",
+      preDeploySyncStrategy: "require-already-published-shipped-branch",
+      requireCleanTreeBeforeDeployAction: true,
       requireSyncedBranchBeforeDeployAction: true,
-      postDeployValidation: ["Verify staging environment is reachable."],
-    };
-  }
-
-  targets.production = {
-    aliases: ["prod"],
-    expectedBranch: "main",
-    requireCleanTreeBeforeDeployAction: true,
-    allowCommitBeforeDeploy: false,
-    requireExplicitDirtySyncConfirmation: false,
-    allowFirstPublishBeforeDeploy: true,
-    allowPushBeforeDeploy: true,
-    requireSyncedBranchBeforeDeployAction: true,
-    postDeployValidation: ["Verify production environment is reachable."],
+      deployCommand: null,
+      comment: `Configure the deployCommand for your ${target} production target.`,
+    },
   };
 
-  return targets;
+  if (answers.branchStrategy === "simple") {
+    delete baseTargets.dev;
+    delete baseTargets.staging;
+  }
+
+  // For long-lived strategy, rename staging target to review
+  if (answers.branchStrategy === "long-lived-environment-branches") {
+    baseTargets.review = {
+      ...baseTargets.staging,
+      expectedBranch: "review",
+      description: "Deploy review to the review/field-testing environment.",
+    };
+    delete baseTargets.staging;
+  }
+
+  return baseTargets;
 }
 
 module.exports = {
   generateDeployTargets,
-  generateProfile
+  generateProfile,
+  readContractMetadata
 };

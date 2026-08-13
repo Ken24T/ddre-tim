@@ -1,7 +1,7 @@
 {
   "sourceRepository": "Ken24T/TCTBP-Web",
-  "sourceRevision": "0e207162eadd2314d970b620c8fb96b65ead1c82",
-  "sourceVersion": "0.3.4",
+  "sourceRevision": "468c501835602e58c66bbfc7b02aeb4aa0e04e31",
+  "sourceVersion": "0.3.6",
   "installedSchemaVersion": 11,
   "adviserContract": {
     "major": 1,
@@ -9,10 +9,11 @@
     "capabilities": [
       "inspection.local-v1",
       "workflow-catalogue.core-v1",
-      "reason-codes.core-v1"
+      "reason-codes.core-v1",
+      "version-files.multi-format-v1"
     ]
   },
-  "installedAt": "2026-08-10",
+  "installedAt": "2026-08-13",
   "managedSurface": [
     ".github/TCTBP Agent.md",
     ".github/TCTBP Cheatsheet.md",
@@ -32,6 +33,7 @@
     "scripts/tctbp-gates.js",
     "scripts/tctbp-git-ops.js",
     "scripts/tctbp-json-output.js",
+    "scripts/tctbp-managed-surface.js",
     "scripts/tctbp-output.js",
     "scripts/tctbp-pretool-hook.js",
     "scripts/tctbp-profile-io.js",
@@ -44,7 +46,9 @@
     "scripts/tctbp-run-deploy.js",
     "scripts/tctbp-run-gate.js",
     "scripts/tctbp-run-handover.js",
+    "scripts/tctbp-run-hotfix.js",
     "scripts/tctbp-run-orient.js",
+    "scripts/tctbp-run-preflight.js",
     "scripts/tctbp-run-promote.js",
     "scripts/tctbp-run-publish.js",
     "scripts/tctbp-run-release.js",
@@ -62,6 +66,7 @@
     "scripts/tctbp-scaffold-profile.js",
     "scripts/tctbp-status-model.js",
     "scripts/tctbp-status-report.js",
+    "scripts/tctbp-workflow-catalogue.js",
     "scripts/version-status-policy.mjs",
     "scripts/version-status.mjs"
   ]
