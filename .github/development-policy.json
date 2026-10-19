@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "id": "shared-development-policy",
+  "version": "1.0.0",
+  "document": ".github/DEVELOPMENT_POLICY.md",
+  "reporting": {
+    "mode": "advisory",
+    "lineCounting": "physical",
+    "reviewPromptLines": 300,
+    "designReviewLines": 600,
+    "failOnSize": false
+  },
+  "review": {
+    "scope": "first-party code, configuration and documentation",
+    "recordForNewOrMateriallyChangedLargeFiles": true,
+    "existingFiles": "review incrementally when changed or substantially grown",
+    "outcomes": ["retain with rationale", "extract useful boundaries", "record a scoped follow-up"],
+    "recordLocation": "change notes, review notes or a maintained design decision",
+    "automaticRefactor": false
+  },
+  "principles": {
+    "preferCohesiveModules": true,
+    "preferClearInterfaces": true,
+    "minimiseHiddenSharedState": true,
+    "avoidCircularDependencies": true,
+    "splitDocumentationByReaderTask": true,
+    "reviewFunctionLengthAndImportCountsInContext": true,
+    "preserveUsefulCommentsAndExamples": true
+  },
+  "exclusions": {
+    "directories": [".git", "node_modules", ".venv", "__pycache__", "dist", "build", "coverage", "target", ".next", "vendor", "third_party", "archive", "archives", ".tctbp", ".ddre-runtime", ".codex"],
+    "files": ["package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml", "Cargo.lock"],
+    "generated": "files explicitly marked generated; review unidentified generated outputs separately"
+  },
+  "quality": {
+    "preserveSyntaxTypeTestAndSecurityChecks": true,
+    "noAnyInExportedTypeScriptSignatures": true,
+    "preferPureFunctionsWhenPractical": true,
+    "preserveGitAndApprovalProtections": true,
+    "doNotTreatAnAdvisoryReportAsApproval": true,
+    "doNotFailOnlyForSourceLinesDocumentLinesOrGrowth": true,
+    "purposeSpecificDocumentationBudgets": "review separately; an explicit operational or external constraint needs its own documented reason"
+  }
+}

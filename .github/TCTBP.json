@@ -50,24 +50,11 @@
     },
     "releaseBuildPolicy": "No separate release build exists yet. Use `npm run build` as the normal build gate. Deploy remains disabled until a repo-specific runtime target exists.",
     "developmentPolicy": {
-      "maxFileLines": {
-        "softCeiling": 250,
-        "warningThreshold": 400,
-        "hardSplit": 600,
-        "comment": "AI agents and contributors should respect these file-size limits. Files at or above hardSplit must be split before checkpoint. Files above warningThreshold require a justification comment at the top."
-      },
-      "modularity": {
-        "preferModularFiles": true,
-        "extractAtFunctionGroupSize": 3,
-        "maxImportsPerModule": 8,
-        "comment": "Prefer many small single-purpose files over large multi-purpose files. Extract a group of 3+ related functions into a dedicated module. Consider splitting a module when importing more than 8 symbols from it."
-      },
-      "functionRules": {
-        "maxLines": 40,
-        "preferPure": true,
-        "noAnyInExportedSignatures": true,
-        "comment": "Keep functions small and focused. Prefer pure functions. Avoid 'any' in exported TypeScript signatures."
-      }
+      "id": "shared-development-policy",
+      "version": "1.0.0",
+      "policyFile": ".github/development-policy.json",
+      "document": ".github/DEVELOPMENT_POLICY.md",
+      "reviewCommand": "node scripts/check-modularity.cjs --changed"
     }
   },
   "activation": {

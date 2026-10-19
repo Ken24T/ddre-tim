@@ -94,21 +94,11 @@ function generateProfile(answers) {
         label: hasVite ? "Vite dev server" : null,
       },
       developmentPolicy: {
-        maxFileLines: {
-          softCeiling: 250,
-          warningThreshold: 400,
-          hardSplit: 600,
-        },
-        modularity: {
-          preferModularFiles: true,
-          extractAtFunctionGroupSize: 3,
-          maxImportsPerModule: 8,
-        },
-        functionRules: {
-          maxLines: 40,
-          preferPure: true,
-          noAnyInExportedSignatures: true,
-        },
+        "id": "shared-development-policy",
+        "version": "1.0.0",
+        "policyFile": ".github/development-policy.json",
+        "document": ".github/DEVELOPMENT_POLICY.md",
+        "reviewCommand": "node scripts/check-modularity.cjs --changed"
       },
     },
     activation: {

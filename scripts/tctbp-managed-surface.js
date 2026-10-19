@@ -64,7 +64,8 @@ const RUNNER_FILES = [
   "tctbp-run-ticket.js",
   "tctbp-status-report.js",
   "tctbp-scaffold-cli.js",
-  "tctbp-scaffold-profile.js"
+  "tctbp-scaffold-profile.js",
+  "check-modularity.cjs"
 ];
 
 /** GitHub files copied from the canonical `.github/` directory. */
@@ -72,7 +73,9 @@ const GITHUB_FILES = [
   "agents/TCTBP.agent.md",
   "TCTBP Agent.md",
   "TCTBP Cheatsheet.md",
-  "hooks/tctbp-safety.json"
+  "hooks/tctbp-safety.json",
+  "DEVELOPMENT_POLICY.md",
+  "development-policy.json"
 ];
 
 /** Prompt files copied from the canonical `.github/prompts/` directory. */

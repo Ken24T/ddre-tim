@@ -77,3 +77,13 @@ When finished, report:
 5. which target-repository state was detected or applied
 6. whether the hook layer was installed and whether `node` was available
 7. any unresolved values or follow-up checks
+
+## Shared development policy distribution
+
+Carry `.github/DEVELOPMENT_POLICY.md`, `.github/development-policy.json` and
+`scripts/check-modularity.cjs` together from the canonical source. The target
+profile references these files through `profile.developmentPolicy`. Merge the
+shared policy entry into existing AGENTS/Copilot guidance without replacing
+project-specific instructions or unrelated workflow guards. Remove superseded
+mandatory line-count splits from current guidance; retain historical records.
+Review reporter output with the shared policy; size alone is not a failure.
