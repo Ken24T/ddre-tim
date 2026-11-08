@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "owner": "Ken24T/TCTBP",
+  "sourceCommit": "4243d07ca8cdd6c4fcaf0bfd8cd60cffb5ead0cf",
+  "version": "1.0.0",
+  "release": "1cd850aeb9b279e4f27ce3bdb6b5a6b2dc60430af6f26196a1c1dae25e2d933c",
+  "files": {
+    "cli.cjs": "2364bab39a55958f3916ceeb0737ee76cce37e80dda43af0f527397169f50999",
+    "package.json": "b421ad1df8f8e9a72525136050678a2e70085cc1a036b0f23b1ac294ce6e7315",
+    "lib/adapters.cjs": "4ed20bb5c581ddd8abcaffaad83c407ff9cf55efce91ddbb35b32cb86171e1a5",
+    "lib/arguments.cjs": "01bde00d4a7cbb0ccb8b5338b5d10d2ecd39087b67892b01a26299ad3a974fd2",
+    "lib/begin.cjs": "eec18730092608e250f34fd4da5f7c919395c1a2b8e8a5567d64f0d3aa8af2cc",
+    "lib/continuation.cjs": "6150a1c4148296141ae87e1e325229cc1d47e9e5ab2062c2cce5926c8a5a70cc",
+    "lib/git-state.cjs": "cbdcfff377149f0b027ee33036aa040a49f9e94bdd4b3341c3f445d155437854",
+    "lib/process.cjs": "99e8c7267babd34b753b5d8bffbdcfbd226bec5b04215bd17c8b12276e471dc4",
+    "lib/profile.cjs": "d979a39bfe7f082303bac6c14edd55e2fb38587d9ec31ecafad7e149349009d8"
+  }
+}

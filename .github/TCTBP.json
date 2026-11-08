@@ -774,5 +774,11 @@
       "message": "This push has a net deletion of {net} lines ({added} added, {removed} removed). Confirm this is intentional."
     },
     "comment": "Code-loss prevention gates apply to branch closeout merges, promote merges, and any agent-performed merge into a default or environment branch."
+  },
+  "begin": {
+    "contract": "tctbp-begin/1",
+    "executionCommand": "node scripts/tctbp-run-begin.cjs",
+    "profile": ".github/TCTBP_BEGIN.json",
+    "owner": "TCTBP common core; project-owned capabilities"
   }
 }

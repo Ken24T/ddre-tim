@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "contract": "tctbp-begin/1",
+  "project": "ddre-tim",
+  "mode": "orient",
+  "repository": {
+    "remotes": [
+      "https://github.com/Ken24T/ddre-tim.git"
+    ]
+  },
+  "data": {
+    "kind": "none"
+  },
+  "runtimeRelease": "1cd850aeb9b279e4f27ce3bdb6b5a6b2dc60430af6f26196a1c1dae25e2d933c"
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "TCTBP Begin"
+  short_description: "Inspect or resume using the project Begin contract"
+  default_prompt: "Use $begin for this repository session."
